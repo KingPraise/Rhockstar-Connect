@@ -1,0 +1,290 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat } from "@/lib/services/messages";
+import { getAllUsers, UserBasic } from "@/lib/services/users";
+import { Send, Search, Loader2, MessageSquarePlus } from "lucide-react";
+
+export default function MessagesPage() {
+  const { profile } = useAuthStore();
+  
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [activeChat, setActiveChat] = useState<Chat | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [users, setUsers] = useState<Record<string, UserBasic>>({});
+  
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Fetch all users to resolve names/avatars
+    const fetchUsers = async () => {
+      const { success, users } = await getAllUsers();
+      if (success && users) {
+        const usersMap: Record<string, UserBasic> = {};
+        users.forEach(u => usersMap[u.uid] = u);
+        setUsers(usersMap);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    if (!profile?.uid) return;
+    
+    // Subscribe to chats
+    const unsubscribe = subscribeToChats(profile.uid, (fetchedChats) => {
+      setChats(fetchedChats);
+    });
+
+    return () => unsubscribe();
+  }, [profile?.uid]);
+
+  useEffect(() => {
+    if (!activeChat) return;
+    
+    // Subscribe to active chat messages
+    const unsubscribe = subscribeToMessages(activeChat.id, (fetchedMessages) => {
+      setMessages(fetchedMessages);
+    });
+
+    return () => unsubscribe();
+  }, [activeChat]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile?.uid || !activeChat || !newMessage.trim()) return;
+
+    const text = newMessage;
+    setNewMessage(""); // Optimistic clear
+    
+    await sendMessage(activeChat.id, profile.uid, text);
+  };
+
+  const startNewChat = async (otherUserId: string) => {
+    if (!profile?.uid) return;
+    setShowNewChat(false);
+    
+    const { success, chat } = await getOrCreateChat(profile.uid, otherUserId);
+    if (success && chat) {
+      setActiveChat(chat);
+    }
+  };
+
+  if (!profile) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-100px)]">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+      </div>
+    );
+  }
+
+  // Filter users for new chat (excluding self)
+  const availableUsers = Object.values(users).filter(
+    (u) => u.uid !== profile.uid && 
+           u.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  return (
+    <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full h-[calc(100vh-100px)] gap-4 p-4 lg:p-6 lg:gap-8">
+      
+      {/* SIDEBAR: CHAT LIST */}
+      <div className={`${activeChat ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl`}>
+        <div className="p-6 border-b border-white/5 bg-slate-900/80 sticky top-0 z-10 backdrop-blur-md">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-white tracking-tight">Messages</h2>
+            <button 
+              onClick={() => setShowNewChat(!showNewChat)}
+              className="p-2 rounded-xl bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
+            >
+              <MessageSquarePlus className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="relative group">
+            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-brand transition-colors" />
+            <input 
+              type="text"
+              placeholder={showNewChat ? "Search to start chat..." : "Search messages..."}
+              className="w-full bg-slate-800/50 border border-white/5 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/50 transition-all shadow-inner"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2">
+          {showNewChat ? (
+            // NEW CHAT VIEW
+            <div className="space-y-1">
+              <p className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Suggested Connections</p>
+              {availableUsers.map(u => (
+                <button
+                  key={u.uid}
+                  onClick={() => startNewChat(u.uid)}
+                  className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors text-left"
+                >
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg flex-shrink-0">
+                    <span className="text-lg font-bold text-white">{u.avatar}</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white">{u.fullName}</h3>
+                    <p className="text-sm text-slate-400">@{u.username}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            // EXISTING CHATS VIEW
+            chats.length > 0 ? chats.map((chat) => {
+              const otherUserId = chat.participants.find(p => p !== profile.uid) || chat.participants[0];
+              const otherUser = users[otherUserId];
+              
+              if (!otherUser) return null;
+
+              return (
+                <button
+                  key={chat.id}
+                  onClick={() => setActiveChat(chat)}
+                  className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all text-left ${
+                    activeChat?.id === chat.id 
+                      ? 'bg-gradient-to-r from-brand/10 to-transparent border-l-2 border-brand shadow-inner' 
+                      : 'hover:bg-white/5'
+                  }`}
+                >
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg flex-shrink-0">
+                      <span className="text-lg font-bold text-white">{otherUser.avatar}</span>
+                    </div>
+                    {/* Online indicator placeholder */}
+                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></div>
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className={`font-bold truncate ${activeChat?.id === chat.id ? 'text-brand' : 'text-white'}`}>
+                        {otherUser.fullName}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-slate-400 truncate">
+                      {chat.lastMessage || "No messages yet"}
+                    </p>
+                  </div>
+                </button>
+              );
+            }) : (
+              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                  <MessageSquarePlus className="w-8 h-8 text-slate-500" />
+                </div>
+                <p className="font-medium text-white mb-2">No messages yet</p>
+                <p className="text-sm">Start a conversation with a connection!</p>
+              </div>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* MAIN CONTENT: ACTIVE CHAT */}
+      {activeChat ? (
+        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
+          
+          {/* Active Chat Header */}
+          <div className="p-6 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center gap-4">
+            <button 
+              className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
+              onClick={() => setActiveChat(null)}
+            >
+              ← Back
+            </button>
+            
+            {(() => {
+              const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
+              const otherUser = users[otherUserId];
+              
+              return otherUser ? (
+                <>
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg">
+                    <span className="text-lg font-bold text-white">{otherUser.avatar}</span>
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white leading-tight">{otherUser.fullName}</h2>
+                    <p className="text-xs font-medium text-emerald-400">Online</p>
+                  </div>
+                </>
+              ) : (
+                <div className="animate-pulse flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-white/10" />
+                  <div className="h-4 w-32 bg-white/10 rounded" />
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="text-center">
+              <span className="px-3 py-1 bg-white/5 rounded-full text-xs font-medium text-slate-500">
+                Beginning of your conversation
+              </span>
+            </div>
+
+            {messages.map((msg) => {
+              const isMine = msg.senderId === profile.uid;
+              return (
+                <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[70%] rounded-2xl px-5 py-3 ${
+                    isMine 
+                      ? 'bg-gradient-to-br from-brand to-brand-purple text-white rounded-tr-sm shadow-[0_5px_15px_rgba(56,189,248,0.2)]' 
+                      : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-white/5'
+                  }`}>
+                    <p className="leading-relaxed">{msg.text}</p>
+                    {/* Timestamp could go here if formatted */}
+                  </div>
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Message Input */}
+          <div className="p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-md">
+            <form onSubmit={handleSendMessage} className="flex items-center gap-4">
+              <input 
+                type="text"
+                placeholder="Type your message..."
+                className="flex-1 bg-slate-800/50 border border-white/5 rounded-2xl px-6 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/50 transition-all shadow-inner"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+              />
+              <button 
+                type="submit"
+                disabled={!newMessage.trim()}
+                className="p-4 rounded-2xl bg-gradient-to-r from-brand to-brand-purple text-white shadow-[0_0_15px_rgba(56,189,248,0.3)] disabled:opacity-50 disabled:shadow-none transition-all hover:scale-105 active:scale-95 flex-shrink-0"
+              >
+                <Send className="w-6 h-6" />
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : (
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center neo-card bg-slate-900/60 border border-white/5 rounded-3xl text-slate-400 p-8 text-center shadow-2xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-5 mix-blend-screen pointer-events-none" />
+          <div className="w-24 h-24 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(56,189,248,0.2)]">
+            <Send className="w-10 h-10 text-brand ml-2" />
+          </div>
+          <h2 className="text-3xl font-extrabold text-white mb-3">Your Messages</h2>
+          <p className="max-w-sm font-medium">Select a conversation from the sidebar or start a new chat to begin networking.</p>
+        </div>
+      )}
+    </div>
+  );
+}

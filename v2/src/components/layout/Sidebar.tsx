@@ -19,7 +19,7 @@ export default function Sidebar() {
   const navItems = [
     { name: "Feed", href: "/feed", icon: Home },
     { name: "Profile", href: "/profile", icon: User },
-    { name: "Connections", href: "/connections", icon: Users },
+    { name: "Connections", href: "/network", icon: Users },
     { name: "Messages", href: "/messages", icon: MessageSquare },
     { name: "Dating", href: "/dating", icon: Heart },
     { name: "Jobs", href: "/jobs", icon: Briefcase },

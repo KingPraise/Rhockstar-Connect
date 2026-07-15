@@ -33,8 +33,8 @@ export const registerUser = async (email: string, password: string, fullName: st
     });
 
     return { user, error: null };
-  } catch (error: any) {
-    return { user: null, error: error.message };
+  } catch (error: unknown) {
+    return { user: null, error: (error as Error).message };
   }
 };
 
@@ -48,8 +48,8 @@ export const loginUser = async (email: string, password: string) => {
     }, { merge: true });
 
     return { user: userCredential.user, error: null };
-  } catch (error: any) {
-    return { user: null, error: error.message };
+  } catch (error: unknown) {
+    return { user: null, error: (error as Error).message };
   }
 };
 
@@ -57,7 +57,7 @@ export const logoutUser = async () => {
   try {
     await signOut(auth);
     return { error: null };
-  } catch (error: any) {
-    return { error: error.message };
+  } catch (error: unknown) {
+    return { error: (error as Error).message };
   }
 };

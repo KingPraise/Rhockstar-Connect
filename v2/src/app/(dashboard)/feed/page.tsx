@@ -1,45 +1,23 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import PostComposer from "@/components/feed/PostComposer";
 import PostCard from "@/components/feed/PostCard";
+import { subscribeToFeed, Post } from "@/lib/services/posts";
+import { Loader2 } from "lucide-react";
 
 export default function FeedPage() {
-  const dummyPosts = [
-    {
-      id: 1,
-      user: {
-        name: "Jane Doe",
-        handle: "@janed",
-        avatar: "JD"
-      },
-      content: "Just launched the new version of our app! The Neomorphic design system looks absolutely incredible. 🚀\n\nMassive shoutout to the engineering team for pulling this off in record time.",
-      timeAgo: "2 hours ago",
-      likes: 124,
-      comments: 18
-    },
-    {
-      id: 2,
-      user: {
-        name: "Marcus Johnson",
-        handle: "@marcusj",
-        avatar: "MJ"
-      },
-      content: "Looking for a Senior Frontend Developer to join my team at TechCorp. We're building the future of decentralized finance. \n\nMust have 5+ years of React/Next.js experience. DM me if you're interested! 💼",
-      timeAgo: "5 hours ago",
-      likes: 89,
-      comments: 34
-    },
-    {
-      id: 3,
-      user: {
-        name: "Sarah Chen",
-        handle: "@sarahcodes",
-        avatar: "SC"
-      },
-      content: "Does anyone else find themselves completely rewriting their CSS architecture every 6 months? Tailwind v4 is definitely a game changer though.",
-      timeAgo: "1 day ago",
-      likes: 256,
-      comments: 42
-    }
-  ];
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToFeed((newPosts) => {
+      setPosts(newPosts);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div className="w-full">
@@ -54,9 +32,19 @@ export default function FeedPage() {
       
       {/* Feed Timeline */}
       <div className="flex flex-col">
-        {dummyPosts.map(post => (
-          <PostCard key={post.id} {...post} />
-        ))}
+        {loading ? (
+          <div className="flex items-center justify-center p-12">
+            <Loader2 className="w-8 h-8 animate-spin text-brand" />
+          </div>
+        ) : posts.length > 0 ? (
+          posts.map(post => (
+            <PostCard key={post.id} post={post} />
+          ))
+        ) : (
+          <div className="text-center p-12 neo-card">
+            <p className="text-slate-400">No posts yet. Be the first to post!</p>
+          </div>
+        )}
       </div>
     </div>
   );

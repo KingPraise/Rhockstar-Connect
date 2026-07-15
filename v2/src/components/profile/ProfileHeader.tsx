@@ -1,7 +1,6 @@
 "use client";
 
-import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil } from "lucide-react";
-import Image from "next/image";
+import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye } from "lucide-react";
 
 interface ProfileHeaderProps {
   onEditClick: () => void;
@@ -26,22 +25,27 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
   };
 
   return (
-    <div className="neo-card p-0 overflow-hidden flex flex-col mb-6">
+    <div className="neo-card p-0 overflow-hidden flex flex-col mb-6 group">
       {/* Cover Photo */}
-      <div className="h-48 w-full bg-gradient-to-r from-primary to-accent relative">
-        <button className="absolute top-4 right-4 neo-button-primary bg-white/20 backdrop-blur-md text-white border-white/40 shadow-none hover:bg-white/30 text-sm py-1 px-3">
+      <div className="h-56 w-full bg-gradient-to-r from-brand via-accent to-brand bg-[length:200%_200%] animate-gradient-x relative transition-all duration-700">
+        <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]"></div>
+        <button className="absolute top-4 right-4 neo-button-primary bg-white/20 backdrop-blur-md text-white border-white/40 shadow-none hover:bg-white/30 text-sm py-2 px-4 flex items-center gap-2 group/btn">
+          <Camera className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
           Update Cover
         </button>
       </div>
 
-      <div className="px-6 pb-6 relative">
+      <div className="px-8 pb-8 relative">
         {/* Avatar */}
-        <div className="absolute -top-16 left-6 rounded-full p-1 bg-surface shadow-md">
-          <div className="w-32 h-32 rounded-full bg-primary-light flex items-center justify-center text-white text-4xl font-bold relative overflow-hidden border-4 border-surface">
+        <div className="absolute -top-20 left-8 rounded-full p-2 bg-surface shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.04)] backdrop-blur-sm z-10 transition-transform duration-300 hover:scale-[1.02]">
+          <div className="w-36 h-36 rounded-full bg-gradient-to-br from-primary-light to-brand flex items-center justify-center text-white text-5xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-surface">
             EP
             {/* In a real app, this would be an <Image> tag if they have a photo */}
           </div>
-          <button className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-surface shadow-md flex items-center justify-center text-secondary hover:text-brand transition-colors">
+          <button 
+            onClick={onEditClick}
+            className="absolute bottom-2 right-2 w-10 h-10 rounded-full bg-surface shadow-neo-sm flex items-center justify-center text-secondary hover:text-brand transition-all hover:scale-110 border border-border"
+          >
             <Pencil className="w-4 h-4" />
           </button>
         </div>
@@ -50,63 +54,88 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
         <div className="flex justify-end pt-4 pb-2">
           <button 
             onClick={onEditClick}
-            className="neo-button text-sm"
+            className="neo-button text-sm flex items-center gap-2 hover:bg-brand hover:text-white transition-all group/edit"
           >
+            <Pencil className="w-4 h-4 group-hover/edit:rotate-12 transition-transform" />
             Edit Profile
           </button>
         </div>
 
         {/* User Info */}
-        <div className="mt-2 flex flex-col gap-4">
+        <div className="mt-4 flex flex-col gap-4">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+            <h1 className="text-3xl font-extrabold flex items-center gap-2 tracking-tight text-primary">
               {user.fullName}
-              {user.isVerified && <CheckCircle2 className="w-5 h-5 text-success" />}
+              {user.isVerified && <CheckCircle2 className="w-6 h-6 text-brand fill-brand/20" />}
             </h1>
-            <p className="text-secondary font-medium">@{user.username}</p>
+            <p className="text-secondary font-semibold text-lg">@{user.username}</p>
           </div>
 
-          <p className="text-primary text-lg">{user.headline}</p>
+          <p className="text-primary text-xl font-medium max-w-2xl leading-relaxed">{user.headline}</p>
 
-          <div className="flex flex-wrap gap-4 text-sm text-secondary">
-            <div className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" /> {user.location}
+          <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-secondary mt-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-raised border border-border hover:border-brand/30 transition-colors cursor-default">
+              <MapPin className="w-4 h-4 text-brand" /> {user.location}
             </div>
-            <div className="flex items-center gap-1">
-              <Briefcase className="w-4 h-4" /> Available for work
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-raised border border-border hover:border-success/30 transition-colors cursor-default">
+              <Briefcase className="w-4 h-4 text-success" /> <span className="text-success font-medium">Available for work</span>
             </div>
-            <div className="flex items-center gap-1">
-              <LinkIcon className="w-4 h-4" /> 
-              <a href={user.website} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-raised border border-border hover:border-brand/30 transition-colors cursor-pointer group/link">
+              <LinkIcon className="w-4 h-4 text-brand group-hover/link:rotate-12 transition-transform" /> 
+              <a href={user.website} target="_blank" rel="noopener noreferrer" className="hover:text-brand transition-colors">
                 {user.website.replace("https://", "")}
               </a>
             </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="w-4 h-4" /> Joined {user.joined}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-raised border border-border hover:border-brand/30 transition-colors cursor-default">
+              <Calendar className="w-4 h-4 text-brand" /> Joined {user.joined}
             </div>
           </div>
         </div>
       </div>
 
       {/* Stats Bar */}
-      <div className="border-t border-border bg-surface-raised flex px-6 py-4 justify-between text-center sm:justify-start sm:gap-12">
-        <div className="flex flex-col">
-          <span className="text-xl font-bold text-primary">{user.stats.followers.toLocaleString()}</span>
-          <span className="text-xs text-secondary uppercase font-medium">Followers</span>
+      <div className="border-t border-border bg-surface-raised/50 backdrop-blur-sm grid grid-cols-2 sm:grid-cols-4 divide-x divide-border">
+        <div className="flex items-center justify-center gap-4 py-6 hover:bg-surface-raised transition-colors cursor-pointer group/stat">
+          <div className="w-12 h-12 rounded-full bg-brand/10 flex items-center justify-center text-brand group-hover/stat:scale-110 transition-transform">
+            <Users className="w-6 h-6" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-2xl font-extrabold text-primary tracking-tight">{user.stats.followers.toLocaleString()}</span>
+            <span className="text-xs text-secondary font-bold uppercase tracking-wider">Followers</span>
+          </div>
         </div>
-        <div className="flex flex-col">
-          <span className="text-xl font-bold text-primary">{user.stats.connections.toLocaleString()}</span>
-          <span className="text-xs text-secondary uppercase font-medium">Connections</span>
+        
+        <div className="flex items-center justify-center gap-4 py-6 hover:bg-surface-raised transition-colors cursor-pointer group/stat">
+          <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center text-accent group-hover/stat:scale-110 transition-transform">
+            <Activity className="w-6 h-6" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-2xl font-extrabold text-primary tracking-tight">{user.stats.connections.toLocaleString()}</span>
+            <span className="text-xs text-secondary font-bold uppercase tracking-wider">Connections</span>
+          </div>
         </div>
-        <div className="flex flex-col">
-          <span className="text-xl font-bold text-primary">{user.stats.posts.toLocaleString()}</span>
-          <span className="text-xs text-secondary uppercase font-medium">Posts</span>
+
+        <div className="flex items-center justify-center gap-4 py-6 hover:bg-surface-raised transition-colors cursor-pointer group/stat">
+          <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500 group-hover/stat:scale-110 transition-transform">
+            <TrendingUp className="w-6 h-6" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-2xl font-extrabold text-primary tracking-tight">{user.stats.posts.toLocaleString()}</span>
+            <span className="text-xs text-secondary font-bold uppercase tracking-wider">Posts</span>
+          </div>
         </div>
-        <div className="flex flex-col hidden sm:flex">
-          <span className="text-xl font-bold text-primary">{user.stats.views.toLocaleString()}</span>
-          <span className="text-xs text-secondary uppercase font-medium">Profile Views</span>
+
+        <div className="flex items-center justify-center gap-4 py-6 hover:bg-surface-raised transition-colors cursor-pointer group/stat">
+          <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover/stat:scale-110 transition-transform">
+            <Eye className="w-6 h-6" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-2xl font-extrabold text-primary tracking-tight">{user.stats.views.toLocaleString()}</span>
+            <span className="text-xs text-secondary font-bold uppercase tracking-wider">Views</span>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

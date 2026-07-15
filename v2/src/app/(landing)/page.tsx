@@ -148,7 +148,7 @@ export default function Home() {
             <div className="space-y-6 text-lg text-slate-300 leading-relaxed">
               <p>
                 Rhockstar Connect is a modern professional social networking platform
-                built to connect people with opportunities. Whether you're searching
+                built to connect people with opportunities. Whether you&apos;re searching
                 for jobs, building business relationships, making friends, or expanding
                 your professional network, Rhockstar Connect provides everything you
                 need in one place.

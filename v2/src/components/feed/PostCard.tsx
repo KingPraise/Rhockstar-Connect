@@ -1,28 +1,38 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
+import { toggleLike, Post } from "@/lib/services/posts";
+import { useAuthStore } from "@/store/useAuthStore";
+import { formatDistanceToNow } from "date-fns";
 
 interface PostCardProps {
-  user: {
-    name: string;
-    handle: string;
-    avatar: string;
-  };
-  content: string;
-  timeAgo: string;
-  likes: number;
-  comments: number;
+  post: Post;
 }
 
-export default function PostCard({ user, content, timeAgo, likes, comments }: PostCardProps) {
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(likes);
+export default function PostCard({ post }: PostCardProps) {
+  const { profile } = useAuthStore();
+  const [isLiking, setIsLiking] = useState(false);
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+  // Check if current user liked it
+  const isLiked = profile ? post.likes?.includes(profile.uid) : false;
+  const likeCount = post.likes?.length || 0;
+
+  const handleLike = async () => {
+    if (!profile || isLiking) return;
+    setIsLiking(true);
+    await toggleLike(post.id, profile.uid);
+    setIsLiking(false);
   };
+
+  // Format timestamp safely
+  let timeAgo = "Just now";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const createdAt = post.createdAt as any;
+  if (createdAt?.toDate && typeof createdAt.toDate === 'function') {
+    timeAgo = formatDistanceToNow(createdAt.toDate(), { addSuffix: true });
+  }
 
   return (
     <div className="neo-card p-6 mb-6">
@@ -30,12 +40,12 @@ export default function PostCard({ user, content, timeAgo, likes, comments }: Po
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-4 cursor-pointer group">
           <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white shadow-inner group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow">
-            {user.avatar}
+            {post.user.avatar}
           </div>
           <div>
-            <h4 className="font-bold text-white group-hover:text-brand transition-colors">{user.name}</h4>
+            <h4 className="font-bold text-white group-hover:text-brand transition-colors">{post.user.name}</h4>
             <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span>{user.handle}</span>
+              <span>@{post.user.handle}</span>
               <span>•</span>
               <span>{timeAgo}</span>
             </div>
@@ -48,17 +58,30 @@ export default function PostCard({ user, content, timeAgo, likes, comments }: Po
       </div>
 
       {/* Body */}
-      <div className="mb-6 text-slate-300 leading-relaxed whitespace-pre-wrap">
-        {content}
+      <div className="mb-4 text-slate-300 leading-relaxed whitespace-pre-wrap">
+        {post.content}
       </div>
+
+      {/* Image Attachment */}
+      {post.imageUrl && (
+        <div className="mb-6 rounded-xl overflow-hidden border border-white/5 bg-black/20 max-h-[500px] flex items-center justify-center">
+          <img 
+            src={post.imageUrl} 
+            alt="Post attachment" 
+            className="max-w-full max-h-[500px] object-contain"
+            loading="lazy"
+          />
+        </div>
+      )}
 
       {/* Action Bar */}
       <div className="flex items-center gap-6 pt-4 border-t border-white/5">
         <button 
           onClick={handleLike}
+          disabled={!profile || isLiking}
           className={`flex items-center gap-2 text-sm font-medium transition-all group ${
             isLiked ? "text-red-500" : "text-slate-400 hover:text-red-400"
-          }`}
+          } ${isLiking ? "opacity-50 cursor-not-allowed" : ""}`}
         >
           <div className={`p-2 rounded-full neo-card ${isLiked ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'bg-slate-800/30 hover:border-red-400/30'}`}>
             <Heart className={`w-4 h-4 transition-transform group-hover:scale-110 ${isLiked ? 'fill-current' : ''}`} />
@@ -70,7 +93,7 @@ export default function PostCard({ user, content, timeAgo, likes, comments }: Po
           <div className="p-2 rounded-full neo-card bg-slate-800/30 group-hover:border-brand/30">
             <MessageCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
           </div>
-          <span>{comments}</span>
+          <span>{post.commentsCount || 0}</span>
         </button>
 
         <button className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-all group ml-auto">
