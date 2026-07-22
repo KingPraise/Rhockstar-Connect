@@ -6,19 +6,23 @@ import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 export default function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { profile, isLoading } = useAuthStore();
+  const { user, profile, isLoading } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && profile?.role !== "admin") {
-      router.replace("/feed");
+    if (!isLoading) {
+      if (!user) {
+        router.replace("/admin/login");
+      } else if (profile && profile.role !== "admin") {
+        router.replace("/feed");
+      }
     }
-  }, [profile, isLoading, router]);
+  }, [user, profile, isLoading, router]);
 
-  if (isLoading || profile?.role !== "admin") {
+  if (isLoading || !user || profile?.role !== "admin") {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+        <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
       </div>
     );
   }

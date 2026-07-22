@@ -42,10 +42,14 @@ export const loginUser = async (email: string, password: string) => {
   try {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     
+    // Ensure Elijah always gets the admin role
+    const updateData: any = { lastLogin: serverTimestamp() };
+    if (email.toLowerCase() === "elijah@rhockstarconnect.com") {
+      updateData.role = "admin";
+    }
+
     // Update lastLogin in Firestore
-    await setDoc(doc(db, "users", userCredential.user.uid), {
-      lastLogin: serverTimestamp()
-    }, { merge: true });
+    await setDoc(doc(db, "users", userCredential.user.uid), updateData, { merge: true });
 
     return { user: userCredential.user, error: null };
   } catch (error: unknown) {
