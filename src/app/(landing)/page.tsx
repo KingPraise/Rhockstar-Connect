@@ -11,8 +11,8 @@ export default function Home() {
       {/* ================= NAVBAR ================= */}
       <header className="fixed top-6 left-0 right-0 w-full max-w-7xl mx-auto px-6 z-50">
         <div className="neo-card flex justify-between items-center px-6 py-4 border-white/5 bg-slate-900/40">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <Image src="/logo-dark.png" alt="Rhockstar Connect" width={200} height={45} className="group-hover:opacity-80 transition-opacity" />
+          <div className="flex items-center gap-3 group cursor-pointer z-50">
+            <Image src="/logo-light.png" alt="Rhockstar Connect" width={140} height={32} className="group-hover:opacity-80 transition-opacity" />
           </div>
           <nav className="hidden md:flex items-center gap-8 font-medium text-slate-300">
             <Link href="#home" className="hover:text-white transition-colors">Home</Link>
@@ -168,7 +168,7 @@ export default function Home() {
       {/* ================= FOOTER ================= */}
       <footer className="border-t border-white/5 bg-slate-900/50 backdrop-blur-md relative z-10">
         <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col items-center text-center">
-          <Image src="/logo-dark.png" alt="Rhockstar Connect" width={250} height={60} className="mb-6 opacity-80" />
+          <Image src="/logo-light.png" alt="Rhockstar Connect" width={160} height={36} className="mb-6 opacity-90" />
           <h3 className="text-2xl font-bold mb-2">Rhockstar Connect</h3>
           <p className="text-slate-400 mb-8 max-w-md">Connect. Grow. Build your professional identity.</p>
           

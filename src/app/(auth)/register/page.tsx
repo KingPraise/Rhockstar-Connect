@@ -50,9 +50,9 @@ export default function RegisterPage() {
       {/* RIGHT SIDE: Form */}
       <div className="w-full lg:w-1/2 flex flex-col relative z-10 p-6 sm:p-12 order-1 lg:order-2">
         {/* NAV */}
-        <nav className="flex justify-between items-center w-full max-w-xl mx-auto mb-auto">
+        <nav className="flex justify-between items-center w-full max-w-xl mx-auto mb-auto animate-fade-in">
           <Link href="/" className="flex items-center group">
-            <Image src="/logo-dark.png" alt="Rhockstar Connect" width={200} height={45} className="group-hover:opacity-80 transition-opacity" />
+            <Image src="/logo-light.png" alt="Rhockstar Connect" width={140} height={32} className="group-hover:opacity-80 transition-opacity" />
           </Link>
           <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
             Login
@@ -61,11 +61,8 @@ export default function RegisterPage() {
         </nav>
 
         {/* AUTH WRAPPER */}
-        <div className="w-full max-w-lg mx-auto my-auto py-12">
+        <div className="w-full max-w-lg mx-auto my-auto py-12 animate-slide-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
           <div className="text-left mb-10">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-purple/10 to-brand/10 border border-white/5 shadow-inner mb-6">
-              <Sparkles className="w-8 h-8 text-brand-purple" />
-            </div>
             <h2 className="text-4xl font-extrabold mb-3 text-white tracking-tight">Create Account</h2>
             <p className="text-slate-400 font-medium">Join the Rhockstar Connect network</p>
           </div>
