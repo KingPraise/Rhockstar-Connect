@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -30,6 +31,27 @@ export default function RegisterPage() {
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
+
+    if (!dateOfBirth) {
+      setError("Please enter your date of birth");
+      setLoading(false);
+      return;
+    }
+
+    // Check age >= 18
+    const dob = new Date(dateOfBirth);
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+    
+    if (age < 18) {
+      setError("You must be at least 18 years old to join Rhockstar Connect, as per our Terms of Service.");
       setLoading(false);
       return;
     }
@@ -116,6 +138,17 @@ export default function RegisterPage() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2 relative group">
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Date of Birth</label>
+              <input
+                type="date"
+                className="w-full bg-slate-800/40 border border-white/5 rounded-xl px-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner [color-scheme:dark]"
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
                 required
               />
             </div>
