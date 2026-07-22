@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -11,10 +12,7 @@ export default function Home() {
       <header className="fixed top-6 left-0 right-0 w-full max-w-7xl mx-auto px-6 z-50">
         <div className="neo-card flex justify-between items-center px-6 py-4 border-white/5 bg-slate-900/40">
           <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center neo-card shadow-brand/30 group-hover:scale-105 transition-transform">
-              <span className="font-extrabold text-white text-lg">R</span>
-            </div>
-            <span className="font-bold text-xl tracking-tight hidden sm:block">Rhockstar Connect</span>
+            <Image src="/logo-dark.png" alt="Rhockstar Connect" width={200} height={45} className="group-hover:opacity-80 transition-opacity" />
           </div>
           <nav className="hidden md:flex items-center gap-8 font-medium text-slate-300">
             <Link href="#home" className="hover:text-white transition-colors">Home</Link>
@@ -57,37 +55,26 @@ export default function Home() {
             </div>
           </div>
 
-          {/* APP PREVIEW (NEOMORPHIC) */}
-          <div className="relative mx-auto w-full max-w-lg">
-            <div className="neo-card p-4 bg-slate-900/50 backdrop-blur-2xl border border-white/10 animate-float">
-              <div className="flex gap-2 mb-6 px-2 pt-2">
-                <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                <div className="w-3 h-3 rounded-full bg-amber-500/80" />
-                <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-              </div>
+          {/* APP PREVIEW (NEOMORPHIC HERO IMAGE) */}
+          <div className="relative mx-auto w-full max-w-lg lg:max-w-xl hidden md:block">
+            <div className="relative rounded-3xl overflow-hidden neo-card border border-white/10 shadow-[0_0_50px_rgba(56,189,248,0.2)] animate-float">
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-10" />
+              <Image 
+                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1000&q=80" 
+                alt="Professionals connecting" 
+                width={1000}
+                height={800}
+                className="w-full h-auto object-cover opacity-80"
+              />
               
-              <div className="space-y-4">
-                <div className="neo-card p-4 bg-slate-800/30 flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-lg shadow-[0_0_15px_rgba(56,189,248,0.3)]">R</div>
-                  <div>
-                    <h4 className="font-bold">Rhockstar User</h4>
-                    <p className="text-xs text-slate-400">Software Developer</p>
-                  </div>
+              <div className="absolute bottom-6 left-6 right-6 z-20 space-y-3">
+                <div className="neo-card p-4 bg-slate-800/80 backdrop-blur-md border-l-4 border-l-brand flex items-center gap-3">
+                  <span className="text-xl">💼</span>
+                  <span className="font-bold text-sm text-white">New Premium Job Match</span>
                 </div>
-
-                <div className="space-y-3 pl-4">
-                  <div className="neo-card p-4 bg-slate-800/20 border-l-4 border-l-brand flex items-center gap-3">
-                    <span className="text-xl">💼</span>
-                    <span className="font-medium text-sm">New Job Opportunity</span>
-                  </div>
-                  <div className="neo-card p-4 bg-slate-800/20 border-l-4 border-l-brand-purple flex items-center gap-3 ml-4">
-                    <span className="text-xl">🤝</span>
-                    <span className="font-medium text-sm">New Connection</span>
-                  </div>
-                  <div className="neo-card p-4 bg-slate-800/20 border-l-4 border-l-emerald-500 flex items-center gap-3 ml-8">
-                    <span className="text-xl">💬</span>
-                    <span className="font-medium text-sm">New Message</span>
-                  </div>
+                <div className="neo-card p-4 bg-slate-800/80 backdrop-blur-md border-l-4 border-l-brand-purple flex items-center gap-3 ml-4">
+                  <span className="text-xl">✨</span>
+                  <span className="font-bold text-sm text-white">It&apos;s a Match! Say Hello</span>
                 </div>
               </div>
             </div>
@@ -181,9 +168,7 @@ export default function Home() {
       {/* ================= FOOTER ================= */}
       <footer className="border-t border-white/5 bg-slate-900/50 backdrop-blur-md relative z-10">
         <div className="max-w-7xl mx-auto px-6 py-12 flex flex-col items-center text-center">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center neo-card shadow-brand/30 mb-6">
-            <span className="font-extrabold text-white text-xl">R</span>
-          </div>
+          <Image src="/logo-dark.png" alt="Rhockstar Connect" width={250} height={60} className="mb-6 opacity-80" />
           <h3 className="text-2xl font-bold mb-2">Rhockstar Connect</h3>
           <p className="text-slate-400 mb-8 max-w-md">Connect. Grow. Build your professional identity.</p>
           
@@ -191,6 +176,7 @@ export default function Home() {
             <Link href="#home" className="hover:text-brand transition-colors">Home</Link>
             <Link href="/register" className="hover:text-brand transition-colors">Register</Link>
             <Link href="/login" className="hover:text-brand transition-colors">Login</Link>
+            <Link href="/terms" className="hover:text-brand transition-colors">Terms of Service</Link>
           </nav>
           
           <div className="text-slate-500 text-sm space-y-2">

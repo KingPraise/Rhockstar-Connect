@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { loginUser } from "@/lib/auth";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,35 +30,23 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#020617] text-white flex flex-col items-center justify-center">
-      {/* Immersive Background Effects */}
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 mix-blend-screen pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-br from-brand/20 via-brand-purple/10 to-transparent rounded-full blur-[100px] pointer-events-none" />
-      
-      {/* Decorative Orbs */}
-      <div className="absolute top-20 left-20 w-32 h-32 bg-brand/30 rounded-full blur-[40px] animate-pulse" />
-      <div className="absolute bottom-20 right-20 w-48 h-48 bg-brand-purple/30 rounded-full blur-[50px] animate-pulse" style={{ animationDelay: '2s' }} />
+    <div className="min-h-screen relative overflow-hidden bg-[#020617] text-white flex">
+      {/* LEFT SIDE: Form */}
+      <div className="w-full lg:w-1/2 flex flex-col relative z-10 p-6 sm:p-12">
+        {/* NAV */}
+        <nav className="flex justify-between items-center w-full max-w-lg mx-auto mb-auto">
+          <Link href="/" className="flex items-center group">
+            <Image src="/logo-dark.png" alt="Rhockstar Connect" width={200} height={45} className="group-hover:opacity-80 transition-opacity" />
+          </Link>
+          <Link href="/register" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
+            Create Account
+            <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-brand group-hover:w-full transition-all duration-300"></span>
+          </Link>
+        </nav>
 
-      {/* Floating NAV */}
-      <nav className="absolute top-0 w-full max-w-7xl mx-auto p-6 flex justify-between items-center z-50">
-        <Link href="/" className="text-xl font-bold font-outfit text-white flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-[0_0_15px_rgba(56,189,248,0.3)] group-hover:shadow-[0_0_25px_rgba(56,189,248,0.5)] transition-all transform group-hover:-translate-y-1">
-            <span className="font-extrabold text-white text-lg">R</span>
-          </div>
-          Rhockstar Connect
-        </Link>
-        <Link href="/register" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
-          Create Account
-          <span className="absolute -bottom-1 left-0 w-0 h-[2px] bg-brand group-hover:w-full transition-all duration-300"></span>
-        </Link>
-      </nav>
-
-      {/* AUTH WRAPPER */}
-      <div className="relative z-10 w-full max-w-md px-4 py-12">
-        <div className="absolute -inset-0.5 bg-gradient-to-br from-brand/40 to-brand-purple/40 rounded-3xl blur opacity-30"></div>
-        <section className="relative w-full neo-card p-10 bg-slate-900/60 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl">
-          
-          <div className="text-center mb-10">
+        {/* AUTH WRAPPER */}
+        <div className="w-full max-w-md mx-auto my-auto py-12">
+          <div className="text-left mb-10">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-brand/10 to-brand-purple/10 border border-white/5 shadow-inner mb-6">
               <Sparkles className="w-8 h-8 text-brand" />
             </div>
@@ -143,7 +132,27 @@ export default function LoginPage() {
               Create one now
             </Link>
           </div>
-        </section>
+          
+          <div className="mt-8 text-center text-xs text-slate-500">
+            By continuing, you agree to our <Link href="/terms" className="hover:text-brand transition-colors underline decoration-white/20">Terms of Service</Link>
+          </div>
+        </div>
+      </div>
+
+      {/* RIGHT SIDE: Image */}
+      <div className="hidden lg:block lg:w-1/2 relative">
+        <div className="absolute inset-0 bg-brand/20 mix-blend-overlay z-10" />
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent to-[#020617] z-20" />
+        <Image 
+          src="https://images.unsplash.com/photo-1573164713988-8665fc963095?auto=format&fit=crop&w=1000&q=80" 
+          alt="Professional working" 
+          fill
+          className="object-cover"
+        />
+        <div className="absolute bottom-12 right-12 z-30 max-w-md text-right">
+          <h2 className="text-4xl font-bold text-white mb-4">Your next big opportunity is waiting.</h2>
+          <p className="text-lg text-white/80 font-medium">Join thousands of professionals already connecting on Rhockstar Connect.</p>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { 
   Home, 
@@ -29,11 +30,10 @@ export default function Sidebar() {
 
   return (
     <aside className="w-72 h-screen sticky top-0 bg-slate-900/40 backdrop-blur-3xl border-r border-white/5 hidden md:flex flex-col p-6 z-20">
-      <div className="mb-10 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center neo-card shadow-brand/30">
-          <span className="font-extrabold text-white text-lg">R</span>
-        </div>
-        <h2 className="text-xl font-bold font-outfit text-white tracking-tight">Rhockstar</h2>
+      <div className="p-6">
+        <Link href="/feed" className="flex items-center gap-3 group">
+          <Image src="/logo-dark.png" alt="Rhockstar Connect" width={180} height={40} className="group-hover:opacity-80 transition-opacity" />
+        </Link>
       </div>
 
       <nav className="flex flex-col gap-3 flex-1">
@@ -57,6 +57,25 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Premium Upgrade CTA */}
+      <div className="mt-8 pt-8 border-t border-white/5">
+        <div className="neo-card p-5 bg-gradient-to-br from-brand-purple/20 to-brand/10 border border-brand-purple/30 rounded-2xl relative overflow-hidden group">
+          <div className="absolute inset-0 bg-brand-purple/10 group-hover:bg-brand-purple/20 transition-colors" />
+          <div className="relative z-10">
+            <h4 className="text-white font-bold text-lg mb-1 flex items-center gap-2">
+              <span className="text-xl">✨</span> Premium
+            </h4>
+            <p className="text-slate-300 text-xs mb-4">Get verified, boost visibility, and message anyone.</p>
+            <Link 
+              href="/premium" 
+              className="block w-full text-center py-2 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-sm shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] hover:scale-105 transition-all"
+            >
+              Upgrade Now
+            </Link>
+          </div>
+        </div>
+      </div>
 
       <div className="mt-auto pt-6 border-t border-white/10">
         <div className="neo-card p-4 bg-slate-800/30 flex items-center gap-4 cursor-pointer hover:border-brand/30 transition-colors">
