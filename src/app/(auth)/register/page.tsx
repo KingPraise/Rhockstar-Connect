@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { User, Mail, Lock, UserPlus, Loader2, Sparkles, AtSign } from "lucide-react";
+import { User, Mail, Lock, UserPlus, Loader2, AtSign } from "lucide-react";
 import { registerUser } from "@/lib/auth";
 import Image from "next/image";
 
