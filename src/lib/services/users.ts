@@ -3,7 +3,8 @@ import {
   collection, 
   getDocs,
   doc,
-  getDoc
+  getDoc,
+  updateDoc
 } from 'firebase/firestore';
 
 export interface UserBasic {
@@ -56,6 +57,20 @@ export const getUserById = async (userId: string): Promise<{ success: boolean; u
     return { success: false, error: "User not found" };
   } catch (error: unknown) {
     console.error("Error fetching user:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
+export const updateUserProfile = async (
+  userId: string,
+  data: Partial<Omit<UserBasic, 'uid'>> & { bio?: string; headline?: string; location?: any; phone?: string; dob?: string; relationship?: string }
+) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, data);
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Error updating user profile:", error);
     return { success: false, error: (error as Error).message };
   }
 };

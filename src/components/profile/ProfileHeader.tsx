@@ -1,28 +1,19 @@
 "use client";
 
 import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { format } from "date-fns";
 
 interface ProfileHeaderProps {
   onEditClick: () => void;
 }
 
 export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
-  // Mock data for now until we hook up the Firestore listener
-  const user = {
-    fullName: "Elijah Peter",
-    username: "elijah_p",
-    headline: "Founder at Code Dynasty ICT Solutions | Full Stack Developer",
-    location: "Lagos, Nigeria",
-    website: "https://codedynasty.com",
-    joined: "June 2026",
-    isVerified: true,
-    stats: {
-      posts: 42,
-      followers: 1250,
-      connections: 500,
-      views: 3400
-    }
-  };
+  const { profile } = useAuthStore();
+
+  if (!profile) return null; // Or a skeleton loader
+
+  const locationString = typeof profile.location === 'string' ? profile.location : (profile.location?.city ? `${profile.location.city}, ${profile.location.country}` : "Earth");
 
   return (
     <div className="neo-card p-0 overflow-hidden flex flex-col mb-6 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl group">
@@ -39,7 +30,12 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
         {/* Avatar */}
         <div className="absolute -top-24 left-8 rounded-full p-2 bg-slate-900 shadow-2xl z-10 transition-transform duration-300 hover:scale-[1.02]">
           <div className="w-40 h-40 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center text-white text-6xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-slate-800">
-            EP
+            {profile.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              profile.fullName.substring(0, 2).toUpperCase()
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <button 
@@ -63,33 +59,34 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
 
         <div className="mt-4 max-w-2xl">
           <h1 className="text-4xl font-extrabold text-white flex items-center gap-3 tracking-tight">
-            {user.fullName}
-            {user.isVerified && (
-              <CheckCircle2 className="w-6 h-6 text-brand" />
-            )}
+            {profile.fullName}
+            {/* Logic for verification would go here (from Firestore role) */}
+            <CheckCircle2 className="w-6 h-6 text-brand" />
           </h1>
-          <p className="text-slate-400 font-medium text-lg mt-1 mb-4">@{user.username}</p>
+          <p className="text-slate-400 font-medium text-lg mt-1 mb-4">@{profile.username}</p>
           
           <p className="text-white text-xl font-medium leading-relaxed mb-6">
-            {user.headline}
+            {profile.headline || "Add a professional headline"}
           </p>
 
           <div className="flex flex-wrap items-center gap-y-3 gap-x-6 text-sm text-slate-300 mb-8">
             <div className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer bg-slate-800/50 py-1.5 px-4 rounded-full border border-white/5">
               <MapPin className="w-4 h-4 text-slate-400" />
-              {user.location}
+              {locationString}
             </div>
             <div className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer bg-slate-800/50 py-1.5 px-4 rounded-full border border-white/5">
               <Briefcase className="w-4 h-4 text-slate-400" />
-              Available for work
+              {profile.relationship || "Single"}
             </div>
-            <a href={user.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-brand hover:text-brand-purple transition-colors bg-brand/10 py-1.5 px-4 rounded-full border border-brand/20">
-              <LinkIcon className="w-4 h-4" />
-              codedynasty.com
-            </a>
+            {profile.website && (
+              <a href={profile.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-brand hover:text-brand-purple transition-colors bg-brand/10 py-1.5 px-4 rounded-full border border-brand/20">
+                <LinkIcon className="w-4 h-4" />
+                {profile.website.replace(/^https?:\/\//, '')}
+              </a>
+            )}
             <div className="flex items-center gap-2 text-slate-400 py-1.5 px-4 rounded-full border border-transparent">
               <Calendar className="w-4 h-4" />
-              Joined {user.joined}
+              Joined {format(new Date(), "MMMM yyyy")} {/* Replace with actual joined date when added to auth store */}
             </div>
           </div>
         </div>
@@ -100,28 +97,28 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
         <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
           <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand transition-colors">
             <Users className="w-5 h-5 text-brand" />
-            1,250
+            {profile.stats?.followers || 0}
           </div>
           <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Followers</span>
         </div>
         <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
           <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
             <Activity className="w-5 h-5 text-brand-purple" />
-            500
+            {profile.stats?.connections || 0}
           </div>
           <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Connections</span>
         </div>
         <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
           <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand transition-colors">
             <TrendingUp className="w-5 h-5 text-brand" />
-            42
+            {profile.stats?.posts || 0}
           </div>
           <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Posts</span>
         </div>
         <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
           <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
             <Eye className="w-5 h-5 text-brand-purple" />
-            3,400
+            0 {/* Views placeholder */}
           </div>
           <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Views</span>
         </div>
@@ -129,4 +126,3 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
     </div>
   );
 }
-

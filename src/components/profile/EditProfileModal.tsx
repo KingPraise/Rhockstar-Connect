@@ -1,14 +1,101 @@
 "use client";
 
 import { useState } from "react";
-import { X, Upload, Save } from "lucide-react";
+import { X, Upload, Save, Loader2 } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { updateUserProfile } from "@/lib/services/users";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 interface EditProfileModalProps {
   onClose: () => void;
 }
 
 export default function EditProfileModal({ onClose }: EditProfileModalProps) {
+  const { profile, setProfile } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"personal" | "professional" | "social" | "privacy">("personal");
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    fullName: profile?.fullName || "",
+    username: profile?.username || "",
+    phone: profile?.phone || "",
+    dob: profile?.dob || "",
+    location: typeof profile?.location === 'string' ? profile.location : (profile?.location?.city || ""),
+    relationship: profile?.relationship || "Single",
+    bio: profile?.bio || "",
+    headline: profile?.headline || "",
+    website: profile?.website || "",
+    skills: profile?.skills?.join(", ") || "",
+    education: profile?.education || "",
+    visibility: profile?.visibility || "public",
+  });
+
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(profile?.avatar || null);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSave = async () => {
+    if (!profile) return;
+    setIsSaving(true);
+
+    try {
+      let avatarUrl = profile.avatar;
+      
+      if (avatarFile) {
+        const storage = getStorage();
+        const storageRef = ref(storage, `avatars/${profile.uid}_${Date.now()}`);
+        const snapshot = await uploadBytes(storageRef, avatarFile);
+        avatarUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      const updateData = {
+        fullName: formData.fullName,
+        username: formData.username,
+        phone: formData.phone,
+        dob: formData.dob,
+        location: formData.location,
+        relationship: formData.relationship,
+        bio: formData.bio,
+        headline: formData.headline,
+        website: formData.website,
+        skills: formData.skills.split(",").map(s => s.trim()).filter(Boolean),
+        education: formData.education,
+        visibility: formData.visibility,
+        ...(avatarUrl && { avatar: avatarUrl })
+      };
+
+      const result = await updateUserProfile(profile.uid, updateData);
+      
+      if (result.success) {
+        // Update local store
+        setProfile({
+          ...profile,
+          ...updateData
+        } as any);
+        onClose();
+      } else {
+        alert("Failed to update profile");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("An error occurred");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -56,7 +143,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
 
           {/* Form Content */}
           <div className="flex-1 overflow-y-auto p-6 bg-surface">
-            <form className="flex flex-col gap-6">
+            <div className="flex flex-col gap-6">
               
               {/* Personal Info Tab */}
               {activeTab === "personal" && (
@@ -64,39 +151,46 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                   <div className="flex flex-col gap-2">
                     <label className="text-sm font-semibold text-secondary ml-1">Profile Photo</label>
                     <div className="flex items-center gap-4">
-                      <div className="w-20 h-20 rounded-full bg-primary-light flex items-center justify-center text-white text-xl font-bold">
-                        EP
+                      {avatarPreview ? (
+                        <img src={avatarPreview} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-brand" />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-primary-light flex items-center justify-center text-white text-xl font-bold">
+                          {formData.fullName?.substring(0, 2).toUpperCase() || 'U'}
+                        </div>
+                      )}
+                      <div>
+                        <input type="file" id="avatarUpload" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                        <label htmlFor="avatarUpload" className="neo-button text-sm flex items-center gap-2 cursor-pointer">
+                          <Upload className="w-4 h-4" /> Change Photo
+                        </label>
                       </div>
-                      <button type="button" className="neo-button text-sm flex items-center gap-2">
-                        <Upload className="w-4 h-4" /> Change Photo
-                      </button>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium text-secondary ml-1">Full Name</label>
-                      <input type="text" className="neo-input" defaultValue="Elijah Peter" />
+                      <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange} className="neo-input" />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium text-secondary ml-1">Username</label>
-                      <input type="text" className="neo-input" defaultValue="elijah_p" />
+                      <input type="text" name="username" value={formData.username} onChange={handleInputChange} className="neo-input" />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium text-secondary ml-1">Phone Number</label>
-                      <input type="tel" className="neo-input" defaultValue="+234 800 000 0000" />
+                      <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} className="neo-input" />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium text-secondary ml-1">Date of Birth</label>
-                      <input type="date" className="neo-input" defaultValue="1995-06-15" />
+                      <input type="date" name="dob" value={formData.dob} onChange={handleInputChange} className="neo-input" />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium text-secondary ml-1">Location</label>
-                      <input type="text" className="neo-input" defaultValue="Lagos, Nigeria" />
+                      <input type="text" name="location" value={formData.location} onChange={handleInputChange} className="neo-input" />
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium text-secondary ml-1">Relationship Status</label>
-                      <select className="neo-input cursor-pointer bg-transparent">
+                      <select name="relationship" value={formData.relationship} onChange={handleInputChange} className="neo-input cursor-pointer bg-transparent">
                         <option>Single</option>
                         <option>In a Relationship</option>
                         <option>Married</option>
@@ -107,7 +201,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
 
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-secondary ml-1">Bio</label>
-                    <textarea className="neo-input min-h-[100px] resize-y" defaultValue="Passionate full-stack developer with 5+ years of experience building scalable web applications."></textarea>
+                    <textarea name="bio" value={formData.bio} onChange={handleInputChange} className="neo-input min-h-[100px] resize-y"></textarea>
                   </div>
                 </div>
               )}
@@ -117,22 +211,22 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                 <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-secondary ml-1">Professional Title / Headline</label>
-                    <input type="text" className="neo-input" defaultValue="Founder at Code Dynasty ICT Solutions | Full Stack Developer" />
+                    <input type="text" name="headline" value={formData.headline} onChange={handleInputChange} className="neo-input" />
                   </div>
                   
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-secondary ml-1">Website</label>
-                    <input type="url" className="neo-input" defaultValue="https://codedynasty.com" />
+                    <input type="url" name="website" value={formData.website} onChange={handleInputChange} className="neo-input" />
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-secondary ml-1">Skills (Comma separated)</label>
-                    <textarea className="neo-input" defaultValue="React, Next.js, TypeScript, Node.js, Firebase, Tailwind CSS"></textarea>
+                    <textarea name="skills" value={formData.skills} onChange={handleInputChange} className="neo-input" placeholder="React, Node.js, Design..."></textarea>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-secondary ml-1">Education</label>
-                    <input type="text" className="neo-input" defaultValue="University of Technology" />
+                    <input type="text" name="education" value={formData.education} onChange={handleInputChange} className="neo-input" />
                   </div>
                 </div>
               )}
@@ -140,10 +234,10 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
               {/* Social Links Tab */}
               {activeTab === "social" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                  {['LinkedIn', 'Twitter (X)', 'GitHub', 'Facebook', 'Instagram', 'YouTube', 'TikTok', 'WhatsApp'].map(social => (
+                  {['LinkedIn', 'Twitter', 'GitHub', 'Instagram'].map(social => (
                     <div key={social} className="flex flex-col gap-1">
                       <label className="text-sm font-medium text-secondary ml-1">{social}</label>
-                      <input type="url" className="neo-input" placeholder={`https://${social.toLowerCase().split(" ")[0]}.com/...`} />
+                      <input type="url" className="neo-input" placeholder={`https://${social.toLowerCase()}.com/...`} />
                     </div>
                   ))}
                 </div>
@@ -154,27 +248,15 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                 <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-secondary ml-1">Profile Visibility</label>
-                    <select className="neo-input cursor-pointer bg-transparent">
+                    <select name="visibility" value={formData.visibility} onChange={handleInputChange} className="neo-input cursor-pointer bg-transparent">
                       <option value="public">Public - Anyone can see</option>
                       <option value="connections">Connections Only</option>
                       <option value="private">Private - Only me</option>
                     </select>
                   </div>
-                  
-                  <div className="flex flex-col gap-4 mt-4">
-                    <label className="flex items-center gap-3 p-3 bg-surface-raised border border-border rounded-lg cursor-pointer hover:bg-surface transition-colors">
-                      <input type="checkbox" className="w-5 h-5 accent-primary" defaultChecked />
-                      <span className="font-medium text-secondary">Show online status</span>
-                    </label>
-                    
-                    <label className="flex items-center gap-3 p-3 bg-surface-raised border border-border rounded-lg cursor-pointer hover:bg-surface transition-colors">
-                      <input type="checkbox" className="w-5 h-5 accent-primary" defaultChecked />
-                      <span className="font-medium text-secondary">Allow search engines to index profile</span>
-                    </label>
-                  </div>
                 </div>
               )}
-            </form>
+            </div>
           </div>
         </div>
 
@@ -182,15 +264,17 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
         <div className="p-4 border-t border-border bg-surface-raised flex justify-end gap-4">
           <button 
             onClick={onClose}
-            className="neo-button bg-surface shadow-sm text-secondary hover:text-primary"
+            disabled={isSaving}
+            className="neo-button bg-surface shadow-sm text-secondary hover:text-primary disabled:opacity-50"
           >
             Cancel
           </button>
           <button 
-            onClick={onClose}
-            className="neo-button neo-button-primary"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="neo-button neo-button-primary min-w-[140px] flex justify-center"
           >
-            <Save className="w-4 h-4" /> Save Changes
+            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save Changes</>}
           </button>
         </div>
       </div>

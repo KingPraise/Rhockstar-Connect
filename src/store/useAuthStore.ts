@@ -8,9 +8,17 @@ export interface UserProfile {
   email: string;
   bio?: string;
   headline?: string;
-  location?: { city?: string; state?: string; country?: string };
+  location?: { city?: string; state?: string; country?: string } | string;
   avatar?: string;
   stats?: { posts: number; followers: number; following: number; connections: number };
+  phone?: string;
+  dob?: string;
+  relationship?: string;
+  website?: string;
+  skills?: string[];
+  education?: string;
+  socialLinks?: Record<string, string>;
+  visibility?: 'public' | 'connections' | 'private';
 }
 
 interface AuthState {
