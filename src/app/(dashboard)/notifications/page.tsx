@@ -1,63 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Heart, MessageSquare, Briefcase, UserPlus, Check } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bell, Heart, MessageSquare, Briefcase, UserPlus, Check, ThumbsUp, MessageCircle } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { 
+  Notification, 
+  subscribeToNotifications, 
+  markNotificationAsRead, 
+  markAllNotificationsAsRead 
+} from "@/lib/services/notifications";
+import { formatDistanceToNow } from "date-fns";
 
 export default function NotificationsPage() {
-  // Mock data for phase 6
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "match",
-      title: "New Match!",
-      message: "You matched with Sarah in Dating.",
-      time: "2 mins ago",
-      read: false,
-      icon: Heart,
-      color: "text-rose-500",
-      bg: "bg-rose-500/10",
-    },
-    {
-      id: 2,
-      type: "message",
-      title: "New Message",
-      message: "David sent you a new message.",
-      time: "1 hour ago",
-      read: false,
-      icon: MessageSquare,
-      color: "text-brand",
-      bg: "bg-brand/10",
-    },
-    {
-      id: 3,
-      type: "connection",
-      title: "Connection Request",
-      message: "Michael wants to connect with you.",
-      time: "3 hours ago",
-      read: true,
-      icon: UserPlus,
-      color: "text-brand-purple",
-      bg: "bg-brand-purple/10",
-    },
-    {
-      id: 4,
-      type: "job",
-      title: "Job Application Update",
-      message: "Your application for 'Senior React Developer' was viewed.",
-      time: "1 day ago",
-      read: true,
-      icon: Briefcase,
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-    }
-  ]);
+  const { profile } = useAuthStore();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  useEffect(() => {
+    if (!profile?.uid) return;
+    const unsubscribe = subscribeToNotifications(profile.uid, (fetchedNotifs) => {
+      setNotifications(fetchedNotifs);
+    });
+    return () => unsubscribe();
+  }, [profile?.uid]);
+
+  const handleMarkAllAsRead = async () => {
+    if (!profile?.uid) return;
+    await markAllNotificationsAsRead(profile.uid);
   };
 
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
+  const handleMarkAsRead = async (id: string) => {
+    await markNotificationAsRead(id);
+  };
+
+  const getIconForType = (type: string) => {
+    switch (type) {
+      case "match": return { icon: Heart, color: "text-rose-500", bg: "bg-rose-500/10" };
+      case "message": return { icon: MessageSquare, color: "text-brand", bg: "bg-brand/10" };
+      case "connection": return { icon: UserPlus, color: "text-brand-purple", bg: "bg-brand-purple/10" };
+      case "job": return { icon: Briefcase, color: "text-emerald-500", bg: "bg-emerald-500/10" };
+      case "like": return { icon: ThumbsUp, color: "text-blue-500", bg: "bg-blue-500/10" };
+      case "comment": return { icon: MessageCircle, color: "text-amber-500", bg: "bg-amber-500/10" };
+      default: return { icon: Bell, color: "text-slate-400", bg: "bg-slate-800" };
+    }
   };
 
   return (
@@ -73,7 +57,7 @@ export default function NotificationsPage() {
           </div>
         </div>
         <button 
-          onClick={markAllAsRead}
+          onClick={handleMarkAllAsRead}
           className="text-sm font-bold text-slate-300 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-lg border border-white/10 flex items-center gap-2"
         >
           <Check className="w-4 h-4" />
@@ -83,18 +67,24 @@ export default function NotificationsPage() {
 
       <div className="space-y-4">
         {notifications.map((notification) => {
-          const Icon = notification.icon;
+          const { icon: Icon, color, bg } = getIconForType(notification.type);
+          
+          let timeString = "Just now";
+          if (notification.createdAt?.toDate) {
+            timeString = formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true });
+          }
+
           return (
             <div 
               key={notification.id} 
-              onClick={() => markAsRead(notification.id)}
+              onClick={() => handleMarkAsRead(notification.id)}
               className={`neo-card p-4 sm:p-6 flex items-start gap-4 transition-all duration-300 cursor-pointer ${
                 notification.read 
                   ? "bg-slate-900/40 border-white/5 opacity-70 hover:opacity-100" 
                   : "bg-slate-800/80 border-brand/30 shadow-[0_0_20px_rgba(56,189,248,0.1)] hover:border-brand/60"
               }`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${notification.bg} ${notification.color}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${bg} ${color}`}>
                 <Icon className="w-6 h-6" />
               </div>
               
@@ -103,7 +93,7 @@ export default function NotificationsPage() {
                   <h3 className={`font-bold text-lg truncate ${notification.read ? "text-slate-200" : "text-white"}`}>
                     {notification.title}
                   </h3>
-                  <span className="text-xs font-medium text-slate-500 whitespace-nowrap ml-4">{notification.time}</span>
+                  <span className="text-xs font-medium text-slate-500 whitespace-nowrap ml-4">{timeString}</span>
                 </div>
                 <p className={`text-sm ${notification.read ? "text-slate-400" : "text-slate-300 font-medium"}`}>
                   {notification.message}

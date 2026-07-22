@@ -57,31 +57,51 @@ export default function SettingsPage() {
             <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in">
               <h2 className="text-2xl font-bold text-white border-b border-white/10 pb-4">Account Information</h2>
               
-              <div className="space-y-6">
+              <form 
+                className="space-y-6"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  const fullName = formData.get('fullName') as string;
+                  const username = formData.get('username') as string;
+                  
+                  if (profile?.uid) {
+                    const { updateUserProfile } = await import('@/lib/services/users');
+                    const res = await updateUserProfile(profile.uid, { fullName, username });
+                    if (res.success) {
+                      useAuthStore.getState().setProfile({ ...profile, fullName, username } as any);
+                      alert('Profile updated successfully!');
+                    } else {
+                      alert('Failed to update profile');
+                    }
+                  }
+                }}
+              >
                 <div>
                   <label className="block text-sm font-bold text-slate-300 mb-2">Full Name</label>
-                  <input type="text" defaultValue={profile?.fullName || ""} className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors" />
+                  <input type="text" name="fullName" defaultValue={profile?.fullName || ""} className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors" />
                 </div>
                 
                 <div>
                   <label className="block text-sm font-bold text-slate-300 mb-2">Email Address</label>
-                  <input type="email" defaultValue={user?.email || "user@example.com"} className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors" />
+                  <input type="email" disabled defaultValue={user?.email || "user@example.com"} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors opacity-70 cursor-not-allowed" />
+                  <p className="text-xs text-slate-500 mt-1">Email cannot be changed directly.</p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-bold text-slate-300 mb-2">Username</label>
                   <div className="flex bg-slate-800 border border-white/10 rounded-xl overflow-hidden focus-within:border-brand focus-within:ring-1 focus-within:ring-brand transition-colors">
                     <span className="bg-slate-900 px-4 py-3 text-slate-500 font-bold">@</span>
-                    <input type="text" defaultValue={profile?.username || ""} className="w-full bg-transparent px-4 py-3 text-white focus:outline-none" />
+                    <input type="text" name="username" defaultValue={profile?.username || ""} className="w-full bg-transparent px-4 py-3 text-white focus:outline-none" />
                   </div>
                 </div>
 
                 <div className="pt-4">
-                  <button className="bg-brand hover:bg-brand-dark text-white font-bold py-3 px-8 rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.4)] transition-colors">
+                  <button type="submit" className="bg-brand hover:bg-brand-dark text-white font-bold py-3 px-8 rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.4)] transition-colors">
                     Save Changes
                   </button>
                 </div>
-              </div>
+              </form>
             </div>
           )}
 
