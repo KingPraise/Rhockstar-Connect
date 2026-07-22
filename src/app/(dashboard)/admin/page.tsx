@@ -1,6 +1,7 @@
 "use client";
 
 import { Users, CreditCard, Shield, TrendingUp, AlertTriangle, CheckCircle, Activity, Star } from "lucide-react";
+import AdminRoute from "@/components/auth/AdminRoute";
 
 export default function AdminDashboardPage() {
   const stats = [
@@ -11,7 +12,8 @@ export default function AdminDashboardPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <AdminRoute>
+      <div className="max-w-7xl mx-auto space-y-8">
       <div className="flex items-center justify-between bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-rose-500/20 shadow-2xl">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center text-white shadow-lg">
@@ -103,6 +105,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </AdminRoute>
   );
 }

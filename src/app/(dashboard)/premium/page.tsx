@@ -1,17 +1,55 @@
 "use client";
 
-import { Check, Sparkles, Star, Shield, Zap } from "lucide-react";
+import { Check, Crown, Star, Shield, Zap, Loader2, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { db } from "@/lib/firebase";
+import { doc, updateDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 export default function PremiumPage() {
+  const { profile, setProfile } = useAuthStore();
+  const router = useRouter();
+  const [processingTier, setProcessingTier] = useState<string | null>(null);
+
+  const handleSubscribe = async (tier: 'pro' | 'elite') => {
+    if (!profile) return;
+    setProcessingTier(tier);
+
+    try {
+      // Mock payment delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const userRef = doc(db, "users", profile.uid);
+      await updateDoc(userRef, {
+        subscriptionTier: tier,
+        subscriptionStatus: "active"
+      });
+
+      setProfile({
+        ...profile,
+        subscriptionTier: tier,
+        subscriptionStatus: "active"
+      });
+
+      alert(`Successfully upgraded to ${tier.toUpperCase()}!`);
+      router.push("/profile");
+    } catch (error) {
+      console.error("Subscription error:", error);
+      alert("Failed to process subscription.");
+    } finally {
+      setProcessingTier(null);
+    }
+  };
   return (
     <div className="max-w-5xl mx-auto space-y-10 pb-20">
       
       {/* HEADER */}
       <div className="text-center max-w-2xl mx-auto space-y-4 pt-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-brand-purple/20 to-brand/20 border border-white/5 shadow-[0_0_30px_rgba(168,85,247,0.3)] mb-4">
-          <Sparkles className="w-8 h-8 text-brand-purple" />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400/20 to-amber-600/20 border border-amber-500/20 shadow-[0_0_30px_rgba(245,158,11,0.3)] mb-4">
+          <Crown className="w-8 h-8 text-amber-500" />
         </div>
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Upgrade to <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-brand-purple">Premium</span></h1>
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Upgrade to <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">Premium</span></h1>
         <p className="text-lg text-slate-400">Unlock the full power of Rhockstar Connect. Get verified, increase your visibility, and build meaningful relationships faster.</p>
       </div>
 
@@ -48,8 +86,13 @@ export default function PremiumPage() {
             ))}
           </div>
           
-          <button className="w-full neo-button-secondary py-4 text-white font-bold hover:bg-white/10 transition-colors mt-auto">
-            Choose Pro
+          <button 
+            onClick={() => handleSubscribe('pro')}
+            disabled={processingTier !== null || profile?.subscriptionTier === 'pro'}
+            className="w-full neo-button-secondary py-4 text-white font-bold hover:bg-white/10 transition-colors mt-auto flex items-center justify-center gap-2"
+          >
+            {processingTier === 'pro' ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+            {profile?.subscriptionTier === 'pro' ? 'Current Plan' : 'Choose Pro'}
           </button>
         </div>
 
@@ -88,12 +131,19 @@ export default function PremiumPage() {
             ))}
           </div>
           
-          <button className="w-full relative group overflow-hidden rounded-xl bg-gradient-to-r from-brand to-brand-purple p-[1px] transition-all hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] mt-auto">
+          <div className="w-full relative group overflow-hidden rounded-xl bg-gradient-to-r from-brand to-brand-purple p-[1px] transition-all hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] mt-auto cursor-pointer">
             <div className="absolute inset-0 bg-white/20 group-hover:bg-transparent transition-colors z-0" />
-            <div className="relative z-10 flex items-center justify-center gap-2 bg-slate-900 px-6 py-4 rounded-xl group-hover:bg-opacity-0 transition-all duration-300">
-              <span className="font-bold text-white tracking-wide">Upgrade to Elite</span>
-            </div>
-          </button>
+            <button 
+              onClick={() => handleSubscribe('elite')}
+              disabled={processingTier !== null || profile?.subscriptionTier === 'elite'}
+              className="relative z-10 w-full flex items-center justify-center gap-2 bg-slate-900 px-6 py-4 rounded-xl group-hover:bg-opacity-0 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {processingTier === 'elite' ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+              <span className="font-bold text-white tracking-wide">
+                {profile?.subscriptionTier === 'elite' ? 'Current Plan' : 'Upgrade to Elite'}
+              </span>
+            </button>
+          </div>
         </div>
 
       </div>

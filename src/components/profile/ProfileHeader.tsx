@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye } from "lucide-react";
+import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { format } from "date-fns";
 
@@ -60,8 +60,9 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
         <div className="mt-4 max-w-2xl">
           <h1 className="text-4xl font-extrabold text-white flex items-center gap-3 tracking-tight">
             {profile.fullName}
-            {/* Logic for verification would go here (from Firestore role) */}
-            <CheckCircle2 className="w-6 h-6 text-brand" />
+            {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite' || profile.role === 'admin') && (
+              <CheckCircle2 className="w-6 h-6 text-brand" />
+            )}
           </h1>
           <p className="text-slate-400 font-medium text-lg mt-1 mb-4">@{profile.username}</p>
           
@@ -115,12 +116,29 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
           </div>
           <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Posts</span>
         </div>
-        <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
-          <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
-            <Eye className="w-5 h-5 text-brand-purple" />
-            0 {/* Views placeholder */}
-          </div>
-          <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Views</span>
+        <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat relative">
+          {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite' || profile.role === 'admin') ? (
+            <>
+              <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
+                <Eye className="w-5 h-5 text-brand-purple" />
+                24 {/* Views placeholder */}
+              </div>
+              <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Views</span>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 text-2xl font-bold text-slate-600 blur-[2px]">
+                <Eye className="w-5 h-5" />
+                24
+              </div>
+              <span className="text-xs font-bold text-slate-600 mt-1 uppercase tracking-wider blur-[1px]">Views</span>
+              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-[1px]">
+                <div className="bg-slate-800/80 p-2 rounded-full border border-white/5">
+                  <Lock className="w-4 h-4 text-slate-400" />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

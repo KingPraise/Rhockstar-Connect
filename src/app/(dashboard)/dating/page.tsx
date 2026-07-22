@@ -16,8 +16,14 @@ export default function DatingPage() {
   const [matchModal, setMatchModal] = useState<UserBasic | null>(null);
   const [animatingCard, setAnimatingCard] = useState<'like' | 'pass' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [swipesToday, setSwipesToday] = useState(0);
 
   useEffect(() => {
+    // Load swipes from local storage for today
+    const dateKey = new Date().toISOString().split('T')[0];
+    const saved = localStorage.getItem(`dating_swipes_${dateKey}`);
+    if (saved) setSwipesToday(parseInt(saved, 10));
+
     const fetchProspects = async () => {
       if (!profile?.uid) return;
       
@@ -37,9 +43,23 @@ export default function DatingPage() {
   const handleAction = async (action: 'like' | 'pass') => {
     if (!profile?.uid || prospects.length === 0 || isProcessing) return;
     
+    // Check premium limits
+    if ((profile.subscriptionTier === 'free' || !profile.subscriptionTier) && swipesToday >= 5) {
+      if (confirm("You've reached your free limit of 5 swipes per day! Upgrade to Premium for unlimited swipes. Go to Premium page?")) {
+        router.push('/premium');
+      }
+      return;
+    }
+    
     setIsProcessing(true);
     setAnimatingCard(action);
     
+    // Update swipe count
+    const newSwipes = swipesToday + 1;
+    setSwipesToday(newSwipes);
+    const dateKey = new Date().toISOString().split('T')[0];
+    localStorage.setItem(`dating_swipes_${dateKey}`, newSwipes.toString());
+
     const currentProspect = prospects[0];
     
     // Animate out for 300ms before removing

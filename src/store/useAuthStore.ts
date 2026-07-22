@@ -19,6 +19,10 @@ export interface UserProfile {
   education?: string;
   socialLinks?: Record<string, string>;
   visibility?: 'public' | 'connections' | 'private';
+  role?: 'admin' | 'user';
+  subscriptionTier?: 'free' | 'pro' | 'elite';
+  subscriptionStatus?: 'active' | 'inactive';
+  savedPosts?: string[];
 }
 
 interface AuthState {

@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send } from "lucide-react";
 import { useState } from "react";
-import { toggleLike, Post } from "@/lib/services/posts";
+import { toggleLike, toggleSavePost, addComment, Post } from "@/lib/services/posts";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
 
@@ -12,8 +12,12 @@ interface PostCardProps {
 }
 
 export default function PostCard({ post }: PostCardProps) {
-  const { profile } = useAuthStore();
+  const { profile, setProfile } = useAuthStore();
   const [isLiking, setIsLiking] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [isCommenting, setIsCommenting] = useState(false);
 
   // Check if current user liked it
   const isLiked = profile ? post.likes?.includes(profile.uid) : false;
@@ -24,6 +28,46 @@ export default function PostCard({ post }: PostCardProps) {
     setIsLiking(true);
     await toggleLike(post.id, profile.uid);
     setIsLiking(false);
+  };
+
+  const isSaved = profile?.savedPosts?.includes(post.id) || false;
+
+  const handleSave = async () => {
+    if (!profile || isSaving) return;
+    setIsSaving(true);
+    const res = await toggleSavePost(post.id, profile.uid);
+    if (res.success && res.isSaved !== undefined) {
+      // Update local profile state
+      const newSavedPosts = res.isSaved 
+        ? [...(profile.savedPosts || []), post.id]
+        : (profile.savedPosts || []).filter(id => id !== post.id);
+      
+      setProfile({ ...profile, savedPosts: newSavedPosts });
+    }
+    setIsSaving(false);
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: `Post by ${post.user.name}`,
+        text: post.content,
+        url: window.location.href,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(`${window.location.href}#${post.id}`);
+      alert("Link copied to clipboard!");
+    }
+  };
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !commentText.trim() || isCommenting) return;
+    
+    setIsCommenting(true);
+    await addComment(post.id, profile, commentText.trim());
+    setCommentText("");
+    setIsCommenting(false);
   };
 
   // Format timestamp safely
@@ -89,20 +133,95 @@ export default function PostCard({ post }: PostCardProps) {
           <span>{likeCount}</span>
         </button>
 
-        <button className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-brand transition-all group">
+        <button 
+          onClick={() => setShowComments(!showComments)}
+          className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-brand transition-all group"
+        >
           <div className="p-2 rounded-full neo-card bg-slate-800/30 group-hover:border-brand/30">
             <MessageCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
           </div>
           <span>{post.commentsCount || 0}</span>
         </button>
 
-        <button className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-all group ml-auto">
+        <button 
+          onClick={handleShare}
+          className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-all group"
+        >
           <div className="p-2 rounded-full neo-card bg-slate-800/30 group-hover:border-emerald-400/30">
             <Share2 className="w-4 h-4 transition-transform group-hover:scale-110" />
           </div>
           <span className="hidden sm:inline">Share</span>
         </button>
+        
+        <button 
+          onClick={handleSave}
+          disabled={!profile || isSaving}
+          className={`flex items-center gap-2 text-sm font-medium transition-all group ml-auto ${
+            isSaved ? "text-amber-400" : "text-slate-400 hover:text-amber-400"
+          }`}
+        >
+          <div className={`p-2 rounded-full neo-card ${isSaved ? 'bg-amber-400/10 border-amber-400/30' : 'bg-slate-800/30 hover:border-amber-400/30'}`}>
+            <Bookmark className={`w-4 h-4 transition-transform group-hover:scale-110 ${isSaved ? 'fill-current' : ''}`} />
+          </div>
+        </button>
       </div>
+
+      {/* Comments Section */}
+      {showComments && (
+        <div className="mt-4 pt-4 border-t border-white/5 animate-in fade-in slide-in-from-top-2">
+          {post.comments && post.comments.length > 0 ? (
+            <div className="space-y-4 mb-4">
+              {post.comments.map((comment) => {
+                let cTimeAgo = "Just now";
+                const cCreatedAt = new Date(comment.createdAt);
+                if (!isNaN(cCreatedAt.getTime())) {
+                  cTimeAgo = formatDistanceToNow(cCreatedAt, { addSuffix: true });
+                }
+                return (
+                  <div key={comment.id} className="flex gap-3">
+                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0">
+                      {comment.user.avatar}
+                    </div>
+                    <div className="flex-1 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-white text-sm">{comment.user.name}</span>
+                        <span className="text-xs text-slate-500">{cTimeAgo}</span>
+                      </div>
+                      <p className="text-sm text-slate-300">{comment.content}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center text-sm text-slate-500 py-2">
+              No comments yet. Be the first to start the conversation!
+            </div>
+          )}
+
+          {/* Add Comment Input */}
+          <form onSubmit={handleAddComment} className="flex gap-2 items-center mt-4">
+            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0">
+              {profile?.avatar || profile?.fullName.substring(0, 2).toUpperCase()}
+            </div>
+            <input
+              type="text"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write a comment..."
+              className="flex-1 bg-slate-900/50 border border-white/10 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-brand/50"
+              disabled={isCommenting}
+            />
+            <button
+              type="submit"
+              disabled={!commentText.trim() || isCommenting}
+              className="p-2 rounded-full bg-brand/20 text-brand hover:bg-brand/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

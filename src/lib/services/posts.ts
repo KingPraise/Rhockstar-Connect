@@ -28,6 +28,7 @@ export interface Post {
   createdAt: unknown;
   likes: string[];
   commentsCount: number;
+  comments?: Comment[];
 }
 
 // Create a new post
@@ -100,6 +101,75 @@ export const toggleLike = async (postId: string, userId: string) => {
     return { success: false, error: "Post not found" };
   } catch (error: unknown) {
     console.error("Error toggling like:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
+export interface Comment {
+  id: string;
+  userId: string;
+  user: {
+    name: string;
+    handle: string;
+    avatar: string;
+  };
+  content: string;
+  createdAt: string;
+}
+
+// Add a comment to a post
+export const addComment = async (postId: string, user: UserProfile, content: string) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postSnap = await getDoc(postRef);
+
+    if (postSnap.exists()) {
+      const newComment: Comment = {
+        id: Date.now().toString(),
+        userId: user.uid,
+        user: {
+          name: user.fullName,
+          handle: user.username,
+          avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase()
+        },
+        content,
+        createdAt: new Date().toISOString()
+      };
+
+      const currentComments = postSnap.data().comments || [];
+      await updateDoc(postRef, {
+        comments: [...currentComments, newComment],
+        commentsCount: (postSnap.data().commentsCount || 0) + 1
+      });
+
+      return { success: true };
+    }
+    return { success: false, error: "Post not found" };
+  } catch (error: unknown) {
+    console.error("Error adding comment:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
+// Toggle save a post for a user
+export const toggleSavePost = async (postId: string, userId: string) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      const savedPosts = userData.savedPosts || [];
+      const isSaved = savedPosts.includes(postId);
+
+      await updateDoc(userRef, {
+        savedPosts: isSaved ? arrayRemove(postId) : arrayUnion(postId)
+      });
+      return { success: true, isSaved: !isSaved };
+    }
+    return { success: false, error: "User not found" };
+  } catch (error: unknown) {
+    console.error("Error saving post:", error);
     return { success: false, error: (error as Error).message };
   }
 };
