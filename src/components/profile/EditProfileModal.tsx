@@ -4,7 +4,8 @@ import { useState } from "react";
 import { X, Upload, Save, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { updateUserProfile } from "@/lib/services/users";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 
 interface EditProfileModalProps {
   onClose: () => void;
@@ -55,9 +56,19 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
       let avatarUrl = profile.avatar;
       
       if (avatarFile) {
-        const storage = getStorage();
+        // Create a timeout promise to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Upload timed out. Check your internet connection or Firebase Storage rules.")), 15000);
+        });
+
         const storageRef = ref(storage, `avatars/${profile.uid}_${Date.now()}`);
-        const snapshot = await uploadBytes(storageRef, avatarFile);
+        
+        // Race the upload against the 15-second timeout
+        const snapshot = await Promise.race([
+          uploadBytes(storageRef, avatarFile),
+          timeoutPromise
+        ]) as any;
+
         avatarUrl = await getDownloadURL(snapshot.ref);
       }
 

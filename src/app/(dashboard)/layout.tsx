@@ -1,4 +1,5 @@
 import Sidebar from "@/components/layout/Sidebar";
+import MobileNav from "@/components/layout/MobileNav";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 export default function DashboardLayout({
@@ -7,7 +8,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#020617] text-white relative overflow-hidden">
+    <div className="flex min-h-screen bg-[#020617] text-white relative overflow-hidden pb-16 md:pb-0">
       {/* Neomorphic Background Glows */}
       <div className="neo-glow bg-brand/10 w-[800px] h-[800px] top-[-300px] left-[-200px]" />
       <div className="neo-glow bg-brand-purple/10 w-[600px] h-[600px] bottom-[20%] right-[-100px]" style={{ animationDelay: '3s' }} />
@@ -19,6 +20,9 @@ export default function DashboardLayout({
           {children}
         </ProtectedRoute>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileNav />
     </div>
   );
 }

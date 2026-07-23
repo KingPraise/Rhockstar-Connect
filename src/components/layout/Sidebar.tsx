@@ -107,6 +107,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              prefetch={true}
               className={`flex items-center ${isMinimized ? "justify-center px-0" : "gap-4 px-5"} py-3 rounded-xl font-medium transition-all group relative ${
                 isActive 
                   ? "bg-brand/10 text-brand shadow-[inset_0_0_15px_rgba(56,189,248,0.1)] border border-brand/20" 
