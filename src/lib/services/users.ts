@@ -22,12 +22,15 @@ export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBas
     
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      users.push({
-        uid: docSnap.id,
-        fullName: data.fullName,
-        username: data.username,
-        avatar: data.avatar || data.fullName.substring(0, 2).toUpperCase()
-      });
+      // Exclude super admins from public listings
+      if (data.role !== 'admin') {
+        users.push({
+          uid: docSnap.id,
+          fullName: data.fullName,
+          username: data.username,
+          avatar: data.avatar || data.fullName.substring(0, 2).toUpperCase()
+        });
+      }
     });
 
     return { success: true, users };

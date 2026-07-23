@@ -97,8 +97,7 @@ export const sendMessage = async (chatId: string, senderId: string, text: string
 export const subscribeToChats = (userId: string, callback: (chats: Chat[]) => void) => {
   const q = query(
     collection(db, 'chats'), 
-    where('participants', 'array-contains', userId),
-    orderBy('lastMessageTime', 'desc')
+    where('participants', 'array-contains', userId)
   );
   
   return onSnapshot(q, (snapshot) => {
@@ -106,7 +105,18 @@ export const subscribeToChats = (userId: string, callback: (chats: Chat[]) => vo
     snapshot.forEach((doc) => {
       chats.push({ id: doc.id, ...doc.data() } as Chat);
     });
+    
+    // Sort in memory to avoid requiring a Firestore composite index
+    chats.sort((a, b) => {
+      // Handle Firebase Timestamps
+      const timeA = (a.lastMessageTime as any)?.toMillis?.() || 0;
+      const timeB = (b.lastMessageTime as any)?.toMillis?.() || 0;
+      return timeB - timeA;
+    });
+
     callback(chats);
+  }, (error) => {
+    console.error("Chats subscription error:", error);
   });
 };
 
