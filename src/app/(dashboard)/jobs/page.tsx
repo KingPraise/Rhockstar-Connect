@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { getJobs, JobListing } from "@/lib/services/jobs";
-import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2 } from "lucide-react";
+import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2, Lock, Crown } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
+import PremiumLockModal from "@/components/ui/PremiumLockModal";
 
 export default function JobsPage() {
+  const { profile } = useAuthStore();
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
   const [isApplying, setIsApplying] = useState<string | null>(null);
+  const [premiumLockOpen, setPremiumLockOpen] = useState(false);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -29,7 +33,14 @@ export default function JobsPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const handleApply = async (jobId: string) => {
+  const handleApply = async (jobId: string, isFeatured?: boolean) => {
+    const isFree = !profile?.subscriptionTier || profile.subscriptionTier === 'free';
+    
+    if (isFree && (appliedJobs.size >= 2 || isFeatured)) {
+      setPremiumLockOpen(true);
+      return;
+    }
+
     setIsApplying(jobId);
     // Simulate application process
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -142,6 +153,13 @@ export default function JobsPage() {
           )}
         </div>
       )}
+
+      <PremiumLockModal
+        isOpen={premiumLockOpen}
+        onClose={() => setPremiumLockOpen(false)}
+        title="Unlock Unlimited Job Applications"
+        description="Free tier members are limited to 2 job applications per month. Upgrade to Pro or Elite for unlimited job applications!"
+      />
     </div>
   );
 }

@@ -9,8 +9,9 @@ import {
   sendConnectionRequest, 
   updateConnectionStatus 
 } from "@/lib/services/connections";
-import { Loader2, Users, UserPlus, Check, X, Search } from "lucide-react";
+import { Loader2, Users, UserPlus, Check, X, Search, Lock, Crown, Filter } from "lucide-react";
 import Link from "next/link";
+import PremiumLockModal from "@/components/ui/PremiumLockModal";
 
 export default function NetworkPage() {
   const { profile } = useAuthStore();
@@ -20,6 +21,7 @@ export default function NetworkPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [premiumLockOpen, setPremiumLockOpen] = useState(false);
 
   const fetchData = async () => {
     if (!profile?.uid) return;
@@ -128,6 +130,28 @@ export default function NetworkPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
+      </div>
+
+      {/* PREMIUM FILTERS BAR */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2">
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
+          <Filter className="w-3.5 h-3.5 text-amber-400" /> Filters:
+        </span>
+        {[
+          "Verified Gold Badge Only",
+          "Senior Tech & Executive Roles",
+          "Highest Profile Views",
+          "Active Hiring Managers"
+        ].map((filterLabel, idx) => (
+          <button
+            key={idx}
+            onClick={() => setPremiumLockOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500/10 transition-all flex items-center gap-1.5 shrink-0 group"
+          >
+            <Lock className="w-3 h-3 text-amber-400 group-hover:scale-110 transition-transform" />
+            <span>{filterLabel}</span>
+          </button>
+        ))}
       </div>
 
       {/* PENDING INVITATIONS */}
@@ -239,6 +263,12 @@ export default function NetworkPage() {
         </div>
       </section>
       
+      <PremiumLockModal
+        isOpen={premiumLockOpen}
+        onClose={() => setPremiumLockOpen(false)}
+        title="Unlock Advanced Professional Search"
+        description="Filter professionals by Verified Badges, Executive Seniority, High Industry Ratings, and Active Hiring Status."
+      />
     </div>
   );
 }

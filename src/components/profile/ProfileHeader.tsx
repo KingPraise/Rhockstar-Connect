@@ -11,12 +11,18 @@ interface ProfileHeaderProps {
   onConnectClick?: () => void;
 }
 
+import { useState } from "react";
+import { Crown } from "lucide-react";
+import PremiumLockModal from "@/components/ui/PremiumLockModal";
+
 export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile = true, onConnectClick }: ProfileHeaderProps) {
   const { profile: loggedInProfile } = useAuthStore();
   const profile = customProfile || loggedInProfile;
+  const [premiumLockOpen, setPremiumLockOpen] = useState(false);
 
   if (!profile) return null; // Or a skeleton loader
 
+  const isFree = !profile.subscriptionTier || profile.subscriptionTier === 'free';
   const locationString = typeof profile.location === 'string' ? profile.location : (profile.location?.city ? `${profile.location.city}, ${profile.location.country}` : "Earth");
 
   return (
@@ -55,15 +61,25 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end pt-4 pb-2">
+        <div className="flex justify-end pt-4 pb-2 gap-2">
           {isOwnProfile ? (
-            <button 
-              onClick={onEditClick}
-              className="py-2 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm flex items-center gap-2 transition-all border border-white/5 shadow-lg hover:border-white/10"
-            >
-              <Pencil className="w-4 h-4" />
-              Edit Profile
-            </button>
+            <>
+              <button 
+                onClick={() => setPremiumLockOpen(true)}
+                className="py-2 px-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-300 border border-amber-500/30 hover:border-amber-400 font-bold text-sm flex items-center gap-1.5 transition-all shadow-md"
+              >
+                {isFree ? <Lock className="w-4 h-4 text-amber-400" /> : <Crown className="w-4 h-4 text-amber-400" />}
+                <span>Boost Profile</span>
+              </button>
+
+              <button 
+                onClick={onEditClick}
+                className="py-2 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm flex items-center gap-2 transition-all border border-white/5 shadow-lg hover:border-white/10"
+              >
+                <Pencil className="w-4 h-4" />
+                Edit Profile
+              </button>
+            </>
           ) : (
             <button 
               onClick={onConnectClick}
@@ -150,15 +166,25 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
                 24
               </div>
               <span className="text-xs font-bold text-slate-600 mt-1 uppercase tracking-wider blur-[1px]">Views</span>
-              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-[1px]">
-                <div className="bg-slate-800/80 p-2 rounded-full border border-white/5">
-                  <Lock className="w-4 h-4 text-slate-400" />
+              <div 
+                onClick={() => setPremiumLockOpen(true)}
+                className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-[1px] cursor-pointer"
+              >
+                <div className="bg-slate-800/80 p-2 rounded-full border border-white/5 hover:border-amber-500/50 transition-colors">
+                  <Lock className="w-4 h-4 text-amber-400" />
                 </div>
               </div>
             </>
           )}
         </div>
       </div>
+
+      <PremiumLockModal
+        isOpen={premiumLockOpen}
+        onClose={() => setPremiumLockOpen(false)}
+        title="Unlock Profile Views & Boost"
+        description="See who viewed your profile, boost your ranking in search results, and get a Gold Verified Badge."
+      />
     </div>
   );
 }

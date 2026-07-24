@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { getDatingProspects, recordDatingAction } from "@/lib/services/dating";
-import { Heart, X, Sparkles, Loader2, MessageCircleHeart } from "lucide-react";
+import { Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, Eye } from "lucide-react";
 import { getOrCreateChat } from "@/lib/services/messages";
 import { useRouter } from "next/navigation";
+import PremiumLockModal from "@/components/ui/PremiumLockModal";
 
 export default function DatingPage() {
   const { profile } = useAuthStore();
@@ -17,6 +18,11 @@ export default function DatingPage() {
   const [animatingCard, setAnimatingCard] = useState<'like' | 'pass' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [swipesToday, setSwipesToday] = useState(0);
+  const [premiumLockOpen, setPremiumLockOpen] = useState(false);
+  const [lockDetails, setLockDetails] = useState<{ title: string; desc: string }>({
+    title: "Unlock Unlimited Dating Swipes",
+    desc: "You've reached your daily free limit of 5 swipes. Upgrade to Premium for unlimited matches & swipes!"
+  });
 
   useEffect(() => {
     // Load swipes from local storage for today
@@ -40,14 +46,20 @@ export default function DatingPage() {
     fetchProspects();
   }, [profile?.uid]);
 
+  const openLock = (title: string, desc: string) => {
+    setLockDetails({ title, desc });
+    setPremiumLockOpen(true);
+  };
+
   const handleAction = async (action: 'like' | 'pass') => {
     if (!profile?.uid || prospects.length === 0 || isProcessing) return;
     
     // Check premium limits
     if ((profile.subscriptionTier === 'free' || !profile.subscriptionTier) && swipesToday >= 5) {
-      if (confirm("You've reached your free limit of 5 swipes per day! Upgrade to Premium for unlimited swipes. Go to Premium page?")) {
-        router.push('/premium');
-      }
+      openLock(
+        "Unlock Unlimited Dating Swipes",
+        "You've reached your daily free limit of 5 swipes. Upgrade to Premium for unlimited matches & swipes!"
+      );
       return;
     }
     
@@ -102,6 +114,37 @@ export default function DatingPage() {
             <p className="text-slate-400 font-medium">Connect with professionals on a deeper level.</p>
           </div>
         </div>
+      </div>
+
+      {/* WHO LIKED YOU - PREMIUM LOCKED BANNER */}
+      <div 
+        onClick={() => openLock("See Who Liked Your Profile", "Upgrade to Premium or Elite to see who already liked your profile and match with them instantly!")}
+        className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-brand-purple/10 border border-amber-500/30 backdrop-blur-md flex items-center justify-between cursor-pointer hover:border-amber-500/60 transition-all group"
+      >
+        <div className="flex items-center gap-3">
+          <div className="relative flex -space-x-3">
+            <div className="w-10 h-10 rounded-full bg-slate-800 border-2 border-amber-500/50 flex items-center justify-center font-extrabold text-amber-400 text-xs blur-[2px]">
+              ?
+            </div>
+            <div className="w-10 h-10 rounded-full bg-slate-800 border-2 border-rose-500/50 flex items-center justify-center font-extrabold text-rose-400 text-xs blur-[2px]">
+              ?
+            </div>
+            <div className="w-10 h-10 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-400 font-bold">
+              <Lock className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <h3 className="font-extrabold text-white text-sm flex items-center gap-1.5">
+              <span>See Who Liked You</span>
+              <Crown className="w-3.5 h-3.5 text-amber-400" />
+            </h3>
+            <p className="text-xs text-slate-400">2 people already liked your dating profile today</p>
+          </div>
+        </div>
+
+        <button className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs group-hover:scale-105 transition-transform flex items-center gap-1">
+          <Eye className="w-3.5 h-3.5" /> Unlock Now
+        </button>
       </div>
 
       {/* SWIPE STACK */}
@@ -200,6 +243,13 @@ export default function DatingPage() {
           </div>
         </div>
       )}
+
+      <PremiumLockModal
+        isOpen={premiumLockOpen}
+        onClose={() => setPremiumLockOpen(false)}
+        title={lockDetails.title}
+        description={lockDetails.desc}
+      />
     </div>
   );
 }
