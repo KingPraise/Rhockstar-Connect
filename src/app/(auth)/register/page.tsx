@@ -1,22 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { User, Mail, Lock, UserPlus, Loader2, AtSign } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { User, Mail, Lock, UserPlus, Loader2, AtSign, Gift } from "lucide-react";
 import { registerUser } from "@/lib/auth";
 import Image from "next/image";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const ref = searchParams.get("ref") || searchParams.get("code") || searchParams.get("referral");
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, [searchParams]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +66,7 @@ export default function RegisterPage() {
       return;
     }
 
-    const { user, error } = await registerUser(email, password, fullName, username);
+    const { user, error } = await registerUser(email, password, fullName, username, referralCode);
 
     if (error) {
       setError(error);
@@ -183,6 +193,22 @@ export default function RegisterPage() {
                 required
               />
             </div>
+            <div className="space-y-2 relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10 pt-7">
+                <Gift className="w-5 h-5 text-amber-400 group-focus-within:text-brand-purple transition-colors" />
+              </div>
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Referral Code (Optional)</label>
+                {referralCode && <span className="text-xs text-amber-400 font-bold">Applied! ✨</span>}
+              </div>
+              <input
+                type="text"
+                className="w-full bg-slate-800/40 border border-amber-500/20 rounded-xl pl-12 pr-4 py-4 text-amber-200 placeholder:text-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all shadow-inner"
+                placeholder="Enter referral username (e.g. elijah)"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value)}
+              />
+            </div>
 
             <div className="pt-2">
               <label className="flex items-center gap-3 text-sm text-slate-400 cursor-pointer hover:text-white transition-colors group">
@@ -240,5 +266,17 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
   );
 }

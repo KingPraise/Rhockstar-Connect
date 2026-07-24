@@ -17,7 +17,8 @@ import {
   Settings, 
   Sparkles, 
   LogOut, 
-  FileText 
+  FileText,
+  Gift
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logoutUser } from "@/lib/auth";
@@ -43,6 +44,7 @@ export default function MobileHeader() {
     { name: "Dating", href: "/dating", icon: Heart },
     { name: "Jobs", href: "/jobs", icon: Briefcase },
     { name: "Notifications", href: "/notifications", icon: Bell },
+    { name: "Rewards & Referrals", href: "/referrals", icon: Gift, badge: "NEW" },
     { name: "Premium", href: "/premium", icon: Sparkles, badge: "PRO" },
     { name: "Settings", href: "/settings", icon: Settings },
     { name: "Terms of Service", href: "/terms", icon: FileText },

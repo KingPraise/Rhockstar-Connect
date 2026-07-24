@@ -7,7 +7,15 @@ import {
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
-export const registerUser = async (email: string, password: string, fullName: string, username: string) => {
+import { recordReferral } from "./services/referrals";
+
+export const registerUser = async (
+  email: string, 
+  password: string, 
+  fullName: string, 
+  username: string,
+  referralCode?: string
+) => {
   try {
     // 1. Create user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -22,15 +30,24 @@ export const registerUser = async (email: string, password: string, fullName: st
     await setDoc(doc(db, "users", user.uid), {
       uid: user.uid,
       fullName,
-      username,
+      username: username.toLowerCase().replace('@', ''),
       email,
       bio: "",
       headline: "",
       location: { city: "", state: "", country: "" },
       stats: { posts: 0, followers: 0, following: 0, connections: 0 },
+      referralCode: username.toLowerCase().replace('@', ''),
+      referralCount: 0,
+      referredFriends: [],
+      claimedRewards: [],
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
     });
+
+    // 4. Record referral if referral code was provided
+    if (referralCode && referralCode.trim()) {
+      await recordReferral(referralCode, user.uid, fullName);
+    }
 
     return { user, error: null };
   } catch (error: unknown) {

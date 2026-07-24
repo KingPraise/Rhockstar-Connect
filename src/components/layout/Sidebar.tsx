@@ -16,7 +16,8 @@ import {
   LogOut,
   Sparkles,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Gift
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logoutUser } from "@/lib/auth";
@@ -41,6 +42,7 @@ export default function Sidebar() {
     { name: "Dating", href: "/dating", icon: Heart },
     { name: "Jobs", href: "/jobs", icon: Briefcase },
     { name: "Notifications", href: "/notifications", icon: Bell },
+    { name: "Rewards & Referrals", href: "/referrals", icon: Gift },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 

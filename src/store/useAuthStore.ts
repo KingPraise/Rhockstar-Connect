@@ -23,6 +23,10 @@ export interface UserProfile {
   subscriptionTier?: 'free' | 'pro' | 'elite';
   subscriptionStatus?: 'active' | 'inactive';
   savedPosts?: string[];
+  referralCode?: string;
+  referralCount?: number;
+  referredFriends?: Array<{ uid: string; name: string; joinedAt: string }>;
+  claimedRewards?: string[];
 }
 
 interface AuthState {
