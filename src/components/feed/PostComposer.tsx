@@ -3,7 +3,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { Image as ImageIcon, Video, Send, X, Loader2, Sparkles } from "lucide-react";
+import { Image as ImageIcon, Video, Send, X, Loader2, Sparkles, AlertCircle } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createPost } from "@/lib/services/posts";
 
@@ -13,6 +13,7 @@ export default function PostComposer() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isPosting, setIsPosting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,6 +21,7 @@ export default function PostComposer() {
       const file = e.target.files[0];
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+      setErrorMsg(null);
     }
   };
 
@@ -36,14 +38,28 @@ export default function PostComposer() {
     if ((!content.trim() && !imageFile) || !profile) return;
     
     setIsPosting(true);
-    const result = await createPost(profile, content, imageFile);
+    setErrorMsg(null);
+
+    // 10 second timeout race condition
+    const postPromise = createPost(profile, content, imageFile);
+    const timeoutPromise = new Promise<{ success: boolean; error?: string }>((resolve) => {
+      setTimeout(() => {
+        resolve({ 
+          success: false, 
+          error: "Posting timed out after 10 seconds. Storage server took too long to respond. Please try again." 
+        });
+      }, 10000);
+    });
+
+    const result = await Promise.race([postPromise, timeoutPromise]);
     setIsPosting(false);
 
     if (result.success) {
       setContent("");
       removeImage();
+      setErrorMsg(null);
     } else {
-      alert("Failed to create post. Please try again.");
+      setErrorMsg(result.error || "Failed to create post. Please try again.");
     }
   };
 
@@ -84,6 +100,22 @@ export default function PostComposer() {
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand/10 rounded-full blur-2xl" />
       
       <form onSubmit={handlePost}>
+        {errorMsg && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-rose-400 text-sm">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setErrorMsg(null)}
+              className="text-rose-400 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         <div className="flex gap-4">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex-shrink-0 flex items-center justify-center font-bold text-white shadow-inner">
             {profile.avatar || profile.fullName.substring(0, 2).toUpperCase()}

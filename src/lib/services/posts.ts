@@ -31,6 +31,35 @@ export interface Post {
   comments?: Comment[];
 }
 
+const uploadImageWithFallback = async (imageFile: File, userUid: string): Promise<string> => {
+  const convertToBase64 = (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(imageFile);
+    });
+  };
+
+  try {
+    const uploadPromise = (async () => {
+      const safeName = imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
+      const storageRef = ref(storage, `posts/${userUid}_${Date.now()}_${safeName}`);
+      const snapshot = await uploadBytes(storageRef, imageFile);
+      return await getDownloadURL(snapshot.ref);
+    })();
+
+    const timeoutPromise = new Promise<string>((_, reject) => 
+      setTimeout(() => reject(new Error("Storage upload timed out")), 5000)
+    );
+
+    return await Promise.race([uploadPromise, timeoutPromise]);
+  } catch (err) {
+    console.warn("Storage upload failed or timed out. Falling back to data URL:", err);
+    return await convertToBase64();
+  }
+};
+
 // Create a new post
 export const createPost = async (
   user: UserProfile, 
@@ -41,10 +70,7 @@ export const createPost = async (
     let imageUrl = null;
 
     if (imageFile) {
-      // Upload image to Firebase Storage
-      const storageRef = ref(storage, `posts/${user.uid}_${Date.now()}_${imageFile.name}`);
-      const snapshot = await uploadBytes(storageRef, imageFile);
-      imageUrl = await getDownloadURL(snapshot.ref);
+      imageUrl = await uploadImageWithFallback(imageFile, user.uid);
     }
 
     // Add post to Firestore
