@@ -43,8 +43,7 @@ export const subscribeToNotifications = (userId: string, callback: (notification
   const notifRef = collection(db, 'notifications');
   const q = query(
     notifRef, 
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
+    where('userId', '==', userId)
   );
 
   return onSnapshot(q, (snapshot) => {
@@ -52,7 +51,17 @@ export const subscribeToNotifications = (userId: string, callback: (notification
     snapshot.forEach((doc) => {
       notifications.push({ id: doc.id, ...doc.data() } as Notification);
     });
+
+    // Sort in memory to avoid requiring a Firestore composite index
+    notifications.sort((a, b) => {
+      const timeA = (a.createdAt as any)?.toMillis?.() || 0;
+      const timeB = (b.createdAt as any)?.toMillis?.() || 0;
+      return timeB - timeA;
+    });
+
     callback(notifications);
+  }, (error) => {
+    console.error("Notifications subscription error:", error);
   });
 };
 

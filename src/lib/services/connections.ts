@@ -11,6 +11,8 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 
+import { createNotification } from './notifications';
+
 export interface ConnectionRequest {
   id: string;
   fromUserId: string;
@@ -39,6 +41,16 @@ export const sendConnectionRequest = async (fromUserId: string, toUserId: string
       createdAt: serverTimestamp()
     };
     await addDoc(connRef, data);
+
+    // Trigger notification to recipient
+    await createNotification({
+      userId: toUserId,
+      type: "connection",
+      title: "New Connection Request",
+      message: "Sent you a connection request.",
+      link: "/network"
+    });
+
     return { success: true };
   } catch (error: unknown) {
     console.error("Error sending connection request:", error);
@@ -53,6 +65,19 @@ export const updateConnectionStatus = async (connectionId: string, status: 'acce
       await deleteDoc(docRef);
     } else {
       await updateDoc(docRef, { status });
+
+      // Get connection doc to notify sender
+      const connSnap = await getDocs(query(collection(db, 'connections')));
+      const connData = connSnap.docs.find(d => d.id === connectionId)?.data();
+      if (connData?.fromUserId) {
+        await createNotification({
+          userId: connData.fromUserId,
+          type: "connection",
+          title: "Connection Accepted",
+          message: "Accepted your connection request!",
+          link: "/network"
+        });
+      }
     }
     return { success: true };
   } catch (error: unknown) {

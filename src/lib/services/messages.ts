@@ -8,10 +8,13 @@ import {
   serverTimestamp,
   where,
   getDocs,
+  getDoc,
   setDoc,
   doc,
   updateDoc
 } from 'firebase/firestore';
+
+import { createNotification } from './notifications';
 
 export interface Chat {
   id: string;
@@ -26,6 +29,7 @@ export interface Message {
   chatId: string;
   senderId: string;
   text: string;
+  status?: 'sent' | 'delivered' | 'read';
   createdAt: unknown;
 }
 
@@ -76,6 +80,7 @@ export const sendMessage = async (chatId: string, senderId: string, text: string
       chatId,
       senderId,
       text,
+      status: 'delivered',
       createdAt: serverTimestamp()
     };
 
@@ -86,10 +91,46 @@ export const sendMessage = async (chatId: string, senderId: string, text: string
       lastMessageTime: serverTimestamp()
     });
 
+    // Notify recipient
+    const chatSnap = await getDoc(chatRef);
+    if (chatSnap.exists()) {
+      const participants: string[] = chatSnap.data().participants || [];
+      const recipientId = participants.find(p => p !== senderId);
+      if (recipientId) {
+        await createNotification({
+          userId: recipientId,
+          type: "message",
+          title: "New Message",
+          message: text.length > 50 ? `${text.substring(0, 50)}...` : text,
+          link: "/messages"
+        });
+      }
+    }
+
     return { success: true };
   } catch (error: unknown) {
     console.error("Error sending message:", error);
     return { success: false, error: (error as Error).message };
+  }
+};
+
+// Mark messages as read in active chat
+export const markMessagesAsRead = async (chatId: string, currentUserId: string) => {
+  try {
+    const messagesRef = collection(db, `chats/${chatId}/messages`);
+    const q = query(messagesRef, where('senderId', '!=', currentUserId));
+    const snapshot = await getDocs(q);
+
+    const updatePromises: Promise<void>[] = [];
+    snapshot.forEach((docSnap) => {
+      if (docSnap.data().status !== 'read') {
+        updatePromises.push(updateDoc(doc(db, `chats/${chatId}/messages`, docSnap.id), { status: 'read' }));
+      }
+    });
+
+    await Promise.all(updatePromises);
+  } catch (error) {
+    console.error("Error marking messages read:", error);
   }
 };
 

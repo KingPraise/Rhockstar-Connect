@@ -4,7 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat } from "@/lib/services/messages";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
-import { Send, Search, Loader2, MessageSquarePlus } from "lucide-react";
+import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck } from "lucide-react";
+import { markMessagesAsRead } from "@/lib/services/messages";
 
 export default function MessagesPage() {
   const { profile } = useAuthStore();
@@ -45,19 +46,30 @@ export default function MessagesPage() {
   }, [profile?.uid]);
 
   useEffect(() => {
-    if (!activeChat) return;
+    if (!activeChat || !profile?.uid) return;
     
     // Subscribe to active chat messages
     const unsubscribe = subscribeToMessages(activeChat.id, (fetchedMessages) => {
       setMessages(fetchedMessages);
+      markMessagesAsRead(activeChat.id, profile.uid);
     });
 
     return () => unsubscribe();
-  }, [activeChat]);
+  }, [activeChat, profile?.uid]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const formatMessageTime = (timestamp: any) => {
+    if (!timestamp) return "";
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return "";
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,15 +251,29 @@ export default function MessagesPage() {
 
             {messages.map((msg) => {
               const isMine = msg.senderId === profile.uid;
+              const formattedTime = formatMessageTime(msg.createdAt);
+              const isRead = msg.status === 'read';
+
               return (
                 <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[70%] rounded-2xl px-5 py-3 ${
+                  <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 flex flex-col gap-1 ${
                     isMine 
                       ? 'bg-gradient-to-br from-brand to-brand-purple text-white rounded-tr-sm shadow-[0_5px_15px_rgba(56,189,248,0.2)]' 
                       : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-white/5'
                   }`}>
-                    <p className="leading-relaxed">{msg.text}</p>
-                    {/* Timestamp could go here if formatted */}
+                    <p className="leading-relaxed text-sm md:text-base break-words">{msg.text}</p>
+                    
+                    {/* Timestamp & Status Ticks */}
+                    <div className={`flex items-center gap-1 text-[10px] ${isMine ? 'justify-end text-white/80' : 'justify-start text-slate-400'}`}>
+                      <span>{formattedTime}</span>
+                      {isMine && (
+                        isRead ? (
+                          <CheckCheck className="w-3.5 h-3.5 text-cyan-200 inline" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 text-white/70 inline" />
+                        )
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -255,22 +281,23 @@ export default function MessagesPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Message Input */}
-          <div className="p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-md">
-            <form onSubmit={handleSendMessage} className="flex items-center gap-4">
+          {/* Message Input - Embedded Send Button guarantee visible on mobile */}
+          <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-md">
+            <form onSubmit={handleSendMessage} className="relative flex items-center w-full">
               <input 
                 type="text"
                 placeholder="Type your message..."
-                className="flex-1 bg-slate-800/50 border border-white/5 rounded-2xl px-6 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/50 transition-all shadow-inner"
+                className="w-full bg-slate-800/60 border border-white/10 rounded-2xl pl-5 pr-14 py-3.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/50 transition-all shadow-inner"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
               />
               <button 
                 type="submit"
                 disabled={!newMessage.trim()}
-                className="p-4 rounded-2xl bg-gradient-to-r from-brand to-brand-purple text-white shadow-[0_0_15px_rgba(56,189,248,0.3)] disabled:opacity-50 disabled:shadow-none transition-all hover:scale-105 active:scale-95 flex-shrink-0"
+                className="absolute right-1.5 p-2.5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white shadow-md disabled:opacity-40 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                aria-label="Send Message"
               >
-                <Send className="w-6 h-6" />
+                <Send className="w-5 h-5" />
               </button>
             </form>
           </div>
