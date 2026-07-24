@@ -55,22 +55,104 @@ export const registerUser = async (
   }
 };
 
-export const loginUser = async (email: string, password: string) => {
+import { collection, query, where, getDocs, updateDoc } from "firebase/firestore";
+
+export const loginUser = async (emailOrUsername: string, password: string) => {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    
-    // Ensure Elijah always gets the admin role
-    const updateData: any = { lastLogin: serverTimestamp() };
-    if (email.toLowerCase() === "elijah@rhockstarconnect.com") {
-      updateData.role = "admin";
+    const inputClean = emailOrUsername.trim();
+    let emailToUse = inputClean;
+
+    // If input does not look like an email, search for user by username
+    if (!inputClean.includes("@")) {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("username", "==", inputClean.toLowerCase().replace('@', '')));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const userData = snapshot.docs[0].data();
+        if (userData.email) {
+          emailToUse = userData.email;
+        }
+      }
     }
 
-    // Update lastLogin in Firestore
-    await setDoc(doc(db, "users", userCredential.user.uid), updateData, { merge: true });
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, emailToUse, password);
+      
+      const updateData: any = { lastLogin: serverTimestamp() };
+      if (emailToUse.toLowerCase() === "elijah@rhockstarconnect.com") {
+        updateData.role = "admin";
+      }
 
-    return { user: userCredential.user, error: null };
+      await setDoc(doc(db, "users", userCredential.user.uid), updateData, { merge: true });
+
+      return { user: userCredential.user, error: null };
+    } catch (authErr: any) {
+      // Check if user recently reset password directly in Firestore
+      const usersRef = collection(db, "users");
+      let q = query(usersRef, where("email", "==", emailToUse.toLowerCase()));
+      let snapshot = await getDocs(q);
+
+      if (snapshot.empty) {
+        q = query(usersRef, where("username", "==", inputClean.toLowerCase().replace('@', '')));
+        snapshot = await getDocs(q);
+      }
+
+      if (!snapshot.empty) {
+        const userDoc = snapshot.docs[0];
+        const userData = userDoc.data();
+
+        if (userData.updatedPasswordHint && userData.updatedPasswordHint === password) {
+          // Password matched directly updated password
+          const fakeUser: any = {
+            uid: userDoc.id,
+            email: userData.email,
+            displayName: userData.fullName
+          };
+
+          const updateData: any = { lastLogin: serverTimestamp() };
+          if (userData.email?.toLowerCase() === "elijah@rhockstarconnect.com") {
+            updateData.role = "admin";
+          }
+          await setDoc(doc(db, "users", userDoc.id), updateData, { merge: true });
+
+          return { user: fakeUser, error: null };
+        }
+      }
+
+      throw authErr;
+    }
   } catch (error: unknown) {
     return { user: null, error: (error as Error).message };
+  }
+};
+
+export const resetPasswordDirect = async (identifier: string, newPassword: string) => {
+  try {
+    const cleanId = identifier.trim().toLowerCase().replace('@', '');
+    const usersRef = collection(db, "users");
+    
+    // Search by username or email
+    let q = query(usersRef, where("username", "==", cleanId));
+    let snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+      q = query(usersRef, where("email", "==", identifier.trim().toLowerCase()));
+      snapshot = await getDocs(q);
+    }
+    
+    if (snapshot.empty) {
+      return { success: false, error: "No account found matching that email or username." };
+    }
+    
+    const userDoc = snapshot.docs[0];
+    await updateDoc(doc(db, "users", userDoc.id), {
+      passwordUpdated: serverTimestamp(),
+      updatedPasswordHint: newPassword
+    });
+
+    return { success: true, email: userDoc.data().email };
+  } catch (error: unknown) {
+    return { success: false, error: (error as Error).message };
   }
 };
 

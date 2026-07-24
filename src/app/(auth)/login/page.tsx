@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { loginUser } from "@/lib/auth";
 import Image from "next/image";
+import ResetPasswordModal from "@/components/auth/ResetPasswordModal";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,9 +101,13 @@ export default function LoginPage() {
                 </div>
                 <span className="font-medium group-hover:text-white transition-colors">Remember me</span>
               </label>
-              <Link href="#" className="text-sm text-slate-400 hover:text-brand font-medium transition-colors">
+              <button 
+                type="button" 
+                onClick={() => setResetModalOpen(true)}
+                className="text-sm text-slate-400 hover:text-brand font-medium transition-colors"
+              >
                 Forgot Password?
-              </Link>
+              </button>
             </div>
 
             <button
@@ -151,6 +157,11 @@ export default function LoginPage() {
           <p className="text-lg text-white/80 font-medium">Join thousands of professionals already connecting on Rhockstar Connect.</p>
         </div>
       </div>
+
+      <ResetPasswordModal 
+        isOpen={resetModalOpen} 
+        onClose={() => setResetModalOpen(false)} 
+      />
     </div>
   );
 }
