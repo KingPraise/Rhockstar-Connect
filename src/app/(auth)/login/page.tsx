@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
@@ -14,14 +14,29 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [resetModalOpen, setResetModalOpen] = useState(false);
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rhockstar_remembered_email");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const { user, error } = await loginUser(email, password);
+    if (rememberMe) {
+      localStorage.setItem("rhockstar_remembered_email", email);
+    } else {
+      localStorage.removeItem("rhockstar_remembered_email");
+    }
+
+    const { user, error } = await loginUser(email, password, rememberMe);
 
     if (error) {
       setError(error);
@@ -94,7 +109,12 @@ export default function LoginPage() {
             <div className="flex items-center justify-between pt-2">
               <label className="flex items-center gap-3 text-sm text-slate-400 cursor-pointer hover:text-white transition-colors group">
                 <div className="relative flex items-center">
-                  <input type="checkbox" className="peer appearance-none w-5 h-5 border border-slate-600 rounded bg-slate-800/50 checked:bg-brand checked:border-brand transition-all cursor-pointer" />
+                  <input 
+                    type="checkbox" 
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="peer appearance-none w-5 h-5 border border-slate-600 rounded bg-slate-800/50 checked:bg-brand checked:border-brand transition-all cursor-pointer" 
+                  />
                   <svg className="absolute w-3 h-3 text-white left-1 pointer-events-none opacity-0 peer-checked:opacity-100" viewBox="0 0 14 10" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M1 5L4.5 8.5L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>

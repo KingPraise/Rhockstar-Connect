@@ -2,7 +2,10 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  updateProfile
+  updateProfile,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
@@ -57,10 +60,17 @@ export const registerUser = async (
 
 import { collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 
-export const loginUser = async (emailOrUsername: string, password: string) => {
+export const loginUser = async (emailOrUsername: string, password: string, rememberMe: boolean = true) => {
   try {
     const inputClean = emailOrUsername.trim();
     let emailToUse = inputClean;
+
+    // Set persistence according to Remember Me checkbox
+    try {
+      await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+    } catch (persErr) {
+      console.warn("Could not set Auth persistence:", persErr);
+    }
 
     // If input does not look like an email, search for user by username
     if (!inputClean.includes("@")) {
