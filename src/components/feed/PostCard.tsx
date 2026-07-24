@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send } from "lucide-react";
-import { useState } from "react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply } from "lucide-react";
+import { useState, useRef } from "react";
 import { toggleLike, toggleSavePost, addComment, Post } from "@/lib/services/posts";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
@@ -22,10 +22,23 @@ export default function PostCard({ post }: PostCardProps) {
   const [isCommenting, setIsCommenting] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authActionName, setAuthActionName] = useState("interact");
+  const commentInputRef = useRef<HTMLInputElement>(null);
 
   const promptGuestAuth = (action: string) => {
     setAuthActionName(action);
     setAuthModalOpen(true);
+  };
+
+  const handleReplyComment = (userName: string) => {
+    if (!profile) {
+      promptGuestAuth("reply to comments");
+      return;
+    }
+    setCommentText(`@${userName} `);
+    if (!showComments) setShowComments(true);
+    setTimeout(() => {
+      commentInputRef.current?.focus();
+    }, 100);
   };
 
   // Check if current user liked it
@@ -209,6 +222,16 @@ export default function PostCard({ post }: PostCardProps) {
                         <span className="text-xs text-slate-500">{cTimeAgo}</span>
                       </div>
                       <p className="text-sm text-slate-300">{comment.content}</p>
+                      <div className="mt-2 pt-1 border-t border-white/5 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleReplyComment(comment.user.name)}
+                          className="text-xs font-semibold text-slate-400 hover:text-brand flex items-center gap-1 transition-colors"
+                        >
+                          <Reply className="w-3.5 h-3.5" />
+                          Reply
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -223,9 +246,10 @@ export default function PostCard({ post }: PostCardProps) {
           {/* Add Comment Input */}
           <form onSubmit={handleAddComment} className="flex gap-2 items-center mt-4">
             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0">
-              {profile?.avatar || profile?.fullName.substring(0, 2).toUpperCase()}
+              {profile?.avatar || profile?.fullName?.substring(0, 2).toUpperCase() || 'U'}
             </div>
             <input
+              ref={commentInputRef}
               type="text"
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
