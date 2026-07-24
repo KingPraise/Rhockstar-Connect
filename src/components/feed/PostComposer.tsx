@@ -40,15 +40,15 @@ export default function PostComposer() {
     setIsPosting(true);
     setErrorMsg(null);
 
-    // 10 second timeout race condition
+    // 15 second timeout safety condition
     const postPromise = createPost(profile, content, imageFile);
     const timeoutPromise = new Promise<{ success: boolean; error?: string }>((resolve) => {
       setTimeout(() => {
         resolve({ 
           success: false, 
-          error: "Posting timed out after 10 seconds. Storage server took too long to respond. Please try again." 
+          error: "Posting timed out. Please check your internet connection and try again." 
         });
-      }, 10000);
+      }, 15000);
     });
 
     const result = await Promise.race([postPromise, timeoutPromise]);

@@ -31,15 +31,47 @@ export interface Post {
   comments?: Comment[];
 }
 
+const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.75): Promise<string> => {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') {
+      resolve("");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = document.createElement("img");
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(event.target?.result as string);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => resolve((event.target?.result as string) || "");
+      img.src = (event.target?.result as string) || "";
+    };
+    reader.onerror = () => resolve("");
+    reader.readAsDataURL(file);
+  });
+};
+
 const uploadImageWithFallback = async (imageFile: File, userUid: string): Promise<string> => {
-  const convertToBase64 = (): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (err) => reject(err);
-      reader.readAsDataURL(imageFile);
-    });
-  };
+  const compressedBase64 = await compressImage(imageFile);
 
   try {
     const uploadPromise = (async () => {
@@ -50,13 +82,13 @@ const uploadImageWithFallback = async (imageFile: File, userUid: string): Promis
     })();
 
     const timeoutPromise = new Promise<string>((_, reject) => 
-      setTimeout(() => reject(new Error("Storage upload timed out")), 5000)
+      setTimeout(() => reject(new Error("Storage upload timed out")), 3000)
     );
 
     return await Promise.race([uploadPromise, timeoutPromise]);
   } catch (err) {
-    console.warn("Storage upload failed or timed out. Falling back to data URL:", err);
-    return await convertToBase64();
+    console.warn("Storage upload failed or timed out. Falling back to compressed image data URL:", err);
+    return compressedBase64;
   }
 };
 
