@@ -2,7 +2,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Image as ImageIcon, Video, Send, X, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Image as ImageIcon, Video, Send, X, Loader2, Sparkles } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createPost } from "@/lib/services/posts";
 
@@ -46,7 +47,36 @@ export default function PostComposer() {
     }
   };
 
-  if (!profile) return null; // Or skeleton loader
+  if (!profile) {
+    return (
+      <div className="neo-card p-6 mb-8 border border-brand/20 bg-slate-900/80 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center text-white shrink-0 shadow-md">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="font-bold text-white text-lg">Viewing as Guest</h3>
+            <p className="text-slate-400 text-sm">Log in or sign up to like, comment, share, and connect with professionals.</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <Link
+            href="/login"
+            className="flex-1 md:flex-initial py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-sm text-center shadow-md hover:scale-105 transition-all"
+          >
+            Log In
+          </Link>
+          <Link
+            href="/register"
+            className="flex-1 md:flex-initial py-2.5 px-5 rounded-xl bg-slate-800 text-white font-bold text-sm text-center border border-white/10 hover:bg-slate-700 transition-all"
+          >
+            Sign Up
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="neo-card p-6 mb-8 relative overflow-hidden">

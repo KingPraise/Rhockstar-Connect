@@ -15,22 +15,32 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     setMounted(true);
   }, []);
 
+  const isPublicRoute = 
+    pathname === "/feed" || 
+    pathname.startsWith("/profile") || 
+    pathname === "/jobs" || 
+    pathname === "/terms";
+
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !user && !isPublicRoute) {
       if (pathname.startsWith("/admin")) {
         router.replace("/admin/login");
       } else {
         router.replace("/login");
       }
     }
-  }, [user, isLoading, router, pathname]);
+  }, [user, isLoading, router, pathname, isPublicRoute]);
 
-  if (!mounted || isLoading || !user) {
+  if (!mounted || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh] w-full">
         <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
+  }
+
+  if (!user && !isPublicRoute) {
+    return null;
   }
 
   return <>{children}</>;

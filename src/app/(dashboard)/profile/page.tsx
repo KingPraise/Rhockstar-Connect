@@ -1,18 +1,108 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import EditProfileModal from "@/components/profile/EditProfileModal";
-import { Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap } from "lucide-react";
+import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
+import { Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap, Loader2, UserPlus, LogIn } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { getUserById, getUserByUsername } from "@/lib/services/users";
+import { sendConnectionRequest } from "@/lib/services/connections";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const { profile } = useAuthStore();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { profile: loggedInProfile } = useAuthStore();
+  
+  const searchParams = useSearchParams();
+  const queryUser = searchParams.get("user") || searchParams.get("username");
+  const queryUid = searchParams.get("uid");
+
+  const [targetUser, setTargetUser] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [connectSuccess, setConnectSuccess] = useState(false);
+
+  useEffect(() => {
+    const fetchTargetUser = async () => {
+      if (queryUser) {
+        setLoading(true);
+        const res = await getUserByUsername(queryUser);
+        if (res.success && res.user) {
+          setTargetUser(res.user);
+        }
+        setLoading(false);
+      } else if (queryUid) {
+        setLoading(true);
+        const res = await getUserById(queryUid);
+        if (res.success && res.user) {
+          setTargetUser(res.user);
+        }
+        setLoading(false);
+      } else {
+        setTargetUser(null);
+      }
+    };
+    fetchTargetUser();
+  }, [queryUser, queryUid]);
+
+  const activeProfile = targetUser || loggedInProfile;
+  const isOwnProfile = Boolean(!targetUser || (loggedInProfile && targetUser?.uid === loggedInProfile.uid));
+
+  const handleConnect = async () => {
+    if (!loggedInProfile) {
+      setAuthModalOpen(true);
+      return;
+    }
+    if (activeProfile?.uid) {
+      await sendConnectionRequest(loggedInProfile.uid, activeProfile.uid);
+      setConnectSuccess(true);
+      setTimeout(() => setConnectSuccess(false), 3000);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] w-full">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+      </div>
+    );
+  }
+
+  if (!activeProfile) {
+    return (
+      <div className="w-full max-w-3xl mx-auto neo-card p-10 text-center flex flex-col items-center gap-6 my-12 bg-slate-900/80">
+        <div className="w-16 h-16 rounded-2xl bg-brand/10 text-brand flex items-center justify-center">
+          <UserPlus className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-extrabold text-white">Profile Not Found or Guest Mode</h2>
+        <p className="text-slate-400">Log in to view your profile or explore professionals on Rhockstar Connect.</p>
+        <div className="flex gap-4">
+          <Link href="/login" className="py-3 px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold">
+            Log In
+          </Link>
+          <Link href="/register" className="py-3 px-6 rounded-xl bg-slate-800 text-white font-bold border border-white/10">
+            Sign Up
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-5xl mx-auto flex flex-col gap-8 relative">
-      <ProfileHeader onEditClick={() => setIsEditModalOpen(true)} />
+      <ProfileHeader 
+        onEditClick={() => setIsEditModalOpen(true)} 
+        customProfile={activeProfile}
+        isOwnProfile={isOwnProfile}
+        onConnectClick={handleConnect}
+      />
+      {connectSuccess && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-center animate-fade-in">
+          Connection request sent successfully!
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
@@ -31,7 +121,7 @@ export default function ProfilePage() {
               </button>
             </div>
             <p className="text-slate-300 text-lg leading-relaxed pt-2 whitespace-pre-wrap z-10">
-              {profile?.bio || "No bio added yet. Click edit to tell the world about yourself!"}
+              {activeProfile?.bio || "No bio added yet. Click edit to tell the world about yourself!"}
             </p>
           </div>
 
@@ -82,14 +172,14 @@ export default function ProfilePage() {
             </div>
             
             <div className="z-10 mt-2">
-              {profile?.education ? (
+              {activeProfile?.education ? (
                 <div className="flex gap-5 group/edu p-4 -mx-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-transparent hover:border-white/5 transition-colors cursor-pointer">
                   <div className="w-16 h-16 bg-slate-800 shadow-lg border border-white/10 rounded-xl flex items-center justify-center text-white shrink-0 group-hover/edu:scale-105 group-hover/edu:border-emerald-500/50 group-hover/edu:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all">
                     <GraduationCap className="w-8 h-8" />
                   </div>
                   <div className="flex flex-col justify-center flex-grow">
                     <div className="flex justify-between items-center">
-                      <h3 className="font-bold text-xl text-white group-hover/edu:text-emerald-400 transition-colors">{profile.education}</h3>
+                      <h3 className="font-bold text-xl text-white group-hover/edu:text-emerald-400 transition-colors">{activeProfile.education}</h3>
                       <ChevronRight className="w-5 h-5 text-slate-500 opacity-0 group-hover/edu:opacity-100 transition-opacity" />
                     </div>
                   </div>
@@ -118,8 +208,8 @@ export default function ProfilePage() {
             </div>
             
             <div className="flex flex-wrap gap-2 z-10 relative">
-              {profile?.skills && profile.skills.length > 0 ? (
-                profile.skills.map((skill: string, index: number) => (
+              {activeProfile?.skills && activeProfile.skills.length > 0 ? (
+                activeProfile.skills.map((skill: string, index: number) => (
                   <span key={index} className="px-4 py-2 bg-slate-800/80 hover:bg-blue-500/10 text-slate-200 hover:text-blue-400 font-medium rounded-xl border border-white/10 hover:border-blue-500/30 transition-all cursor-default shadow-sm hover:shadow-[0_0_15px_rgba(59,130,246,0.15)]">
                     {skill}
                   </span>
@@ -155,6 +245,11 @@ export default function ProfilePage() {
       </div>
 
       {isEditModalOpen && <EditProfileModal onClose={() => setIsEditModalOpen(false)} />}
+      <AuthRequiredModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+        actionName="connect with users" 
+      />
     </div>
   );
 }

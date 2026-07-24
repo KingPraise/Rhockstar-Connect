@@ -6,10 +6,14 @@ import { format } from "date-fns";
 
 interface ProfileHeaderProps {
   onEditClick: () => void;
+  customProfile?: any;
+  isOwnProfile?: boolean;
+  onConnectClick?: () => void;
 }
 
-export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
-  const { profile } = useAuthStore();
+export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile = true, onConnectClick }: ProfileHeaderProps) {
+  const { profile: loggedInProfile } = useAuthStore();
+  const profile = customProfile || loggedInProfile;
 
   if (!profile) return null; // Or a skeleton loader
 
@@ -20,10 +24,12 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
       {/* Cover Photo */}
       <div className="h-64 w-full bg-gradient-to-r from-brand-purple via-brand to-brand-purple bg-[length:200%_200%] animate-gradient-x relative">
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]"></div>
-        <button className="absolute top-4 right-4 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white text-sm py-2 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/10 shadow-lg">
-          <Camera className="w-4 h-4" />
-          Update Cover
-        </button>
+        {isOwnProfile && (
+          <button onClick={onEditClick} className="absolute top-4 right-4 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white text-sm py-2 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/10 shadow-lg">
+            <Camera className="w-4 h-4" />
+            Update Cover
+          </button>
+        )}
       </div>
 
       <div className="px-8 pb-8 relative">
@@ -34,27 +40,39 @@ export default function ProfileHeader({ onEditClick }: ProfileHeaderProps) {
               // eslint-disable-next-line @next/next/no-img-element
               <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              profile.fullName.substring(0, 2).toUpperCase()
+              profile.fullName?.substring(0, 2).toUpperCase() || 'U'
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
-          <button 
-            onClick={onEditClick}
-            className="absolute bottom-2 right-2 w-10 h-10 rounded-full bg-slate-800 shadow-lg flex items-center justify-center text-white hover:text-brand-purple transition-all hover:scale-110 border border-white/10"
-          >
-            <Camera className="w-4 h-4" />
-          </button>
+          {isOwnProfile && (
+            <button 
+              onClick={onEditClick}
+              className="absolute bottom-2 right-2 w-10 h-10 rounded-full bg-slate-800 shadow-lg flex items-center justify-center text-white hover:text-brand-purple transition-all hover:scale-110 border border-white/10"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {/* Action Buttons */}
         <div className="flex justify-end pt-4 pb-2">
-          <button 
-            onClick={onEditClick}
-            className="py-2 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm flex items-center gap-2 transition-all border border-white/5 shadow-lg hover:border-white/10"
-          >
-            <Pencil className="w-4 h-4" />
-            Edit Profile
-          </button>
+          {isOwnProfile ? (
+            <button 
+              onClick={onEditClick}
+              className="py-2 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm flex items-center gap-2 transition-all border border-white/5 shadow-lg hover:border-white/10"
+            >
+              <Pencil className="w-4 h-4" />
+              Edit Profile
+            </button>
+          ) : (
+            <button 
+              onClick={onConnectClick}
+              className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:scale-105"
+            >
+              <Users className="w-4 h-4" />
+              Connect
+            </button>
+          )}
         </div>
 
         <div className="mt-4 max-w-2xl">

@@ -4,7 +4,9 @@ import {
   getDocs,
   doc,
   getDoc,
-  updateDoc
+  updateDoc,
+  query,
+  where
 } from 'firebase/firestore';
 
 export interface UserBasic {
@@ -40,7 +42,7 @@ export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBas
   }
 };
 
-export const getUserById = async (userId: string): Promise<{ success: boolean; user?: UserBasic; error?: string }> => {
+export const getUserById = async (userId: string): Promise<{ success: boolean; user?: any; error?: string }> => {
   try {
     const userRef = doc(db, 'users', userId);
     const docSnap = await getDoc(userRef);
@@ -51,15 +53,36 @@ export const getUserById = async (userId: string): Promise<{ success: boolean; u
         success: true, 
         user: {
           uid: docSnap.id,
-          fullName: data.fullName,
-          username: data.username,
-          avatar: data.avatar || data.fullName.substring(0, 2).toUpperCase()
+          ...data
         } 
       };
     }
     return { success: false, error: "User not found" };
   } catch (error: unknown) {
     console.error("Error fetching user:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
+export const getUserByUsername = async (username: string): Promise<{ success: boolean; user?: any; error?: string }> => {
+  try {
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('username', '==', username.replace('@', '')));
+    const snapshot = await getDocs(q);
+    
+    if (!snapshot.empty) {
+      const docSnap = snapshot.docs[0];
+      return { 
+        success: true, 
+        user: {
+          uid: docSnap.id,
+          ...docSnap.data()
+        } 
+      };
+    }
+    return { success: false, error: "User not found" };
+  } catch (error: unknown) {
+    console.error("Error fetching user by username:", error);
     return { success: false, error: (error as Error).message };
   }
 };

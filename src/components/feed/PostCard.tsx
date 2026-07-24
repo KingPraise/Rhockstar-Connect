@@ -7,6 +7,8 @@ import { toggleLike, toggleSavePost, addComment, Post } from "@/lib/services/pos
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
 
+import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
+
 interface PostCardProps {
   post: Post;
 }
@@ -18,13 +20,24 @@ export default function PostCard({ post }: PostCardProps) {
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [isCommenting, setIsCommenting] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authActionName, setAuthActionName] = useState("interact");
+
+  const promptGuestAuth = (action: string) => {
+    setAuthActionName(action);
+    setAuthModalOpen(true);
+  };
 
   // Check if current user liked it
   const isLiked = profile ? post.likes?.includes(profile.uid) : false;
   const likeCount = post.likes?.length || 0;
 
   const handleLike = async () => {
-    if (!profile || isLiking) return;
+    if (!profile) {
+      promptGuestAuth("like posts");
+      return;
+    }
+    if (isLiking) return;
     setIsLiking(true);
     await toggleLike(post.id, profile.uid);
     setIsLiking(false);
@@ -33,7 +46,11 @@ export default function PostCard({ post }: PostCardProps) {
   const isSaved = profile?.savedPosts?.includes(post.id) || false;
 
   const handleSave = async () => {
-    if (!profile || isSaving) return;
+    if (!profile) {
+      promptGuestAuth("save posts");
+      return;
+    }
+    if (isSaving) return;
     setIsSaving(true);
     const res = await toggleSavePost(post.id, profile.uid);
     if (res.success && res.isSaved !== undefined) {
@@ -62,7 +79,11 @@ export default function PostCard({ post }: PostCardProps) {
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile || !commentText.trim() || isCommenting) return;
+    if (!profile) {
+      promptGuestAuth("comment on posts");
+      return;
+    }
+    if (!commentText.trim() || isCommenting) return;
     
     setIsCommenting(true);
     await addComment(post.id, profile, commentText.trim());
@@ -222,6 +243,12 @@ export default function PostCard({ post }: PostCardProps) {
           </form>
         </div>
       )}
+      {/* Guest Auth Prompt Modal */}
+      <AuthRequiredModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+        actionName={authActionName} 
+      />
     </div>
   );
 }
