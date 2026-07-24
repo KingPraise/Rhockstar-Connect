@@ -17,7 +17,8 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  Gift
+  Gift,
+  Shield
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logoutUser } from "@/lib/auth";
@@ -147,6 +148,18 @@ export default function Sidebar() {
         ) : (
           <Link href="/premium" className="flex items-center justify-center p-3 rounded-xl bg-gradient-to-br from-brand-purple/20 to-brand/20 border border-brand-purple/30 group hover:border-brand-purple/60 transition-colors" title="Upgrade to Premium">
             <Sparkles className="w-5 h-5 text-brand-purple group-hover:scale-110 transition-transform animate-pulse" />
+          </Link>
+        )}
+
+        {/* SUPER ADMIN SHORTCUT */}
+        {profile?.role === 'admin' && (
+          <Link
+            href="/admin"
+            title={isMinimized ? "Super Admin Portal" : undefined}
+            className={`w-full p-3 rounded-xl flex items-center ${isMinimized ? "justify-center" : "justify-center gap-2"} text-amber-300 bg-amber-500/10 hover:bg-amber-500 hover:text-slate-950 transition-all border border-amber-500/30 shadow-lg font-bold text-sm`}
+          >
+            <Shield className="w-5 h-5 text-amber-400" />
+            {!isMinimized && <span>Super Admin</span>}
           </Link>
         )}
 
