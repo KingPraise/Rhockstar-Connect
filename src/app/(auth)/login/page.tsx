@@ -42,7 +42,7 @@ export default function LoginPage() {
       setError(error);
       setLoading(false);
     } else if (user) {
-      router.push("/feed");
+      window.location.href = "/feed";
     }
   };
 

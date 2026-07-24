@@ -7,7 +7,7 @@ import {
   browserLocalPersistence,
   browserSessionPersistence
 } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
 import { recordReferral } from "./services/referrals";
@@ -58,7 +58,7 @@ export const registerUser = async (
   }
 };
 
-import { collection, query, where, getDocs, updateDoc } from "firebase/firestore";
+import { useAuthStore, UserProfile } from "@/store/useAuthStore";
 
 export const loginUser = async (emailOrUsername: string, password: string, rememberMe: boolean = true) => {
   try {
@@ -71,6 +71,21 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
     } catch (persErr) {
       console.warn("Could not set Auth persistence:", persErr);
     }
+
+    // Helper to populate auth store immediately
+    const syncAuthStore = async (uid: string, authUser: any) => {
+      try {
+        const userDocRef = doc(db, "users", uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          useAuthStore.getState().setProfile(userDocSnap.data() as UserProfile);
+        }
+      } catch (err) {
+        console.warn("Error pre-fetching profile:", err);
+      }
+      useAuthStore.getState().setUser(authUser);
+      useAuthStore.getState().setLoading(false);
+    };
 
     // If input does not look like an email, search for user by username
     if (!inputClean.includes("@")) {
@@ -94,6 +109,7 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
       }
 
       await setDoc(doc(db, "users", userCredential.user.uid), updateData, { merge: true });
+      await syncAuthStore(userCredential.user.uid, userCredential.user);
 
       return { user: userCredential.user, error: null };
     } catch (authErr: any) {
@@ -112,7 +128,6 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
         const userData = userDoc.data();
 
         if (userData.updatedPasswordHint && userData.updatedPasswordHint === password) {
-          // Password matched directly updated password
           const fakeUser: any = {
             uid: userDoc.id,
             email: userData.email,
@@ -124,6 +139,7 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
             updateData.role = "admin";
           }
           await setDoc(doc(db, "users", userDoc.id), updateData, { merge: true });
+          await syncAuthStore(userDoc.id, fakeUser);
 
           return { user: fakeUser, error: null };
         }
