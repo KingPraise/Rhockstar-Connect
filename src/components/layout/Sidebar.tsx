@@ -51,7 +51,7 @@ export default function Sidebar() {
     <aside 
       className={`h-screen sticky top-0 bg-slate-900/40 backdrop-blur-3xl border-r border-white/5 hidden md:flex flex-col z-20 transition-all duration-300 ${
         isMinimized ? "w-24" : "w-72"
-      } overflow-y-auto custom-scrollbar`}
+      } overflow-y-auto no-scrollbar`}
     >
       {/* Header / Logo */}
       <div className={`p-6 flex items-center ${isMinimized ? "justify-center" : "justify-between"}`}>
