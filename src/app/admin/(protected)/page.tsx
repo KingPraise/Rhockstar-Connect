@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, CreditCard, Shield, TrendingUp, AlertTriangle, CheckCircle, Activity, Star, Settings, UserCheck } from "lucide-react";
+import { Users, CreditCard, Shield, TrendingUp, AlertTriangle, CheckCircle, Activity, Star, Settings, UserCheck, Gift } from "lucide-react";
 import { getAllUsersAdmin, getSystemReports, AdminUser, AdminReport } from "@/lib/services/admin";
 
 export default function AdminDashboardPage() {
@@ -107,6 +107,12 @@ export default function AdminDashboardPage() {
             <Settings className="w-7 h-7 text-brand-purple mb-3 group-hover:scale-110 transition-transform" />
             <h3 className="text-white font-extrabold text-base mb-1">Global Settings</h3>
             <p className="text-slate-400 text-xs">Configure site maintenance mode, banners, and referral policy</p>
+          </Link>
+
+          <Link href="/admin/referrals" className="p-5 rounded-2xl bg-slate-800/60 border border-white/5 hover:border-purple-400 hover:bg-purple-500/10 transition-all group">
+            <Gift className="w-7 h-7 text-purple-400 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="text-white font-extrabold text-base mb-1">Referrals & Rewards</h3>
+            <p className="text-slate-400 text-xs">Track viral invites, view leaderboards, and grant bonus rewards</p>
           </Link>
 
           <Link href="/admin/profile" className="p-5 rounded-2xl bg-slate-800/60 border border-white/5 hover:border-rose-400 hover:bg-rose-500/10 transition-all group">

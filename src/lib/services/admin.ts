@@ -242,3 +242,88 @@ export const updateAdminProfile = async (
     return { success: false, error: (error as Error).message };
   }
 };
+
+// 6. REFERRALS & REWARDS TRACKING
+export interface AdminReferralLog {
+  id: string;
+  referrerId: string;
+  referrerName: string;
+  referredUserId: string;
+  referredName: string;
+  codeUsed: string;
+  createdAt: any;
+}
+
+export const getAdminReferralOverview = async () => {
+  try {
+    const referralsRef = collection(db, 'referrals');
+    const snapshot = await getDocs(referralsRef);
+    const logs: AdminReferralLog[] = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    })) as AdminReferralLog[];
+
+    // Calculate Leaderboard
+    const userCounts: Record<string, { name: string; count: number; code: string }> = {};
+    logs.forEach(log => {
+      const key = log.referrerId || log.referrerName || 'Unknown';
+      if (!userCounts[key]) {
+        userCounts[key] = {
+          name: log.referrerName || 'Anonymous',
+          count: 0,
+          code: log.codeUsed || 'N/A'
+        };
+      }
+      userCounts[key].count += 1;
+    });
+
+    const leaderboard = Object.entries(userCounts)
+      .map(([id, info]) => ({ id, ...info }))
+      .sort((a, b) => b.count - a.count);
+
+    return {
+      success: true,
+      totalReferrals: logs.length,
+      leaderboard,
+      logs: logs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+    };
+  } catch (error: unknown) {
+    console.error('Error fetching admin referral overview:', error);
+    return {
+      success: false,
+      totalReferrals: 0,
+      leaderboard: [],
+      logs: [],
+      error: (error as Error).message
+    };
+  }
+};
+
+export const grantUserBonusReferrals = async (userId: string, daysToGrant: number) => {
+  try {
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      const currentCount = userData.referralCount || 0;
+      const currentExpiry = userData.premiumUntil ? new Date(userData.premiumUntil) : new Date();
+
+      if (currentExpiry < new Date()) {
+        currentExpiry.setTime(new Date().getTime());
+      }
+      currentExpiry.setDate(currentExpiry.getDate() + daysToGrant);
+
+      await updateDoc(userRef, {
+        referralCount: currentCount + 1,
+        subscriptionTier: 'pro',
+        subscriptionStatus: 'active',
+        premiumUntil: currentExpiry.toISOString()
+      });
+      return { success: true };
+    }
+    return { success: false, error: "User not found" };
+  } catch (error: unknown) {
+    return { success: false, error: (error as Error).message };
+  }
+};
