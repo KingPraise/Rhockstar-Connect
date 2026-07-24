@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import AuthProvider from "@/components/providers/AuthProvider";
+
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-inter"
+});
 
 export const metadata: Metadata = {
   title: "Rhockstar Connect | Professional Networking & Meaningful Relationships",
@@ -25,16 +33,14 @@ export const metadata: Metadata = {
   },
 };
 
-import AuthProvider from "@/components/providers/AuthProvider";
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
         <AuthProvider>
           {children}
         </AuthProvider>
