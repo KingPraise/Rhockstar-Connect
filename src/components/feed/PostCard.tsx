@@ -1,9 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2 } from "lucide-react";
 import { useState, useRef } from "react";
 import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, Post } from "@/lib/services/posts";
+import { getUserById } from "@/lib/services/users";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -26,8 +27,28 @@ export default function PostCard({ post }: PostCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [isLikesModalOpen, setIsLikesModalOpen] = useState(false);
+  const [likesUsers, setLikesUsers] = useState<any[]>([]);
+  const [isLoadingLikes, setIsLoadingLikes] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: string; name: string } | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpenLikesModal = async () => {
+    setIsLikesModalOpen(true);
+    if (!post.likes || post.likes.length === 0) return;
+    
+    setIsLoadingLikes(true);
+    try {
+      const usersData = await Promise.all(
+        post.likes.map(id => getUserById(id))
+      );
+      setLikesUsers(usersData.filter(res => res.success && res.user).map(res => res.user));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingLikes(false);
+    }
+  };
 
   const promptGuestAuth = (action: string) => {
     setAuthActionName(action);
@@ -228,18 +249,27 @@ export default function PostCard({ post }: PostCardProps) {
 
       {/* Action Bar */}
       <div className="flex items-center gap-6 pt-4 border-t border-white/5">
-        <button 
-          onClick={handleLike}
-          disabled={!profile || isLiking}
-          className={`flex items-center gap-2 text-sm font-medium transition-all group ${
-            isLiked ? "text-red-500" : "text-slate-400 hover:text-red-400"
-          } ${isLiking ? "opacity-50 cursor-not-allowed" : ""}`}
-        >
-          <div className={`p-2 rounded-full neo-card ${isLiked ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'bg-slate-800/30 hover:border-red-400/30'}`}>
-            <Heart className={`w-4 h-4 transition-transform group-hover:scale-110 ${isLiked ? 'fill-current' : ''}`} />
-          </div>
-          <span>{likeCount}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleLike}
+            disabled={!profile || isLiking}
+            className={`flex items-center text-sm font-medium transition-all group ${
+              isLiked ? "text-red-500" : "text-slate-400 hover:text-red-400"
+            } ${isLiking ? "opacity-50 cursor-not-allowed" : ""}`}
+            title="Like Post"
+          >
+            <div className={`p-2 rounded-full neo-card ${isLiked ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'bg-slate-800/30 hover:border-red-400/30'}`}>
+              <Heart className={`w-4 h-4 transition-transform group-hover:scale-110 ${isLiked ? 'fill-current' : ''}`} />
+            </div>
+          </button>
+          <button 
+            onClick={handleOpenLikesModal} 
+            className="text-sm font-medium text-slate-400 hover:text-white transition-colors hover:underline px-1 cursor-pointer"
+            title="See who liked this"
+          >
+            {likeCount}
+          </button>
+        </div>
 
         <button 
           onClick={() => setShowComments(!showComments)}
@@ -397,12 +427,49 @@ export default function PostCard({ post }: PostCardProps) {
           </form>
         </div>
       )}
-      {/* Guest Auth Prompt Modal */}
-      <AuthRequiredModal 
-        isOpen={authModalOpen} 
-        onClose={() => setAuthModalOpen(false)} 
-        actionName={authActionName} 
-      />
+      {/* Auth Required Modal */}
+      {authModalOpen && (
+        <AuthRequiredModal 
+          isOpen={authModalOpen} 
+          onClose={() => setAuthModalOpen(false)} 
+          title={`Sign in to ${authActionName}`} 
+        />
+      )}
+
+      {/* Likes Modal */}
+      {isLikesModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-sm mx-4 overflow-hidden shadow-2xl">
+            <div className="flex justify-between items-center p-4 border-b border-white/10 bg-slate-800/50">
+              <h3 className="text-lg font-bold text-white">Likes</h3>
+              <button onClick={() => setIsLikesModalOpen(false)} className="text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/5">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 max-h-[60vh] overflow-y-auto no-scrollbar space-y-4">
+              {isLoadingLikes ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="w-6 h-6 text-brand animate-spin" />
+                </div>
+              ) : likesUsers.length > 0 ? (
+                likesUsers.map(u => (
+                  <Link href={`/profile?uid=${u.uid}`} key={u.uid} onClick={() => setIsLikesModalOpen(false)} className="flex items-center gap-3 group">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-white shrink-0 text-sm shadow-md">
+                      {u.avatar || u.fullName?.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-semibold text-sm truncate group-hover:text-brand transition-colors">{u.fullName}</p>
+                      <p className="text-slate-400 text-xs truncate">@{u.username}</p>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <p className="text-center text-slate-500 py-4 text-sm">No likes yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
