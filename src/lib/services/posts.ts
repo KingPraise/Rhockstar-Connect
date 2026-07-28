@@ -212,6 +212,33 @@ export const addComment = async (postId: string, user: UserProfile, content: str
   }
 };
 
+// Delete a comment
+export const deleteComment = async (postId: string, commentId: string) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postSnap = await getDoc(postRef);
+
+    if (postSnap.exists()) {
+      const currentComments = postSnap.data().comments || [];
+      // Filter out the comment itself AND any replies to it
+      const updatedComments = currentComments.filter((c: Comment) => c.id !== commentId && c.replyToId !== commentId);
+      
+      const removedCount = currentComments.length - updatedComments.length;
+      
+      await updateDoc(postRef, {
+        comments: updatedComments,
+        commentsCount: Math.max(0, (postSnap.data().commentsCount || 0) - removedCount)
+      });
+
+      return { success: true };
+    }
+    return { success: false, error: "Post not found" };
+  } catch (error: unknown) {
+    console.error("Error deleting comment:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
 // Toggle save a post for a user
 export const toggleSavePost = async (postId: string, userId: string) => {
   try {

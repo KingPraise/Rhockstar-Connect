@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat } from "@/lib/services/messages";
+import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus } from "@/lib/services/messages";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck } from "lucide-react";
 import { markMessagesAsRead } from "@/lib/services/messages";
@@ -21,6 +21,7 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Fetch all users and connections
@@ -90,6 +91,10 @@ export default function MessagesPage() {
 
     const text = newMessage;
     setNewMessage(""); // Optimistic clear
+    
+    // Clear typing status
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    updateTypingStatus(activeChat.id, profile.uid, false);
     
     await sendMessage(activeChat.id, profile.uid, text);
   };
@@ -290,23 +295,59 @@ export default function MessagesPage() {
                 </div>
               );
             })}
+            {(() => {
+               const otherUserId = activeChat.participants.find(p => p !== profile?.uid) || activeChat.participants[0];
+               const isTyping = activeChat.typingStatus?.[otherUserId];
+               if (isTyping) {
+                 return (
+                   <div className="flex justify-start">
+                     <div className="bg-slate-800 text-slate-400 rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm flex items-center gap-1.5 border border-white/5">
+                       <span className="w-1.5 h-1.5 rounded-full bg-brand/60 animate-bounce" style={{ animationDelay: '0ms' }} />
+                       <span className="w-1.5 h-1.5 rounded-full bg-brand/60 animate-bounce" style={{ animationDelay: '150ms' }} />
+                       <span className="w-1.5 h-1.5 rounded-full bg-brand/60 animate-bounce" style={{ animationDelay: '300ms' }} />
+                     </div>
+                   </div>
+                 );
+               }
+               return null;
+            })()}
             <div ref={messagesEndRef} />
           </div>
 
           {/* Message Input - Embedded Send Button guarantee visible on mobile */}
           <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-md">
-            <form onSubmit={handleSendMessage} className="relative flex items-center w-full">
-              <input 
-                type="text"
-                placeholder="Type your message..."
-                className="w-full bg-slate-800/60 border border-white/10 rounded-2xl pl-5 pr-14 py-3.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/50 transition-all shadow-inner"
+            <form onSubmit={handleSendMessage} className="relative flex items-center w-full bg-slate-800/60 border border-white/10 rounded-2xl pl-5 pr-14 py-1.5 focus-within:border-brand/50 focus-within:ring-1 focus-within:ring-brand/50 transition-all shadow-inner">
+              <textarea 
+                placeholder="Type your message... (Shift+Enter for new line)"
+                className="w-full bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none resize-none min-h-[24px] max-h-[120px] scrollbar-thin my-2"
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                rows={1}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                  
+                  if (activeChat && profile) {
+                    updateTypingStatus(activeChat.id, profile.uid, true);
+                    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                    typingTimeoutRef.current = setTimeout(() => {
+                      updateTypingStatus(activeChat.id, profile.uid, false);
+                    }, 2000);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (newMessage.trim()) {
+                      handleSendMessage(e as any);
+                    }
+                  }
+                }}
               />
               <button 
                 type="submit"
                 disabled={!newMessage.trim()}
-                className="absolute right-1.5 p-2.5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white shadow-md disabled:opacity-40 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center cursor-pointer"
+                className="absolute right-1.5 bottom-1.5 p-2.5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white shadow-md disabled:opacity-40 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                 aria-label="Send Message"
               >
                 <Send className="w-5 h-5" />

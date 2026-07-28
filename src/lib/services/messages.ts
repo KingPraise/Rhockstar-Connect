@@ -22,6 +22,7 @@ export interface Chat {
   lastMessage: string;
   lastMessageTime: unknown;
   unreadCount: Record<string, number>;
+  typingStatus?: Record<string, boolean>;
 }
 
 export interface Message {
@@ -58,7 +59,8 @@ export const getOrCreateChat = async (userId1: string, userId2: string) => {
       participants: [userId1, userId2],
       lastMessage: "",
       lastMessageTime: serverTimestamp(),
-      unreadCount: { [userId1]: 0, [userId2]: 0 }
+      unreadCount: { [userId1]: 0, [userId2]: 0 },
+      typingStatus: { [userId1]: false, [userId2]: false }
     };
     
     await setDoc(newChatRef, newChatData);
@@ -131,6 +133,18 @@ export const markMessagesAsRead = async (chatId: string, currentUserId: string) 
     await Promise.all(updatePromises);
   } catch (error) {
     console.error("Error marking messages read:", error);
+  }
+};
+
+// Update typing status
+export const updateTypingStatus = async (chatId: string, userId: string, isTyping: boolean) => {
+  try {
+    const chatRef = doc(db, 'chats', chatId);
+    await updateDoc(chatRef, {
+      [`typingStatus.${userId}`]: isTyping
+    });
+  } catch (error) {
+    console.error("Error updating typing status:", error);
   }
 };
 

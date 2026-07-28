@@ -3,7 +3,7 @@
 
 import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag } from "lucide-react";
 import { useState, useRef } from "react";
-import { toggleLike, toggleSavePost, addComment, deletePost, Post } from "@/lib/services/posts";
+import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, Post } from "@/lib/services/posts";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -117,6 +117,12 @@ export default function PostCard({ post }: PostCardProps) {
       await deletePost(post.id);
       setIsDeleting(false);
       setShowMenu(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (confirm("Delete this comment?")) {
+      await deleteComment(post.id, commentId);
     }
   };
 
@@ -295,7 +301,7 @@ export default function PostCard({ post }: PostCardProps) {
                           <span className="text-xs text-slate-500">{cTimeAgo}</span>
                         </div>
                         <p className="text-sm text-slate-300">{comment.content}</p>
-                        <div className="mt-2 pt-1 border-t border-white/5 flex items-center gap-3">
+                        <div className="mt-2 pt-1 border-t border-white/5 flex items-center justify-between">
                           <button
                             type="button"
                             onClick={() => handleReplyComment(comment.id, comment.user.name)}
@@ -304,6 +310,15 @@ export default function PostCard({ post }: PostCardProps) {
                             <Reply className="w-3.5 h-3.5" />
                             Reply
                           </button>
+                          {profile?.uid === comment.userId && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="text-xs font-semibold text-slate-500 hover:text-red-400 flex items-center gap-1 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -328,6 +343,17 @@ export default function PostCard({ post }: PostCardProps) {
                                   <span className="text-[10px] text-slate-500">{rTimeAgo}</span>
                                 </div>
                                 <p className="text-xs text-slate-300">{reply.content}</p>
+                                {profile?.uid === reply.userId && (
+                                  <div className="mt-1 pt-1 border-t border-white/5 flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteComment(reply.id)}
+                                      className="text-[10px] font-semibold text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
