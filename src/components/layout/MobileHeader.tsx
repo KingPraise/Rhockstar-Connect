@@ -85,7 +85,7 @@ export default function MobileHeader() {
           <div className="absolute inset-0" onClick={() => setIsOpen(false)} />
 
           {/* Drawer Content */}
-          <div className="relative w-[85%] max-w-sm bg-slate-900 border-l border-white/10 h-[100dvh] flex flex-col z-10 overflow-y-auto shadow-2xl animate-slide-left">
+          <div className="relative w-[85%] max-w-sm bg-slate-900 border-l border-white/10 h-[100dvh] flex flex-col z-10 shadow-2xl animate-slide-left">
             {/* Drawer Header */}
             <div className="p-5 border-b border-white/10 flex items-center justify-between bg-slate-950/50">
               <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">Menu Navigation</span>
