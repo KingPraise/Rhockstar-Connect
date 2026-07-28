@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Gift,
-  Shield
+  Shield,
+  Search
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logoutUser } from "@/lib/auth";
@@ -36,6 +37,7 @@ export default function Sidebar() {
   };
 
   const navItems = [
+    { name: "Search", href: "/search", icon: Search },
     { name: "Feed", href: "/feed", icon: Home },
     { name: "Profile", href: "/profile", icon: User },
     { name: "Connections", href: "/network", icon: Users },
