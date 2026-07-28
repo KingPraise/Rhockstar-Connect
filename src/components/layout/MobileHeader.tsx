@@ -55,8 +55,8 @@ export default function MobileHeader() {
     <>
       {/* Top Bar for Mobile */}
       <header className="md:hidden sticky top-0 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-lg">
-        <Link href="/feed" className="flex items-center gap-2">
-          <Image src="/logo-light.png" alt="Rhockstar Connect" width={160} height={36} priority className="h-9 w-auto object-contain drop-shadow-md" />
+        <Link href="/feed" className="flex items-center gap-2 pl-1">
+          <Image src="/logo-light.png" alt="Rhockstar Connect" width={220} height={56} priority className="h-14 w-auto object-contain drop-shadow-md" />
         </Link>
 
         <div className="flex items-center gap-2">
