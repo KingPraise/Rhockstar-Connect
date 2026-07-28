@@ -174,10 +174,11 @@ export interface Comment {
   };
   content: string;
   createdAt: string;
+  replyToId?: string;
 }
 
 // Add a comment to a post
-export const addComment = async (postId: string, user: UserProfile, content: string) => {
+export const addComment = async (postId: string, user: UserProfile, content: string, replyToId?: string) => {
   try {
     const postRef = doc(db, 'posts', postId);
     const postSnap = await getDoc(postRef);
@@ -192,7 +193,8 @@ export const addComment = async (postId: string, user: UserProfile, content: str
           avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase()
         },
         content,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        ...(replyToId && { replyToId })
       };
 
       const currentComments = postSnap.data().comments || [];

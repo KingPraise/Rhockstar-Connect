@@ -25,6 +25,7 @@ export default function PostCard({ post }: PostCardProps) {
   const [authActionName, setAuthActionName] = useState("interact");
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; name: string } | null>(null);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
   const promptGuestAuth = (action: string) => {
@@ -32,11 +33,12 @@ export default function PostCard({ post }: PostCardProps) {
     setAuthModalOpen(true);
   };
 
-  const handleReplyComment = (userName: string) => {
+  const handleReplyComment = (commentId: string, userName: string) => {
     if (!profile) {
       promptGuestAuth("reply to comments");
       return;
     }
+    setReplyingTo({ id: commentId, name: userName });
     setCommentText(`@${userName} `);
     if (!showComments) setShowComments(true);
     setTimeout(() => {
@@ -102,8 +104,9 @@ export default function PostCard({ post }: PostCardProps) {
     if (!commentText.trim() || isCommenting) return;
     
     setIsCommenting(true);
-    await addComment(post.id, profile, commentText.trim());
+    await addComment(post.id, profile, commentText.trim(), replyingTo?.id);
     setCommentText("");
+    setReplyingTo(null);
     setIsCommenting(false);
   };
 
@@ -242,34 +245,67 @@ export default function PostCard({ post }: PostCardProps) {
         <div className="mt-4 pt-4 border-t border-white/5 animate-in fade-in slide-in-from-top-2">
           {post.comments && post.comments.length > 0 ? (
             <div className="space-y-4 mb-4">
-              {post.comments.map((comment) => {
+              {post.comments.filter(c => !c.replyToId).map((comment) => {
                 let cTimeAgo = "Just now";
                 const cCreatedAt = new Date(comment.createdAt);
                 if (!isNaN(cCreatedAt.getTime())) {
                   cTimeAgo = formatDistanceToNow(cCreatedAt, { addSuffix: true });
                 }
+                
+                // Get replies for this comment
+                const replies = post.comments?.filter(c => c.replyToId === comment.id) || [];
+                
                 return (
-                  <div key={comment.id} className="flex gap-3">
-                    <Link href={`/profile?uid=${comment.userId}`} className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0 hover:ring-2 hover:ring-brand transition-all">
-                      {comment.user.avatar}
-                    </Link>
-                    <div className="flex-1 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors">{comment.user.name}</Link>
-                        <span className="text-xs text-slate-500">{cTimeAgo}</span>
-                      </div>
-                      <p className="text-sm text-slate-300">{comment.content}</p>
-                      <div className="mt-2 pt-1 border-t border-white/5 flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => handleReplyComment(comment.user.name)}
-                          className="text-xs font-semibold text-slate-400 hover:text-brand flex items-center gap-1 transition-colors"
-                        >
-                          <Reply className="w-3.5 h-3.5" />
-                          Reply
-                        </button>
+                  <div key={comment.id} className="flex flex-col gap-3">
+                    <div className="flex gap-3">
+                      <Link href={`/profile?uid=${comment.userId}`} className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0 hover:ring-2 hover:ring-brand transition-all">
+                        {comment.user.avatar}
+                      </Link>
+                      <div className="flex-1 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
+                        <div className="flex items-center justify-between mb-1">
+                          <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors">{comment.user.name}</Link>
+                          <span className="text-xs text-slate-500">{cTimeAgo}</span>
+                        </div>
+                        <p className="text-sm text-slate-300">{comment.content}</p>
+                        <div className="mt-2 pt-1 border-t border-white/5 flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleReplyComment(comment.id, comment.user.name)}
+                            className="text-xs font-semibold text-slate-400 hover:text-brand flex items-center gap-1 transition-colors"
+                          >
+                            <Reply className="w-3.5 h-3.5" />
+                            Reply
+                          </button>
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Render Replies */}
+                    {replies.length > 0 && (
+                      <div className="ml-11 space-y-3 relative before:absolute before:left-[-22px] before:top-0 before:bottom-4 before:w-px before:bg-white/10">
+                        {replies.map((reply) => {
+                          let rTimeAgo = "Just now";
+                          const rCreatedAt = new Date(reply.createdAt);
+                          if (!isNaN(rCreatedAt.getTime())) {
+                            rTimeAgo = formatDistanceToNow(rCreatedAt, { addSuffix: true });
+                          }
+                          return (
+                            <div key={reply.id} className="flex gap-3 relative before:absolute before:left-[-22px] before:top-4 before:w-4 before:h-px before:bg-white/10">
+                              <Link href={`/profile?uid=${reply.userId}`} className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white text-[10px] shrink-0 hover:ring-2 hover:ring-brand transition-all">
+                                {reply.user.avatar}
+                              </Link>
+                              <div className="flex-1 bg-slate-900/50 rounded-2xl rounded-tl-sm p-3 border border-white/5">
+                                <div className="flex items-center justify-between mb-1">
+                                  <Link href={`/profile?uid=${reply.userId}`} className="font-bold text-white text-xs hover:text-brand transition-colors">{reply.user.name}</Link>
+                                  <span className="text-[10px] text-slate-500">{rTimeAgo}</span>
+                                </div>
+                                <p className="text-xs text-slate-300">{reply.content}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -289,8 +325,11 @@ export default function PostCard({ post }: PostCardProps) {
               ref={commentInputRef}
               type="text"
               value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Write a comment..."
+              onChange={(e) => {
+                setCommentText(e.target.value);
+                if (e.target.value === "") setReplyingTo(null); // Clear reply state if input is completely cleared
+              }}
+              placeholder={replyingTo ? `Replying to ${replyingTo.name}...` : "Write a comment..."}
               className="flex-1 bg-slate-900/50 border border-white/10 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-brand/50"
               disabled={isCommenting}
             />
