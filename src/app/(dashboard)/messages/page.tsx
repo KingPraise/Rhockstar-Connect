@@ -4,7 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus } from "@/lib/services/messages";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
-import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck } from "lucide-react";
+import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square } from "lucide-react";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { markMessagesAsRead } from "@/lib/services/messages";
 
 export default function MessagesPage() {
@@ -22,6 +24,95 @@ export default function MessagesPage() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeChat || !profile?.uid) return;
+    
+    // Validate file
+    if (!file.type.startsWith('image/')) {
+      alert("Please select an image file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image size must be less than 5MB.");
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      const timestamp = Date.now();
+      const storageRef = ref(storage, `chats/${activeChat.id}/${timestamp}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      await sendMessage(activeChat.id, profile.uid, "Sent an image", "image", downloadURL);
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        if (!activeChat || !profile?.uid) return;
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        
+        try {
+          setIsUploadingAudio(true);
+          const timestamp = Date.now();
+          const storageRef = ref(storage, `chats/${activeChat.id}/${timestamp}_audio.webm`);
+          await uploadBytes(storageRef, audioBlob);
+          const downloadURL = await getDownloadURL(storageRef);
+          
+          await sendMessage(activeChat.id, profile.uid, "Sent a voice note", "audio", downloadURL);
+        } catch (error) {
+          console.error("Error uploading audio:", error);
+          alert("Failed to upload voice note.");
+        } finally {
+          setIsUploadingAudio(false);
+          // Stop all tracks to release mic
+          stream.getTracks().forEach(track => track.stop());
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      alert("Could not access microphone. Please check your permissions.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+    }
+  };
 
   useEffect(() => {
     // Fetch all users and connections
@@ -278,7 +369,20 @@ export default function MessagesPage() {
                       ? 'bg-gradient-to-br from-brand to-brand-purple text-white rounded-tr-sm shadow-[0_5px_15px_rgba(56,189,248,0.2)]' 
                       : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-white/5'
                   }`}>
-                    <p className="leading-relaxed text-sm md:text-base break-words">{msg.text}</p>
+                    {msg.type === 'image' && msg.mediaUrl ? (
+                      <div className="rounded-xl overflow-hidden mb-1 relative bg-slate-900/50">
+                        <img src={msg.mediaUrl} alt="Attachment" className="max-w-full h-auto max-h-64 object-contain" />
+                        {msg.text !== "Sent an image" && <p className="leading-relaxed text-sm md:text-base break-words mt-2 px-1">{msg.text}</p>}
+                      </div>
+                    ) : msg.type === 'audio' && msg.mediaUrl ? (
+                      <div className="mb-1">
+                        <audio controls className="max-w-[200px] md:max-w-[250px] h-10">
+                          <source src={msg.mediaUrl} type="audio/webm" />
+                        </audio>
+                      </div>
+                    ) : (
+                      <p className="leading-relaxed text-sm md:text-base break-words">{msg.text}</p>
+                    )}
                     
                     {/* Timestamp & Status Ticks */}
                     <div className={`flex items-center gap-1 text-[10px] ${isMine ? 'justify-end text-white/80' : 'justify-start text-slate-400'}`}>
@@ -316,7 +420,40 @@ export default function MessagesPage() {
 
           {/* Message Input - Embedded Send Button guarantee visible on mobile */}
           <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-md">
-            <form onSubmit={handleSendMessage} className="relative flex items-center w-full bg-slate-800/60 border border-white/10 rounded-2xl pl-5 pr-14 py-1.5 focus-within:border-brand/50 focus-within:ring-1 focus-within:ring-brand/50 transition-all shadow-inner">
+            <form onSubmit={handleSendMessage} className="relative flex items-center w-full bg-slate-800/60 border border-white/10 rounded-2xl pl-[4.5rem] pr-14 py-1.5 focus-within:border-brand/50 focus-within:ring-1 focus-within:ring-brand/50 transition-all shadow-inner">
+              <input 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                ref={fileInputRef} 
+                onChange={handleImageUpload} 
+              />
+              <div className="absolute left-1.5 bottom-1.5 flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingImage || isRecording || isUploadingAudio}
+                  className="p-2 rounded-xl text-slate-400 hover:text-brand hover:bg-white/5 transition-colors disabled:opacity-50"
+                  title="Attach Photo"
+                >
+                  {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={isUploadingAudio || isUploadingImage}
+                  className={`p-2 rounded-xl transition-colors disabled:opacity-50 ${isRecording ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'text-slate-400 hover:text-brand hover:bg-white/5'}`}
+                  title={isRecording ? "Stop Recording" : "Record Voice Note"}
+                >
+                  {isUploadingAudio ? <Loader2 className="w-5 h-5 animate-spin" /> : isRecording ? <Square className="w-4 h-4 fill-current" /> : <Mic className="w-5 h-5" />}
+                </button>
+              </div>
+              {isRecording && (
+                <div className="absolute left-20 right-14 top-0 bottom-0 bg-slate-800/90 rounded-xl flex items-center px-4 animate-pulse">
+                  <div className="w-2 h-2 rounded-full bg-red-500 mr-2" />
+                  <span className="text-red-500 text-sm font-medium">Recording voice note...</span>
+                </div>
+              )}
               <textarea 
                 placeholder="Type your message... (Shift+Enter for new line)"
                 className="w-full bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none resize-none min-h-[24px] max-h-[120px] scrollbar-thin my-2"

@@ -30,6 +30,8 @@ export interface Message {
   chatId: string;
   senderId: string;
   text: string;
+  type?: 'text' | 'image' | 'audio';
+  mediaUrl?: string;
   status?: 'sent' | 'delivered' | 'read';
   createdAt: unknown;
 }
@@ -73,18 +75,28 @@ export const getOrCreateChat = async (userId1: string, userId2: string) => {
 };
 
 // Send a message
-export const sendMessage = async (chatId: string, senderId: string, text: string) => {
+export const sendMessage = async (
+  chatId: string, 
+  senderId: string, 
+  text: string, 
+  type: 'text' | 'image' | 'audio' = 'text',
+  mediaUrl?: string
+) => {
   try {
     const messagesRef = collection(db, `chats/${chatId}/messages`);
     const chatRef = doc(db, 'chats', chatId);
 
-    const messageData = {
+    const messageData: any = {
       chatId,
       senderId,
       text,
+      type,
       status: 'delivered',
       createdAt: serverTimestamp()
     };
+    if (mediaUrl) {
+      messageData.mediaUrl = mediaUrl;
+    }
 
     await addDoc(messagesRef, messageData);
     
