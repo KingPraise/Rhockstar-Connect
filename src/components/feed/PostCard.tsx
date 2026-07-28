@@ -141,10 +141,12 @@ export default function PostCard({ post }: PostCardProps) {
             </div>
           </div>
         </Link>
-        <div className="relative">
+        <div className="relative z-20">
           <button 
-            onClick={() => setShowMenu(!showMenu)} 
-            className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800/50"
+            type="button"
+            onClick={(e) => { e.preventDefault(); setShowMenu(!showMenu); }} 
+            className="text-slate-400 hover:text-white transition-colors p-3 -m-1 rounded-full hover:bg-slate-800/50 flex items-center justify-center cursor-pointer"
+            aria-label="Post Options"
           >
             <MoreHorizontal className="w-5 h-5" />
           </button>

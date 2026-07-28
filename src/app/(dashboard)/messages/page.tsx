@@ -15,6 +15,7 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [users, setUsers] = useState<Record<string, UserBasic>>({});
+  const [friends, setFriends] = useState<string[]>([]);
   
   const [showNewChat, setShowNewChat] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,17 +23,29 @@ export default function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Fetch all users to resolve names/avatars
-    const fetchUsers = async () => {
+    // Fetch all users and connections
+    const fetchData = async () => {
+      if (!profile?.uid) return;
+      
       const { success, users } = await getAllUsers();
       if (success && users) {
         const usersMap: Record<string, UserBasic> = {};
         users.forEach(u => usersMap[u.uid] = u);
         setUsers(usersMap);
       }
+      
+      // Fetch accepted connections (friends)
+      const { getUserConnections } = await import("@/lib/services/connections");
+      const connRes = await getUserConnections(profile.uid);
+      if (connRes.success && connRes.connections) {
+        const acceptedIds = connRes.connections
+          .filter(c => c.status === 'accepted')
+          .map(c => c.fromUserId === profile.uid ? c.toUserId : c.fromUserId);
+        setFriends(acceptedIds);
+      }
     };
-    fetchUsers();
-  }, []);
+    fetchData();
+  }, [profile?.uid]);
 
   useEffect(() => {
     if (!profile?.uid) return;
@@ -99,9 +112,10 @@ export default function MessagesPage() {
     );
   }
 
-  // Filter users for new chat (excluding self)
+  // Filter users for new chat: Only accepted friends (excluding self) matching search
   const availableUsers = Object.values(users).filter(
     (u) => u.uid !== profile.uid && 
+           friends.includes(u.uid) &&
            u.fullName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -176,8 +190,6 @@ export default function MessagesPage() {
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg flex-shrink-0">
                       <span className="text-lg font-bold text-white">{otherUser.avatar}</span>
                     </div>
-                    {/* Online indicator placeholder */}
-                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-900 rounded-full"></div>
                   </div>
                   
                   <div className="flex-1 min-w-0">
