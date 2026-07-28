@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Lock, Mail, Loader2, CheckCircle2, ShieldCheck } from "lucide-react";
+import { X, Lock, Mail, Loader2, CheckCircle2, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { resetPasswordDirect } from "@/lib/auth";
 
 interface ResetPasswordModalProps {
@@ -16,6 +16,8 @@ export default function ResetPasswordModal({ isOpen, onClose }: ResetPasswordMod
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   if (!isOpen) return null;
 
@@ -116,14 +118,21 @@ export default function ResetPasswordModal({ isOpen, onClose }: ResetPasswordMod
                 <Lock className="w-4 h-4" />
               </div>
               <input
-                type="password"
+                type={showNewPassword ? "text" : "password"}
                 required
                 minLength={8}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50"
+                className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50"
                 placeholder="Enter new password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-white transition-colors"
+              >
+                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -134,14 +143,21 @@ export default function ResetPasswordModal({ isOpen, onClose }: ResetPasswordMod
                 <Lock className="w-4 h-4" />
               </div>
               <input
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 required
                 minLength={8}
-                className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50"
+                className="w-full bg-slate-950 border border-white/10 rounded-xl pl-10 pr-10 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50"
                 placeholder="Confirm new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-white transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 

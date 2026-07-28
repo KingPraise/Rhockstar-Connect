@@ -64,8 +64,17 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh] w-full">
-        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+      <div className="w-full max-w-5xl mx-auto flex flex-col gap-8 animate-pulse p-4 md:p-0 mt-8">
+        <div className="h-64 bg-slate-800 rounded-3xl w-full"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 flex flex-col gap-8">
+            <div className="h-40 bg-slate-800 rounded-3xl"></div>
+            <div className="h-40 bg-slate-800 rounded-3xl"></div>
+          </div>
+          <div className="flex flex-col gap-8">
+            <div className="h-80 bg-slate-800 rounded-3xl"></div>
+          </div>
+        </div>
       </div>
     );
   }

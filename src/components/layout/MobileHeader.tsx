@@ -18,7 +18,8 @@ import {
   Sparkles, 
   LogOut, 
   FileText,
-  Gift
+  Gift,
+  Shield
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logoutUser } from "@/lib/auth";
@@ -55,7 +56,7 @@ export default function MobileHeader() {
       {/* Top Bar for Mobile */}
       <header className="md:hidden sticky top-0 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-lg">
         <Link href="/feed" className="flex items-center gap-2">
-          <Image src="/logo-light.png" alt="Rhockstar Connect" width={120} height={28} priority className="h-7 w-auto object-contain" />
+          <Image src="/logo-light.png" alt="Rhockstar Connect" width={160} height={36} priority className="h-9 w-auto object-contain drop-shadow-md" />
         </Link>
 
         <div className="flex items-center gap-2">
@@ -128,10 +129,10 @@ export default function MobileHeader() {
                     href={item.href}
                     prefetch={true}
                     onClick={() => setIsOpen(false)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                    className={`flex items-center justify-between px-4 py-3.5 rounded-xl font-semibold transition-all ${
                       isActive 
-                        ? "bg-brand/10 text-brand border border-brand/20 shadow-[0_0_15px_rgba(56,189,248,0.15)] font-bold" 
-                        : "text-slate-300 hover:bg-white/5 hover:text-white"
+                        ? "bg-brand/10 text-brand shadow-[inset_0_0_15px_rgba(56,189,248,0.1)] border border-brand/20" 
+                        : "text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent"
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -150,7 +151,17 @@ export default function MobileHeader() {
             </nav>
 
             {/* Drawer Footer / Logout */}
-            <div className="p-4 border-t border-white/10 bg-slate-950/60">
+            <div className="p-4 border-t border-white/10 bg-slate-950/60 flex flex-col gap-3">
+              {profile?.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsOpen(false)}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 hover:bg-amber-500 hover:text-slate-950 text-amber-300 font-bold transition-all border border-amber-500/30"
+                >
+                  <Shield className="w-5 h-5" />
+                  <span>Super Admin Portal</span>
+                </Link>
+              )}
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold transition-all active:scale-95"

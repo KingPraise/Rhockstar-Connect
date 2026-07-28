@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { User, Mail, Lock, UserPlus, Loader2, AtSign, Gift } from "lucide-react";
+import { User, Mail, Lock, UserPlus, Loader2, AtSign, Gift, Eye, EyeOff, Calendar } from "lucide-react";
 import { registerUser } from "@/lib/auth";
 import Image from "next/image";
 
@@ -16,7 +16,13 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const [dobMonth, setDobMonth] = useState("");
+  const [dobDay, setDobDay] = useState("");
+  const [dobYear, setDobYear] = useState("");
+  
   const [referralCode, setReferralCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,11 +51,13 @@ function RegisterForm() {
       return;
     }
 
-    if (!dateOfBirth) {
-      setError("Please enter your date of birth");
+    if (!dobYear || !dobMonth || !dobDay) {
+      setError("Please complete your date of birth");
       setLoading(false);
       return;
     }
+
+    const dateOfBirth = `${dobYear}-${dobMonth}-${dobDay}`;
 
     // Check age >= 18
     const dob = new Date(dateOfBirth);
@@ -153,14 +161,44 @@ function RegisterForm() {
             </div>
 
             <div className="space-y-2 relative group">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Date of Birth</label>
-              <input
-                type="date"
-                className="w-full bg-slate-800/40 border border-white/5 rounded-xl px-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner [color-scheme:dark]"
-                value={dateOfBirth}
-                onChange={(e) => setDateOfBirth(e.target.value)}
-                required
-              />
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-2"><Calendar className="w-4 h-4" /> Date of Birth</label>
+              <div className="flex gap-2">
+                <select
+                  className="w-1/3 bg-slate-800/40 border border-white/5 rounded-xl px-3 py-4 text-white focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner appearance-none cursor-pointer text-center"
+                  value={dobMonth}
+                  onChange={(e) => setDobMonth(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>Month</option>
+                  {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
+                    <option key={m} value={m}>{new Date(2000, parseInt(m) - 1).toLocaleString('default', { month: 'short' })} ({m})</option>
+                  ))}
+                </select>
+                
+                <select
+                  className="w-1/3 bg-slate-800/40 border border-white/5 rounded-xl px-3 py-4 text-white focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner appearance-none cursor-pointer text-center"
+                  value={dobDay}
+                  onChange={(e) => setDobDay(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>Day</option>
+                  {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+
+                <select
+                  className="w-1/3 bg-slate-800/40 border border-white/5 rounded-xl px-3 py-4 text-white focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner appearance-none cursor-pointer text-center"
+                  value={dobYear}
+                  onChange={(e) => setDobYear(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>Year</option>
+                  {Array.from({ length: 100 }, (_, i) => String(new Date().getFullYear() - 10 - i)).map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="space-y-2 relative group">
@@ -168,15 +206,24 @@ function RegisterForm() {
                 <Lock className="w-5 h-5 text-slate-400 group-focus-within:text-brand-purple transition-colors" />
               </div>
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Password</label>
-              <input
-                type="password"
-                className="w-full bg-slate-800/40 border border-white/5 rounded-xl pl-12 pr-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner"
-                placeholder="Create a strong password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  className="w-full bg-slate-800/40 border border-white/5 rounded-xl pl-12 pr-12 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner"
+                  placeholder="Create a strong password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center z-10 text-slate-400 hover:text-brand-purple transition-colors"
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2 relative group">
@@ -184,14 +231,23 @@ function RegisterForm() {
                 <Lock className="w-5 h-5 text-slate-400 group-focus-within:text-brand-purple transition-colors" />
               </div>
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Confirm Password</label>
-              <input
-                type="password"
-                className="w-full bg-slate-800/40 border border-white/5 rounded-xl pl-12 pr-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner"
-                placeholder="Re-enter password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  className="w-full bg-slate-800/40 border border-white/5 rounded-xl pl-12 pr-12 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner"
+                  placeholder="Re-enter password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center z-10 text-slate-400 hover:text-brand-purple transition-colors"
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
             <div className="space-y-2 relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10 pt-7">

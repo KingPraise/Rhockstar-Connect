@@ -169,13 +169,13 @@ export default function NetworkPage() {
               
               return (
                 <div key={conn.id} className="neo-card p-5 rounded-2xl flex items-center gap-4 bg-slate-900/40 border border-white/5 hover:border-brand/30 transition-colors">
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg flex-shrink-0">
+                  <Link href={`/profile?uid=${user.uid}`} className="w-14 h-14 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg flex-shrink-0 hover:ring-2 hover:ring-brand transition-all">
                     <span className="text-xl font-bold text-white">{user.avatar}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-white truncate">{user.fullName}</h3>
-                    <p className="text-sm text-slate-400 truncate">@{user.username}</p>
-                  </div>
+                  </Link>
+                  <Link href={`/profile?uid=${user.uid}`} className="flex-1 min-w-0 group block">
+                    <h3 className="font-bold text-white truncate group-hover:text-brand transition-colors">{user.fullName}</h3>
+                    <p className="text-sm text-slate-400 truncate group-hover:text-white transition-colors">@{user.username}</p>
+                  </Link>
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => handleRespond(conn.id, 'accepted')}
@@ -212,12 +212,14 @@ export default function NetworkPage() {
             
             return (
               <div key={user.uid} className="neo-card p-6 rounded-3xl bg-slate-900/60 border border-white/5 flex flex-col items-center text-center group hover:-translate-y-1 transition-all duration-300">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg mb-4 ring-4 ring-slate-900 group-hover:ring-brand/20 transition-all">
-                  <span className="text-3xl font-bold text-white">{user.avatar}</span>
-                </div>
-                
-                <h3 className="font-bold text-lg text-white mb-1 truncate w-full">{user.fullName}</h3>
-                <p className="text-sm text-slate-400 mb-6">@{user.username}</p>
+                <Link href={`/profile?uid=${user.uid}`} className="flex flex-col items-center w-full block group/profile">
+                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg mb-4 ring-4 ring-slate-900 group-hover/profile:ring-brand/50 transition-all">
+                    <span className="text-3xl font-bold text-white">{user.avatar}</span>
+                  </div>
+                  
+                  <h3 className="font-bold text-lg text-white mb-1 truncate w-full group-hover/profile:text-brand transition-colors">{user.fullName}</h3>
+                  <p className="text-sm text-slate-400 mb-6 group-hover/profile:text-white transition-colors">@{user.username}</p>
+                </Link>
                 
                 {status === 'none' && (
                   <button 

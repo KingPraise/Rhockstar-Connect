@@ -1,11 +1,12 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag } from "lucide-react";
 import { useState, useRef } from "react";
-import { toggleLike, toggleSavePost, addComment, Post } from "@/lib/services/posts";
+import { toggleLike, toggleSavePost, addComment, deletePost, Post } from "@/lib/services/posts";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
 
 import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
 
@@ -22,6 +23,8 @@ export default function PostCard({ post }: PostCardProps) {
   const [isCommenting, setIsCommenting] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authActionName, setAuthActionName] = useState("interact");
+  const [showMenu, setShowMenu] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
   const promptGuestAuth = (action: string) => {
@@ -104,6 +107,15 @@ export default function PostCard({ post }: PostCardProps) {
     setIsCommenting(false);
   };
 
+  const handleDeletePost = async () => {
+    if (confirm("Are you sure you want to delete this post?")) {
+      setIsDeleting(true);
+      await deletePost(post.id);
+      setIsDeleting(false);
+      setShowMenu(false);
+    }
+  };
+
   // Format timestamp safely
   let timeAgo = "Just now";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -116,7 +128,7 @@ export default function PostCard({ post }: PostCardProps) {
     <div className="neo-card p-6 mb-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-4 cursor-pointer group">
+        <Link href={`/profile?uid=${post.userId}`} className="flex items-center gap-4 group">
           <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white shadow-inner group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow">
             {post.user.avatar}
           </div>
@@ -128,11 +140,34 @@ export default function PostCard({ post }: PostCardProps) {
               <span>{timeAgo}</span>
             </div>
           </div>
+        </Link>
+        <div className="relative">
+          <button 
+            onClick={() => setShowMenu(!showMenu)} 
+            className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800/50"
+          >
+            <MoreHorizontal className="w-5 h-5" />
+          </button>
+          
+          {showMenu && (
+            <div className="absolute right-0 mt-2 w-48 rounded-xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-200">
+              {profile?.uid === post.userId ? (
+                <>
+                  <button onClick={() => { /* Handle Edit */ }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
+                    <Edit2 className="w-4 h-4" /> Edit Post
+                  </button>
+                  <button onClick={handleDeletePost} disabled={isDeleting} className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors flex items-center gap-2 disabled:opacity-50">
+                    <Trash2 className="w-4 h-4" /> {isDeleting ? "Deleting..." : "Delete Post"}
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => { /* Handle Report */ setShowMenu(false); alert("Post reported to admins."); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
+                  <Flag className="w-4 h-4" /> Report Post
+                </button>
+              )}
+            </div>
+          )}
         </div>
-        
-        <button className="text-slate-400 hover:text-white transition-colors p-2 rounded-full hover:bg-slate-800/50">
-          <MoreHorizontal className="w-5 h-5" />
-        </button>
       </div>
 
       {/* Body */}
@@ -213,12 +248,12 @@ export default function PostCard({ post }: PostCardProps) {
                 }
                 return (
                   <div key={comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0">
+                    <Link href={`/profile?uid=${comment.userId}`} className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0 hover:ring-2 hover:ring-brand transition-all">
                       {comment.user.avatar}
-                    </div>
+                    </Link>
                     <div className="flex-1 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-white text-sm">{comment.user.name}</span>
+                        <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors">{comment.user.name}</Link>
                         <span className="text-xs text-slate-500">{cTimeAgo}</span>
                       </div>
                       <p className="text-sm text-slate-300">{comment.content}</p>

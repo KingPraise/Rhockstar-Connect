@@ -10,7 +10,8 @@ import {
   onSnapshot,
   arrayUnion,
   arrayRemove,
-  getDoc
+  getDoc,
+  deleteDoc
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { UserProfile } from '../../store/useAuthStore';
@@ -228,6 +229,18 @@ export const toggleSavePost = async (postId: string, userId: string) => {
     return { success: false, error: "User not found" };
   } catch (error: unknown) {
     console.error("Error saving post:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
+// Delete a post
+export const deletePost = async (postId: string) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    await deleteDoc(postRef);
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Error deleting post:", error);
     return { success: false, error: (error as Error).message };
   }
 };

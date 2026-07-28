@@ -51,13 +51,13 @@ export default function Sidebar() {
     <aside 
       className={`h-screen sticky top-0 bg-slate-900/40 backdrop-blur-3xl border-r border-white/5 hidden md:flex flex-col z-20 transition-all duration-300 ${
         isMinimized ? "w-24" : "w-72"
-      } overflow-y-auto no-scrollbar`}
+      } overflow-y-auto overscroll-contain no-scrollbar`}
     >
       {/* Header / Logo */}
       <div className={`p-6 flex items-center ${isMinimized ? "justify-center" : "justify-between"}`}>
         {!isMinimized ? (
           <Link href="/feed" className="flex items-center gap-3 group">
-            <Image src="/logo-light.png" alt="Rhockstar Connect" width={140} height={32} className="group-hover:opacity-80 transition-opacity" />
+            <Image src="/logo-light.png" alt="Rhockstar Connect" width={180} height={42} className="group-hover:opacity-80 transition-opacity drop-shadow-md" />
           </Link>
         ) : (
           <Link href="/feed" className="flex justify-center group">
@@ -111,10 +111,10 @@ export default function Sidebar() {
               key={item.name}
               href={item.href}
               prefetch={true}
-              className={`flex items-center ${isMinimized ? "justify-center px-0" : "gap-4 px-5"} py-3 rounded-xl font-medium transition-all group relative ${
+              className={`flex items-center ${isMinimized ? "justify-center px-0" : "gap-4 px-5"} py-3 rounded-xl font-semibold transition-all group relative ${
                 isActive 
                   ? "bg-brand/10 text-brand shadow-[inset_0_0_15px_rgba(56,189,248,0.1)] border border-brand/20" 
-                  : "text-slate-400 hover:text-white hover:bg-slate-800/50 border border-transparent"
+                  : "text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent"
               }`}
               title={isMinimized ? item.name : undefined}
             >

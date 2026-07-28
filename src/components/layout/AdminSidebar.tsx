@@ -59,7 +59,7 @@ export default function AdminSidebar() {
 
       {/* SIDEBAR CONTAINER (Desktop Sidebar + Mobile Drawer) */}
       <aside className={`
-        fixed lg:sticky top-0 left-0 h-screen z-50 bg-slate-900/95 backdrop-blur-xl border-r border-rose-500/20 flex flex-col justify-between py-6 px-4 transition-all duration-300 overflow-y-auto no-scrollbar
+        fixed lg:sticky top-0 left-0 h-screen z-50 bg-slate-900/95 backdrop-blur-xl border-r border-rose-500/20 flex flex-col justify-between py-6 px-4 transition-all duration-300 overflow-y-auto overscroll-contain no-scrollbar
         ${mobileOpen ? "translate-x-0 w-64 shadow-2xl pt-20 lg:pt-6" : "-translate-x-full lg:translate-x-0 w-64"}
       `}>
         <div>

@@ -272,7 +272,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-border bg-surface-raised flex justify-end gap-4">
+        <div className="p-4 pb-24 md:pb-4 border-t border-border bg-surface-raised flex justify-end gap-4">
           <button 
             onClick={onClose}
             disabled={isSaving}
