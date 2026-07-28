@@ -15,6 +15,15 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (user && mounted) {
+      import('@/lib/services/notifications').then(({ requestNotificationPermission, setupMessageListener }) => {
+        requestNotificationPermission(user.uid);
+        setupMessageListener();
+      }).catch(console.error);
+    }
+  }, [user, mounted]);
+
   const isPublicRoute = 
     pathname === "/feed" || 
     pathname.startsWith("/profile") || 

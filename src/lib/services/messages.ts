@@ -111,13 +111,28 @@ export const sendMessage = async (
       const participants: string[] = chatSnap.data().participants || [];
       const recipientId = participants.find(p => p !== senderId);
       if (recipientId) {
+        const title = "New Message";
+        const messageBody = type === 'text' ? (text.length > 50 ? `${text.substring(0, 50)}...` : text) : `Sent an ${type}`;
+        
         await createNotification({
           userId: recipientId,
           type: "message",
-          title: "New Message",
-          message: text.length > 50 ? `${text.substring(0, 50)}...` : text,
+          title,
+          message: messageBody,
           link: "/messages"
         });
+
+        // Trigger FCM Push Notification
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: recipientId,
+            title,
+            body: messageBody,
+            url: "/messages"
+          })
+        }).catch(console.error);
       }
     }
 

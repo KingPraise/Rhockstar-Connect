@@ -7,9 +7,10 @@ interface AuthRequiredModalProps {
   isOpen: boolean;
   onClose: () => void;
   actionName?: string;
+  title?: string;
 }
 
-export default function AuthRequiredModal({ isOpen, onClose, actionName = "interact" }: AuthRequiredModalProps) {
+export default function AuthRequiredModal({ isOpen, onClose, actionName = "interact", title }: AuthRequiredModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -26,7 +27,7 @@ export default function AuthRequiredModal({ isOpen, onClose, actionName = "inter
           <Sparkles className="w-8 h-8" />
         </div>
 
-        <h3 className="text-2xl font-extrabold text-white mb-2">Join Rhockstar Connect</h3>
+        <h3 className="text-2xl font-extrabold text-white mb-2">{title || "Join Rhockstar Connect"}</h3>
         <p className="text-slate-300 text-sm leading-relaxed mb-6">
           Please log in or create a free account to {actionName} and connect with professionals on Rhockstar Connect.
         </p>

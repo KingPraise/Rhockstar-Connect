@@ -11,7 +11,8 @@ import {
   arrayUnion,
   arrayRemove,
   getDoc,
-  deleteDoc
+  deleteDoc,
+  getDocs
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { UserProfile } from '../../store/useAuthStore';
@@ -142,6 +143,22 @@ export const subscribeToFeed = (callback: (posts: Post[]) => void) => {
   });
 };
 
+// Fetch feed posts once
+export const getFeedPosts = async () => {
+  try {
+    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    const posts: Post[] = [];
+    snapshot.forEach((doc) => {
+      posts.push({ id: doc.id, ...doc.data() } as Post);
+    });
+    return { success: true, posts };
+  } catch (error: unknown) {
+    console.error("Error getting feed posts:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
 // Toggle a like on a post
 export const toggleLike = async (postId: string, userId: string) => {
   try {
@@ -155,6 +172,43 @@ export const toggleLike = async (postId: string, userId: string) => {
       await updateDoc(postRef, {
         likes: isLiked ? arrayRemove(userId) : arrayUnion(userId)
       });
+      
+      if (!isLiked && postData.userId !== userId) {
+        // Fire and forget notification logic
+        (async () => {
+          try {
+            const { getUserById } = await import('./users');
+            const userRes = await getUserById(userId);
+            const likerName = userRes.success && userRes.user ? userRes.user.fullName : 'Someone';
+            
+            const title = "New Like";
+            const messageBody = `${likerName} liked your post.`;
+            
+            const { createNotification } = await import('./notifications');
+            await createNotification({
+              userId: postData.userId,
+              type: "like",
+              title,
+              message: messageBody,
+              link: `/`
+            });
+
+            fetch('/api/notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: postData.userId,
+                title,
+                body: messageBody,
+                url: "/"
+              })
+            }).catch(console.error);
+          } catch (e) {
+            console.error(e);
+          }
+        })();
+      }
+
       return { success: true, isLiked: !isLiked };
     }
     return { success: false, error: "Post not found" };

@@ -9,8 +9,10 @@ import {
   doc,
   serverTimestamp,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  arrayUnion
 } from 'firebase/firestore';
+import { getMessaging, getToken, isSupported } from 'firebase/messaging';
 
 export interface Notification {
   id: string;
@@ -90,10 +92,45 @@ export const markAllNotificationsAsRead = async (userId: string) => {
       updateDoc(doc(db, 'notifications', docSnap.id), { read: true })
     );
     await Promise.all(updates);
-    
     return { success: true };
   } catch (error) {
     console.error("Error marking all read:", error);
     return { success: false };
+  }
+};
+
+export const requestNotificationPermission = async (userId: string) => {
+  try {
+    const supported = await isSupported();
+    if (!supported) {
+      console.log('Firebase Messaging is not supported in this browser.');
+      return false;
+    }
+
+    if (!('Notification' in window)) {
+      console.log('This browser does not support desktop notification');
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const messaging = getMessaging();
+      const token = await getToken(messaging, {
+        vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY
+      });
+
+      if (token) {
+        // Save the token to the user's document
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+          fcmTokens: arrayUnion(token)
+        });
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    console.error('An error occurred while requesting notification permission:', error);
+    return false;
   }
 };
