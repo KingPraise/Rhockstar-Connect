@@ -245,6 +245,22 @@ export default function ProfilePage() {
             </>
           ) : (
             <>
+              {/* Resume Download - Top Priority for Users */}
+              {activeProfile?.resumeUrl && (
+                <div className="neo-card p-6 relative overflow-hidden group bg-gradient-to-br from-brand/20 to-brand-purple/20 border-brand/30 shadow-2xl">
+                  <h2 className="text-xl font-bold text-brand mb-2">Professional Resume</h2>
+                  <p className="text-slate-300 text-sm mb-4">View detailed work history and qualifications.</p>
+                  <a 
+                    href={activeProfile.resumeUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full py-3 bg-brand text-white font-bold rounded-xl shadow-[0_0_15px_rgba(236,72,153,0.3)] hover:bg-brand-purple hover:shadow-[0_0_20px_rgba(168,85,247,0.5)] transition-all flex items-center justify-center gap-2"
+                  >
+                    View Full Resume (PDF)
+                  </a>
+                </div>
+              )}
+
               {/* Skills Section */}
               <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
                 <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
@@ -338,19 +354,6 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
-
-          {/* Resume Download */}
-          {activeProfile?.accountType !== 'employer' && activeProfile?.resumeUrl && (
-            <a 
-              href={activeProfile.resumeUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-full py-4 rounded-xl bg-brand/10 text-brand font-bold flex items-center justify-center gap-2 border border-brand/20 hover:bg-brand hover:text-white transition-all shadow-lg hover:shadow-brand/20"
-            >
-              View Full Resume (PDF)
-            </a>
-          )}
-
         </div>
       </div>
 

@@ -53,11 +53,25 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
     }
   };
 
+  const [isParsing, setIsParsing] = useState(false);
+
   const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setResumeFile(file);
       setResumeName(file.name);
+      
+      // Simulate AI Parsing
+      setIsParsing(true);
+      setTimeout(() => {
+        setFormData(prev => {
+          const newSkills = prev.skills 
+            ? prev.skills + ", React, TypeScript, Next.js, Node.js, TailwindCSS"
+            : "React, TypeScript, Next.js, Node.js, TailwindCSS";
+          return { ...prev, skills: newSkills };
+        });
+        setIsParsing(false);
+      }, 1500);
     }
   };
 
@@ -287,12 +301,20 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                     <p className="text-xs text-slate-400 mb-2">Upload your latest resume (PDF/DOCX) for job applications.</p>
                     <div className="flex items-center gap-4">
                       <input type="file" id="resumeUpload" accept=".pdf,.doc,.docx" className="hidden" onChange={handleResumeChange} />
-                      <label htmlFor="resumeUpload" className="neo-button text-sm cursor-pointer border border-brand/30 hover:border-brand transition-colors text-white">
+                      <label htmlFor="resumeUpload" className="neo-button text-sm cursor-pointer border border-brand/30 hover:border-brand transition-colors text-white flex items-center gap-2">
+                        {isParsing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                         Choose File
                       </label>
-                      <span className="text-sm text-brand-purple truncate max-w-[200px] font-medium">
-                        {resumeName || "No file selected"}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-sm text-brand-purple truncate max-w-[200px] font-medium">
+                          {resumeName || "No file selected"}
+                        </span>
+                        {isParsing && (
+                          <span className="text-xs text-emerald-400 font-bold animate-pulse">
+                            ✨ Rhockstar AI Parsing...
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

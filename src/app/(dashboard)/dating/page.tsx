@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { getDatingProspects, recordDatingAction } from "@/lib/services/dating";
-import { Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, Eye, Settings } from "lucide-react";
+import { Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, Eye, Settings, LayoutGrid, Layers, MapPin } from "lucide-react";
 import { getOrCreateChat } from "@/lib/services/messages";
 import { useRouter } from "next/navigation";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
@@ -15,6 +15,7 @@ export default function DatingPage() {
   const [prospects, setProspects] = useState<UserBasic[]>([]);
   const [loading, setLoading] = useState(true);
   const [matchModal, setMatchModal] = useState<UserBasic | null>(null);
+  const [viewMode, setViewMode] = useState<'swipe' | 'grid'>('swipe');
   const [animatingCard, setAnimatingCard] = useState<'like' | 'pass' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [swipesToday, setSwipesToday] = useState(0);
@@ -51,7 +52,7 @@ export default function DatingPage() {
     setPremiumLockOpen(true);
   };
 
-  const handleAction = async (action: 'like' | 'pass') => {
+  const handleAction = async (action: 'like' | 'pass', specificProspectId?: string) => {
     if (!profile?.uid || prospects.length === 0 || isProcessing) return;
     
     // Check premium limits
@@ -64,7 +65,11 @@ export default function DatingPage() {
     }
     
     setIsProcessing(true);
-    setAnimatingCard(action);
+    
+    // If specificProspectId is provided (from Grid view), don't animate the main swipe card
+    if (!specificProspectId) {
+      setAnimatingCard(action);
+    }
     
     // Update swipe count
     const newSwipes = swipesToday + 1;
@@ -72,22 +77,33 @@ export default function DatingPage() {
     const dateKey = new Date().toISOString().split('T')[0];
     localStorage.setItem(`dating_swipes_${dateKey}`, newSwipes.toString());
 
-    const currentProspect = prospects[0];
+    const prospectTargetId = specificProspectId || prospects[0].uid;
+    const currentProspect = prospects.find(p => p.uid === prospectTargetId);
     
-    // Animate out for 300ms before removing
-    setTimeout(async () => {
-      setProspects(prev => prev.slice(1));
+    // Function to execute the action
+    const executeAction = async () => {
+      setProspects(prev => prev.filter(p => p.uid !== prospectTargetId));
       setAnimatingCard(null);
       setIsProcessing(false);
       
-      const res = await recordDatingAction(profile.uid, currentProspect.uid, action);
-      
-      if (res.isMatch) {
-        // Automatically create a chat for them
-        await getOrCreateChat(profile.uid, currentProspect.uid);
-        setMatchModal(currentProspect);
+      if (currentProspect) {
+        const res = await recordDatingAction(profile.uid, currentProspect.uid, action);
+        
+        if (res.isMatch) {
+          // Automatically create a chat for them
+          await getOrCreateChat(profile.uid, currentProspect.uid);
+          setMatchModal(currentProspect);
+        }
       }
-    }, 300);
+    };
+
+    if (!specificProspectId) {
+      // Animate out for 300ms before removing in Swipe view
+      setTimeout(executeAction, 300);
+    } else {
+      // Execute immediately in Grid view
+      await executeAction();
+    }
   };
 
   const currentProspect = prospects.length > 0 ? prospects[0] : null;
@@ -113,14 +129,36 @@ export default function DatingPage() {
             <h1 className="text-3xl font-extrabold text-white tracking-tight">Rhockstar Dating</h1>
             <p className="text-slate-400 font-medium">Connect with professionals on a deeper level.</p>
           </div>
+          </div>
         </div>
-        <button 
-          onClick={() => router.push('/dating/profile')}
-          className="neo-button flex items-center gap-2"
-        >
-          <Settings className="w-4 h-4" />
-          <span className="hidden sm:inline">Dating Profile</span>
-        </button>
+        
+        <div className="flex items-center gap-4">
+          {/* View Mode Toggle */}
+          <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-white/5">
+            <button 
+              onClick={() => setViewMode('swipe')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'swipe' ? 'bg-brand-purple text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+              title="Swipe View"
+            >
+              <Layers className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-brand-purple text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+              title="Grid View"
+            >
+              <LayoutGrid className="w-5 h-5" />
+            </button>
+          </div>
+
+          <button 
+            onClick={() => router.push('/dating/profile')}
+            className="neo-button flex items-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">Dating Profile</span>
+          </button>
+        </div>
       </div>
 
       {/* WHO LIKED YOU - PREMIUM LOCKED BANNER */}
@@ -154,15 +192,16 @@ export default function DatingPage() {
         </button>
       </div>
 
-      {/* SWIPE STACK */}
-      <div className="relative w-full max-w-md mx-auto h-[650px] flex items-center justify-center">
-        {prospects.length === 0 ? (
-          <div className="neo-card w-full h-full p-10 flex flex-col items-center justify-center text-center bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-[3rem]">
-            <Sparkles className="w-16 h-16 text-brand-purple mb-6 opacity-50" />
-            <h2 className="text-2xl font-bold text-white mb-2">You&apos;re all caught up!</h2>
-            <p className="text-slate-400">Check back later for new potential matches in your professional network.</p>
-          </div>
-        ) : (
+      {/* CONTENT AREA */}
+      {prospects.length === 0 ? (
+        <div className="neo-card w-full max-w-md mx-auto min-h-[400px] p-10 flex flex-col items-center justify-center text-center bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-[3rem]">
+          <Sparkles className="w-16 h-16 text-brand-purple mb-6 opacity-50" />
+          <h2 className="text-2xl font-bold text-white mb-2">You&apos;re all caught up!</h2>
+          <p className="text-slate-400">Check back later for new potential matches in your professional network.</p>
+        </div>
+      ) : viewMode === 'swipe' ? (
+        /* SWIPE STACK */
+        <div className="relative w-full max-w-md mx-auto h-[650px] flex items-center justify-center">
           <div className="relative w-full h-full">
             {/* NEXT CARD (Background) */}
             {prospects.length > 1 && (
@@ -290,8 +329,63 @@ export default function DatingPage() {
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        /* GRID VIEW */
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in zoom-in-95 duration-300">
+          {prospects.map((prospect) => (
+            <div key={prospect.uid} className="neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden flex flex-col group hover:border-brand-purple/30 transition-all duration-300">
+              <div className="w-full aspect-[4/5] bg-slate-800 relative overflow-hidden">
+                {prospect.datingPhotos && prospect.datingPhotos.length > 0 ? (
+                  <img src={prospect.datingPhotos[0]} alt={prospect.fullName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                    <span className="text-4xl font-extrabold text-white opacity-50">{prospect.avatar}</span>
+                  </div>
+                )}
+                
+                {/* Gradient Overlay for Text */}
+                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-900 to-transparent flex flex-col justify-end p-4">
+                  <h3 className="text-xl font-extrabold text-white leading-tight">{prospect.fullName}</h3>
+                  <p className="text-sm font-medium text-brand-purple">@{prospect.username}</p>
+                </div>
+              </div>
+
+              <div className="p-4 flex flex-col gap-4 flex-1 bg-slate-900">
+                <div className="flex flex-wrap gap-2">
+                  {prospect.location && typeof prospect.location === 'object' && prospect.location.city && (
+                    <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 bg-slate-800 rounded-lg text-slate-300 border border-white/5">
+                      <MapPin className="w-3 h-3" /> {prospect.location.city}
+                    </span>
+                  )}
+                  {prospect.datingGoals && (
+                    <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 bg-brand-purple/10 text-brand-purple rounded-lg border border-brand-purple/20">
+                      🎯 {prospect.datingGoals}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-auto pt-4 flex gap-3 border-t border-white/5">
+                  <button 
+                    onClick={() => handleAction('pass', prospect.uid)}
+                    disabled={isProcessing}
+                    className="flex-1 py-2.5 rounded-xl bg-slate-800 text-slate-400 font-bold hover:bg-red-500 hover:text-white transition-all disabled:opacity-50 flex items-center justify-center"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={() => handleAction('like', prospect.uid)}
+                    disabled={isProcessing}
+                    className="flex-1 py-2.5 rounded-xl bg-brand-purple/10 text-brand-purple font-bold hover:bg-brand-purple hover:text-white transition-all border border-brand-purple/20 hover:border-transparent disabled:opacity-50 flex items-center justify-center"
+                  >
+                    <Heart className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* MATCH MODAL */}
       {matchModal && (

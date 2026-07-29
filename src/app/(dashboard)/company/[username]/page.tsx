@@ -238,12 +238,17 @@ export default function CompanyPage() {
           </div>
 
           {isOwnProfile && (
-            <div className="neo-card p-6 relative overflow-hidden bg-gradient-to-br from-emerald-500/20 to-teal-600/20 border-emerald-500/30 shadow-2xl">
+            <div className="neo-card p-6 relative overflow-hidden group bg-gradient-to-br from-emerald-500/20 to-teal-600/20 border-emerald-500/30 shadow-2xl">
               <h2 className="text-xl font-bold text-emerald-400 mb-2">Employer Dashboard</h2>
               <p className="text-slate-300 text-sm mb-4">Manage your job listings and view applicants.</p>
-              <Link href="/jobs/post" className="w-full py-3 bg-emerald-500 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-400 transition-colors block text-center">
-                Post a New Job
-              </Link>
+              <div className="flex flex-col gap-3">
+                <Link href={`/company/${username}/ats`} className="w-full py-3 bg-emerald-500 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-400 transition-colors block text-center">
+                  Applicant Tracking (ATS)
+                </Link>
+                <Link href="/jobs/post" className="w-full py-3 bg-slate-800 text-emerald-400 font-bold rounded-xl border border-emerald-500/30 hover:bg-slate-700 transition-colors block text-center">
+                  Post a New Job
+                </Link>
+              </div>
             </div>
           )}
 
