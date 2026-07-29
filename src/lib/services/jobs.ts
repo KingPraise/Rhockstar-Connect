@@ -1,16 +1,20 @@
+import { db } from "../firebase";
+import { collection, doc, getDoc, getDocs, setDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
+
 export interface JobListing {
   id: string;
   title: string;
-  company: string;
+  company: string; // The company name
+  companyId?: string; // The UID of the employer who posted this
   location: string;
   type: 'Full-time' | 'Part-time' | 'Contract' | 'Remote' | 'Internship';
   salary: string;
   description: string;
-  postedAt: string;
+  postedAt: any;
   logo: string;
 }
 
-// Expanded Mock database of premium jobs
+// Keep mock jobs as a fallback/seed
 const MOCK_JOBS: JobListing[] = [
   {
     id: "job_1",
@@ -83,30 +87,87 @@ const MOCK_JOBS: JobListing[] = [
 export interface JobFilters {
   query: string;
   type?: 'Full-time' | 'Part-time' | 'Contract' | 'Remote' | 'Internship' | 'All';
+  companyId?: string;
 }
+
+export const createJob = async (jobData: Omit<JobListing, "id" | "postedAt" | "logo">, employerId: string) => {
+  try {
+    const jobsRef = collection(db, "jobs");
+    const newJobRef = doc(jobsRef);
+    
+    const employerDoc = await getDoc(doc(db, "users", employerId));
+    const employerData = employerDoc.data();
+    
+    let logo = employerData?.fullName?.substring(0, 1).toUpperCase() || "B";
+    if (employerData?.avatar) {
+      logo = employerData.avatar;
+    }
+
+    const job: JobListing = {
+      ...jobData,
+      id: newJobRef.id,
+      companyId: employerId,
+      postedAt: serverTimestamp(),
+      logo
+    };
+
+    await setDoc(newJobRef, job);
+    return { success: true, job };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
 
 export const getJobs = async (filters?: JobFilters): Promise<{ success: boolean; jobs?: JobListing[]; error?: string }> => {
   try {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const jobsRef = collection(db, "jobs");
+    // Sort by newest first
+    const q = query(jobsRef, orderBy("postedAt", "desc"));
+    const snapshot = await getDocs(q);
     
-    let filteredJobs = MOCK_JOBS;
+    let fetchedJobs: JobListing[] = [];
     
+    if (snapshot.empty) {
+      // If Firestore is empty, fallback to MOCK_JOBS to ensure the UI looks good
+      fetchedJobs = MOCK_JOBS;
+    } else {
+      fetchedJobs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        let postedAtStr = "Just now";
+        if (data.postedAt?.toDate) {
+          const diffDays = Math.floor((new Date().getTime() - data.postedAt.toDate().getTime()) / (1000 * 3600 * 24));
+          if (diffDays === 0) postedAtStr = "Today";
+          else if (diffDays === 1) postedAtStr = "1 day ago";
+          else postedAtStr = `${diffDays} days ago`;
+        }
+        return {
+          ...data,
+          id: doc.id,
+          postedAt: postedAtStr
+        } as JobListing;
+      });
+    }
+    
+    // Apply filters
     if (filters) {
       if (filters.query) {
-        const q = filters.query.toLowerCase();
-        filteredJobs = filteredJobs.filter(job => 
-          job.title.toLowerCase().includes(q) || 
-          job.company.toLowerCase().includes(q)
+        const qStr = filters.query.toLowerCase();
+        fetchedJobs = fetchedJobs.filter(job => 
+          job.title.toLowerCase().includes(qStr) || 
+          job.company.toLowerCase().includes(qStr)
         );
       }
       
       if (filters.type && filters.type !== 'All') {
-        filteredJobs = filteredJobs.filter(job => job.type === filters.type);
+        fetchedJobs = fetchedJobs.filter(job => job.type === filters.type);
+      }
+
+      if (filters.companyId) {
+        fetchedJobs = fetchedJobs.filter(job => job.companyId === filters.companyId);
       }
     }
     
-    return { success: true, jobs: filteredJobs };
+    return { success: true, jobs: fetchedJobs };
   } catch {
     return { success: false, error: "Failed to fetch jobs" };
   }

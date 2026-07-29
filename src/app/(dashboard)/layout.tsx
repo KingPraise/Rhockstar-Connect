@@ -2,6 +2,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import MobileNav from "@/components/layout/MobileNav";
 import MobileHeader from "@/components/layout/MobileHeader";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import AIAssistantWidget from "@/components/ai/AIAssistantWidget";
 
 export default function DashboardLayout({
   children,
@@ -28,6 +29,9 @@ export default function DashboardLayout({
 
       {/* Mobile Bottom Navigation */}
       <MobileNav />
+
+      {/* Global AI Assistant */}
+      <AIAssistantWidget />
     </div>
   );
 }

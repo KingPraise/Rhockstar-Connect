@@ -215,9 +215,9 @@ export default function ProfilePage() {
                 <div className="neo-card p-6 relative overflow-hidden group bg-gradient-to-br from-brand to-brand-purple border-white/10 shadow-2xl">
                   <h2 className="text-xl font-bold text-white mb-2">Hiring?</h2>
                   <p className="text-white/80 text-sm mb-4">Post a new job and reach thousands of top professionals.</p>
-                  <button className="w-full py-3 bg-white text-slate-900 font-bold rounded-xl shadow-lg hover:scale-105 transition-transform flex justify-center items-center gap-2">
+                  <Link href="/jobs/post" className="w-full py-3 bg-white text-slate-900 font-bold rounded-xl shadow-lg hover:scale-105 transition-transform flex justify-center items-center gap-2">
                     <Plus className="w-5 h-5" /> Post a Job
-                  </button>
+                  </Link>
                 </div>
               )}
 

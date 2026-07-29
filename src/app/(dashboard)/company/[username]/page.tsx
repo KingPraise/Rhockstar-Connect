@@ -168,9 +168,9 @@ export default function CompanyPage() {
                 <span className="bg-emerald-500/20 text-emerald-400 text-sm py-1 px-3 rounded-full">{jobs.length}</span>
               </h2>
               {isOwnProfile && (
-                <button className="text-sm font-bold bg-white text-slate-900 py-2 px-4 rounded-xl flex items-center gap-2 hover:bg-slate-200 transition-colors">
+                <Link href="/jobs/post" className="text-sm font-bold bg-white text-slate-900 py-2 px-4 rounded-xl flex items-center gap-2 hover:bg-slate-200 transition-colors">
                   <Plus className="w-4 h-4" /> Post Job
-                </button>
+                </Link>
               )}
             </div>
 
@@ -241,9 +241,9 @@ export default function CompanyPage() {
             <div className="neo-card p-6 relative overflow-hidden bg-gradient-to-br from-emerald-500/20 to-teal-600/20 border-emerald-500/30 shadow-2xl">
               <h2 className="text-xl font-bold text-emerald-400 mb-2">Employer Dashboard</h2>
               <p className="text-slate-300 text-sm mb-4">Manage your job listings and view applicants.</p>
-              <button className="w-full py-3 bg-emerald-500 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-400 transition-colors">
-                Go to Dashboard
-              </button>
+              <Link href="/jobs/post" className="w-full py-3 bg-emerald-500 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-400 transition-colors block text-center">
+                Post a New Job
+              </Link>
             </div>
           )}
 
