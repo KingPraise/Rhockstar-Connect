@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import * as admin from 'firebase-admin';
 import { adminDb, adminMessaging } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export async function POST(req: Request) {
   try {
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     // Cleanup invalid tokens
     if (response.failureCount > 0) {
       const failedTokens: string[] = [];
-      response.responses.forEach((resp, idx) => {
+      response.responses.forEach((resp: any, idx: number) => {
         if (!resp.success) {
           failedTokens.push(fcmTokens[idx]);
         }
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       
       if (failedTokens.length > 0) {
         await adminDb.collection('users').doc(userId).update({
-          fcmTokens: admin.firestore.FieldValue.arrayRemove(...failedTokens)
+          fcmTokens: FieldValue.arrayRemove(...failedTokens)
         });
       }
     }

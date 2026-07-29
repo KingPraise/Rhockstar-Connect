@@ -29,11 +29,16 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
     website: profile?.website || "",
     skills: profile?.skills?.join(", ") || "",
     education: profile?.education || "",
+    certifications: profile?.certifications?.join(", ") || "",
+    portfolio: profile?.portfolio?.join(", ") || "",
     visibility: profile?.visibility || "public",
   });
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(profile?.avatar || null);
+  
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeName, setResumeName] = useState<string | null>(profile?.resumeUrl ? "Current Resume Uploaded" : null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -48,12 +53,21 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
     }
   };
 
+  const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setResumeFile(file);
+      setResumeName(file.name);
+    }
+  };
+
   const handleSave = async () => {
     if (!profile) return;
     setIsSaving(true);
 
     try {
       let avatarUrl = profile.avatar;
+      let resumeUrl = profile.resumeUrl;
       
       if (avatarFile) {
         // Create a timeout promise to prevent hanging
@@ -72,6 +86,18 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
         avatarUrl = await getDownloadURL(snapshot.ref);
       }
 
+      if (resumeFile) {
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Upload timed out.")), 15000);
+        });
+        const storageRef = ref(storage, `resumes/${profile.uid}_${Date.now()}_${resumeFile.name}`);
+        const snapshot = await Promise.race([
+          uploadBytes(storageRef, resumeFile),
+          timeoutPromise
+        ]) as any;
+        resumeUrl = await getDownloadURL(snapshot.ref);
+      }
+
       const updateData = {
         fullName: formData.fullName,
         username: formData.username,
@@ -84,8 +110,11 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
         website: formData.website,
         skills: formData.skills.split(",").map(s => s.trim()).filter(Boolean),
         education: formData.education,
+        certifications: formData.certifications.split(",").map(s => s.trim()).filter(Boolean),
+        portfolio: formData.portfolio.split(",").map(s => s.trim()).filter(Boolean),
         visibility: formData.visibility,
-        ...(avatarUrl && { avatar: avatarUrl })
+        ...(avatarUrl && { avatar: avatarUrl }),
+        ...(resumeUrl && { resumeUrl })
       };
 
       const result = await updateUserProfile(profile.uid, updateData);
@@ -237,7 +266,34 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
 
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-secondary ml-1">Education</label>
-                    <input type="text" name="education" value={formData.education} onChange={handleInputChange} className="neo-input" />
+                    <input type="text" name="education" value={formData.education} onChange={handleInputChange} className="neo-input" placeholder="BSc Computer Science, MIT" />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium text-secondary ml-1">Certifications (Comma separated)</label>
+                    <textarea name="certifications" value={formData.certifications} onChange={handleInputChange} className="neo-input" placeholder="AWS Solutions Architect, PMP..."></textarea>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium text-secondary ml-1">Portfolio Links (Comma separated)</label>
+                    <textarea name="portfolio" value={formData.portfolio} onChange={handleInputChange} className="neo-input" placeholder="https://github.com/..., https://dribbble.com/..."></textarea>
+                  </div>
+
+                  <div className="flex flex-col gap-2 mt-2 p-4 border border-white/5 bg-slate-800/30 rounded-2xl">
+                    <label className="text-sm font-bold text-white flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-brand" /> 
+                      Resume / CV
+                    </label>
+                    <p className="text-xs text-slate-400 mb-2">Upload your latest resume (PDF/DOCX) for job applications.</p>
+                    <div className="flex items-center gap-4">
+                      <input type="file" id="resumeUpload" accept=".pdf,.doc,.docx" className="hidden" onChange={handleResumeChange} />
+                      <label htmlFor="resumeUpload" className="neo-button text-sm cursor-pointer border border-brand/30 hover:border-brand transition-colors text-white">
+                        Choose File
+                      </label>
+                      <span className="text-sm text-brand-purple truncate max-w-[200px] font-medium">
+                        {resumeName || "No file selected"}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}

@@ -17,6 +17,9 @@ export interface UserProfile {
   website?: string;
   skills?: string[];
   education?: string;
+  certifications?: string[];
+  portfolio?: string[];
+  resumeUrl?: string;
   socialLinks?: Record<string, string>;
   visibility?: 'public' | 'connections' | 'private';
   role?: 'admin' | 'user';

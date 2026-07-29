@@ -1,28 +1,33 @@
-import * as admin from 'firebase-admin';
+import { getApps, initializeApp, cert, getApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+import { getMessaging } from 'firebase-admin/messaging';
 
-if (!admin.apps.length) {
+if (!getApps().length) {
   try {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     // Handle newlines in the private key from env variables
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-    if (!projectId || !clientEmail || !privateKey) {
-      console.warn("Firebase Admin missing credentials!");
+    if (projectId && clientEmail && privateKey) {
+      initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        }),
+      });
+    } else {
+      console.warn("Firebase Admin missing credentials, initializing default app");
+      initializeApp();
     }
-
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId,
-        clientEmail,
-        privateKey,
-      }),
-    });
   } catch (error) {
     console.error('Firebase admin initialization error', error);
   }
 }
 
-export const adminAuth = admin.auth();
-export const adminDb = admin.firestore();
-export const adminMessaging = admin.messaging();
+export const adminApp = getApp();
+export const adminAuth = getAuth();
+export const adminDb = getFirestore();
+export const adminMessaging = getMessaging();

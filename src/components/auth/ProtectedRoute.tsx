@@ -17,9 +17,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (user && mounted) {
-      import('@/lib/services/notifications').then(({ requestNotificationPermission, setupMessageListener }) => {
+      import('@/lib/services/notifications').then(({ requestNotificationPermission }) => {
         requestNotificationPermission(user.uid);
-        setupMessageListener();
       }).catch(console.error);
     }
   }, [user, mounted]);

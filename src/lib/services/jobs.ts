@@ -3,14 +3,14 @@ export interface JobListing {
   title: string;
   company: string;
   location: string;
-  type: 'Full-time' | 'Part-time' | 'Contract' | 'Remote';
+  type: 'Full-time' | 'Part-time' | 'Contract' | 'Remote' | 'Internship';
   salary: string;
   description: string;
   postedAt: string;
   logo: string;
 }
 
-// Mock database of premium jobs
+// Expanded Mock database of premium jobs
 const MOCK_JOBS: JobListing[] = [
   {
     id: "job_1",
@@ -55,22 +55,55 @@ const MOCK_JOBS: JobListing[] = [
     description: "Looking for an experienced Solidity developer to audit and deploy our next-generation marketplace contracts.",
     postedAt: "3 days ago",
     logo: "O"
+  },
+  {
+    id: "job_5",
+    title: "Marketing Intern",
+    company: "Figma",
+    location: "Remote",
+    type: "Internship",
+    salary: "$30/hr",
+    description: "Join our marketing team for the summer! Help us create engaging content and manage social media campaigns.",
+    postedAt: "12 hours ago",
+    logo: "F"
+  },
+  {
+    id: "job_6",
+    title: "Data Analyst",
+    company: "Spotify",
+    location: "Stockholm, Sweden",
+    type: "Part-time",
+    salary: "$80k - $100k (Pro-rated)",
+    description: "Analyze listening trends and help our product teams make data-driven decisions. 20 hours per week.",
+    postedAt: "4 days ago",
+    logo: "Sp"
   }
 ];
 
-export const getJobs = async (searchQuery?: string): Promise<{ success: boolean; jobs?: JobListing[]; error?: string }> => {
+export interface JobFilters {
+  query: string;
+  type?: 'Full-time' | 'Part-time' | 'Contract' | 'Remote' | 'Internship' | 'All';
+}
+
+export const getJobs = async (filters?: JobFilters): Promise<{ success: boolean; jobs?: JobListing[]; error?: string }> => {
   try {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 800));
     
     let filteredJobs = MOCK_JOBS;
     
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filteredJobs = MOCK_JOBS.filter(job => 
-        job.title.toLowerCase().includes(q) || 
-        job.company.toLowerCase().includes(q)
-      );
+    if (filters) {
+      if (filters.query) {
+        const q = filters.query.toLowerCase();
+        filteredJobs = filteredJobs.filter(job => 
+          job.title.toLowerCase().includes(q) || 
+          job.company.toLowerCase().includes(q)
+        );
+      }
+      
+      if (filters.type && filters.type !== 'All') {
+        filteredJobs = filteredJobs.filter(job => job.type === filters.type);
+      }
     }
     
     return { success: true, jobs: filteredJobs };

@@ -250,6 +250,64 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          {/* Certifications Section */}
+          <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
+            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400"></div>
+            <div className="flex justify-between items-center mb-6 z-10 relative">
+              <h2 className="text-xl font-bold flex items-center gap-3 text-white">
+                <Zap className="w-5 h-5 text-emerald-400" />
+                Certifications
+              </h2>
+            </div>
+            
+            <div className="flex flex-col gap-3 z-10 relative">
+              {activeProfile?.certifications && activeProfile.certifications.length > 0 ? (
+                activeProfile.certifications.map((cert: string, index: number) => (
+                  <div key={index} className="p-4 rounded-xl bg-slate-800/50 border border-white/5">
+                    <span className="font-bold text-white">{cert}</span>
+                  </div>
+                ))
+              ) : (
+                <span className="text-slate-400">No certifications added.</span>
+              )}
+            </div>
+          </div>
+
+          {/* Portfolio & Links */}
+          <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
+            <div className="absolute top-0 left-0 w-1 h-full bg-brand-purple"></div>
+            <div className="flex justify-between items-center mb-6 z-10 relative">
+              <h2 className="text-xl font-bold flex items-center gap-3 text-white">
+                <Globe className="w-5 h-5 text-brand-purple" />
+                Portfolio
+              </h2>
+            </div>
+            
+            <div className="flex flex-col gap-3 z-10 relative">
+              {activeProfile?.portfolio && activeProfile.portfolio.length > 0 ? (
+                activeProfile.portfolio.map((link: string, index: number) => (
+                  <a key={index} href={link} target="_blank" rel="noopener noreferrer" className="p-3 rounded-xl bg-brand-purple/10 text-brand-purple border border-brand-purple/20 hover:bg-brand-purple hover:text-white transition-colors truncate text-sm font-medium">
+                    {link}
+                  </a>
+                ))
+              ) : (
+                <span className="text-slate-400">No portfolio links added.</span>
+              )}
+            </div>
+          </div>
+
+          {/* Resume Download */}
+          {activeProfile?.resumeUrl && (
+            <a 
+              href={activeProfile.resumeUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full py-4 rounded-xl bg-brand/10 text-brand font-bold flex items-center justify-center gap-2 border border-brand/20 hover:bg-brand hover:text-white transition-all shadow-lg hover:shadow-brand/20"
+            >
+              View Full Resume (PDF)
+            </a>
+          )}
+
         </div>
       </div>
 
