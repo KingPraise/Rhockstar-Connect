@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { getDatingProspects, recordDatingAction } from "@/lib/services/dating";
-import { Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, Eye, Settings, LayoutGrid, Layers, MapPin } from "lucide-react";
+import { Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, Eye, Settings, LayoutGrid, Layers, MapPin, MoreHorizontal, Flag } from "lucide-react";
 import { getOrCreateChat } from "@/lib/services/messages";
 import { useRouter } from "next/navigation";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
@@ -24,6 +24,7 @@ export default function DatingPage() {
     title: "Unlock Unlimited Dating Swipes",
     desc: "You've reached your daily free limit of 5 swipes. Upgrade to Premium for unlimited matches & swipes!"
   });
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
   useEffect(() => {
     // Load swipes from local storage for today
@@ -128,7 +129,6 @@ export default function DatingPage() {
           <div>
             <h1 className="text-3xl font-extrabold text-white tracking-tight">Rhockstar Dating</h1>
             <p className="text-slate-400 font-medium">Connect with professionals on a deeper level.</p>
-          </div>
           </div>
         </div>
         
@@ -248,6 +248,27 @@ export default function DatingPage() {
                         </div>
                       )}
                     </div>
+                    
+                    {/* Context Menu Button */}
+                    <div className="absolute top-4 right-4 z-30">
+                      <button 
+                        onClick={(e) => { e.preventDefault(); setActiveMenu(activeMenu === currentProspect.uid ? null : currentProspect.uid); }}
+                        className="w-10 h-10 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors border border-white/10"
+                      >
+                        <MoreHorizontal className="w-5 h-5" />
+                      </button>
+                      
+                      {activeMenu === currentProspect.uid && (
+                        <div className="absolute right-0 mt-2 w-48 rounded-xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden z-40 animate-in fade-in zoom-in-95">
+                          <button onClick={() => { setActiveMenu(null); alert("User reported."); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
+                            <Flag className="w-4 h-4" /> Report User
+                          </button>
+                          <button onClick={() => { setActiveMenu(null); alert("User blocked."); handleAction('pass', currentProspect.uid); }} className="w-full px-4 py-3 text-left text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors flex items-center gap-2 border-t border-white/5">
+                            <X className="w-4 h-4" /> Block User
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Extended Info */}
@@ -348,6 +369,27 @@ export default function DatingPage() {
                 <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-900 to-transparent flex flex-col justify-end p-4">
                   <h3 className="text-xl font-extrabold text-white leading-tight">{prospect.fullName}</h3>
                   <p className="text-sm font-medium text-brand-purple">@{prospect.username}</p>
+                </div>
+                
+                {/* Context Menu Button */}
+                <div className="absolute top-3 right-3 z-30">
+                  <button 
+                    onClick={(e) => { e.preventDefault(); setActiveMenu(activeMenu === prospect.uid ? null : prospect.uid); }}
+                    className="w-8 h-8 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white hover:bg-black/60 transition-colors border border-white/10"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                  
+                  {activeMenu === prospect.uid && (
+                    <div className="absolute right-0 mt-2 w-48 rounded-xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden z-40 animate-in fade-in zoom-in-95">
+                      <button onClick={() => { setActiveMenu(null); alert("User reported."); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
+                        <Flag className="w-4 h-4" /> Report User
+                      </button>
+                      <button onClick={() => { setActiveMenu(null); alert("User blocked."); handleAction('pass', prospect.uid); }} className="w-full px-4 py-3 text-left text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors flex items-center gap-2 border-t border-white/5">
+                        <X className="w-4 h-4" /> Block User
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

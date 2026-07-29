@@ -92,12 +92,29 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
         </div>
 
         <div className="mt-4 max-w-2xl">
-          <h1 className="text-4xl font-extrabold text-white flex items-center gap-3 tracking-tight">
-            {profile.fullName}
-            {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite' || profile.role === 'admin') && (
-              <CheckCircle2 className="w-6 h-6 text-brand" />
+          <div className="flex flex-wrap items-center gap-3 mb-2">
+            <h1 className="text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
+              {profile.fullName}
+              {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite' || profile.role === 'admin') && (
+                <CheckCircle2 className="w-6 h-6 text-brand" />
+              )}
+            </h1>
+            
+            {/* Premium Badges */}
+            {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite') && (
+              <div className="flex items-center gap-2">
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full text-xs font-bold flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                  <Crown className="w-3 h-3" /> Premium Verified
+                </span>
+                {profile.accountType !== 'employer' && (
+                  <span className="px-3 py-1 bg-brand-purple/10 text-brand-purple border border-brand-purple/20 rounded-full text-xs font-bold shadow-[0_0_10px_rgba(168,85,247,0.2)]">
+                    Open to Work
+                  </span>
+                )}
+              </div>
             )}
-          </h1>
+          </div>
+          
           <p className="text-slate-400 font-medium text-lg mt-1 mb-4">@{profile.username}</p>
           
           <p className="text-white text-xl font-medium leading-relaxed mb-6">

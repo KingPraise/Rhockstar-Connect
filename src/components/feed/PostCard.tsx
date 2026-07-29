@@ -222,9 +222,14 @@ export default function PostCard({ post }: PostCardProps) {
                   </button>
                 </>
               ) : (
-                <button onClick={() => { /* Handle Report */ setShowMenu(false); alert("Post reported to admins."); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
-                  <Flag className="w-4 h-4" /> Report Post
-                </button>
+                <>
+                  <button onClick={() => { setShowMenu(false); alert("Post reported to admins."); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
+                    <Flag className="w-4 h-4" /> Report Post
+                  </button>
+                  <button onClick={() => { setShowMenu(false); alert("User blocked. You will no longer see their posts."); }} className="w-full px-4 py-3 text-left text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors flex items-center gap-2 border-t border-white/5">
+                    <X className="w-4 h-4" /> Block User
+                  </button>
+                </>
               )}
             </div>
           )}

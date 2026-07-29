@@ -109,18 +109,52 @@ export default function SettingsPage() {
             <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in">
               <h2 className="text-2xl font-bold text-white border-b border-white/10 pb-4">Security Settings</h2>
               
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">Current Password</label>
-                  <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">New Password</label>
-                  <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
+              <div className="space-y-8">
+                {/* Password Change */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-white">Change Password</h3>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-300 mb-2">Current Password</label>
+                    <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-300 mb-2">New Password</label>
+                    <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
+                  </div>
                 </div>
 
-                <div className="pt-4 border-t border-white/10 mt-8">
+                {/* Verification */}
+                <div className="space-y-4 pt-6 border-t border-white/10">
+                  <h3 className="text-lg font-bold text-white">Account Verification</h3>
+                  
+                  <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                    <div>
+                      <h4 className="font-bold text-white">Email Verification</h4>
+                      <p className="text-sm text-slate-400">Verify your email to secure your account.</p>
+                    </div>
+                    <button className="px-4 py-2 bg-emerald-500/10 text-emerald-500 font-bold rounded-lg border border-emerald-500/20">Verified</button>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                    <div>
+                      <h4 className="font-bold text-white">Phone Verification</h4>
+                      <p className="text-sm text-slate-400">Add a phone number for two-factor authentication.</p>
+                    </div>
+                    <button className="px-4 py-2 bg-brand/10 text-brand font-bold rounded-lg border border-brand/20 hover:bg-brand hover:text-white transition-colors">Verify Now</button>
+                  </div>
+                </div>
+
+                {/* Blocked Users */}
+                <div className="space-y-4 pt-6 border-t border-white/10">
+                  <h3 className="text-lg font-bold text-white">Blocked Users</h3>
+                  <p className="text-sm text-slate-400">Users you block will not be able to see your profile or contact you.</p>
+                  <div className="p-4 bg-slate-800/30 border border-dashed border-white/10 rounded-xl text-center">
+                    <p className="text-slate-500">You haven't blocked anyone yet.</p>
+                  </div>
+                </div>
+
+                {/* Danger Zone */}
+                <div className="pt-6 border-t border-white/10">
                   <h3 className="text-rose-500 font-bold mb-2">Danger Zone</h3>
                   <p className="text-slate-400 text-sm mb-4">Once you delete your account, there is no going back. Please be certain.</p>
                   <button className="bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors">
@@ -148,10 +182,75 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {(activeTab === "notifications" || activeTab === "privacy") && (
+          {activeTab === "privacy" && (
+            <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <h2 className="text-2xl font-bold text-white">Privacy Controls</h2>
+                {profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && (
+                  <span className="px-3 py-1 bg-amber-500/20 text-amber-500 text-xs font-bold rounded-lg border border-amber-500/30">Premium Features</span>
+                )}
+              </div>
+              
+              <div className="space-y-6">
+                
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                  <div>
+                    <h4 className="font-bold text-white">Incognito Mode</h4>
+                    <p className="text-sm text-slate-400">Browse profiles anonymously without them knowing.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" disabled={profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite'} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 peer-disabled:opacity-50"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                  <div>
+                    <h4 className="font-bold text-white">Hide Online Status</h4>
+                    <p className="text-sm text-slate-400">Hide your active status from other users.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" disabled={profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite'} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 peer-disabled:opacity-50"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                  <div>
+                    <h4 className="font-bold text-white">Hide Read Receipts</h4>
+                    <p className="text-sm text-slate-400">Turn off read receipts in direct messages.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" disabled={profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite'} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 peer-disabled:opacity-50"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                  <div>
+                    <h4 className="font-bold text-white">Private Photo Albums</h4>
+                    <p className="text-sm text-slate-400">Require approval for users to view your photos.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" disabled={profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite'} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500 peer-disabled:opacity-50"></div>
+                  </label>
+                </div>
+                
+                {profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && (
+                  <div className="mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center">
+                    <p className="text-sm text-amber-500 font-medium">Upgrade to Premium to unlock advanced privacy controls.</p>
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
+
+          {activeTab === "notifications" && (
             <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in text-center py-20">
               <h2 className="text-xl font-bold text-white mb-2">Coming Soon</h2>
-              <p className="text-slate-400">These settings are being finalized and will be available soon.</p>
+              <p className="text-slate-400">Notification preferences will be available soon.</p>
             </div>
           )}
         </div>

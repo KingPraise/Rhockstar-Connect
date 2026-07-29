@@ -199,7 +199,8 @@ export default function ProfilePage() {
                   </div>
                 </div>
               ) : (
-                  )}
+                <p className="text-slate-400 mt-2">No education added yet.</p>
+              )}
                 </div>
               </div>
             </>
