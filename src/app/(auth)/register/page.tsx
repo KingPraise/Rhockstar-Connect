@@ -24,6 +24,7 @@ function RegisterForm() {
   const [dobYear, setDobYear] = useState("");
   
   const [referralCode, setReferralCode] = useState("");
+  const [accountType, setAccountType] = useState<'standard' | 'employer'>('standard');
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -74,7 +75,7 @@ function RegisterForm() {
       return;
     }
 
-    const { user, error } = await registerUser(email, password, fullName, username, referralCode);
+    const { user, error } = await registerUser(email, password, fullName, username, referralCode, accountType);
 
     if (error) {
       setError(error);
@@ -113,17 +114,36 @@ function RegisterForm() {
               <p>{error}</p>
             </div>
           )}
+          
+          <div className="flex bg-slate-800/50 p-1 rounded-2xl mb-8 border border-white/5">
+            <button 
+              type="button"
+              onClick={() => setAccountType('standard')}
+              className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${accountType === 'standard' ? 'bg-brand-purple text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+            >
+              Personal Account
+            </button>
+            <button 
+              type="button"
+              onClick={() => setAccountType('employer')}
+              className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${accountType === 'employer' ? 'bg-brand text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+            >
+              Employer Account
+            </button>
+          </div>
 
           <form onSubmit={handleRegister} className="space-y-6">
             <div className="space-y-2 relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10 pt-7">
                 <User className="w-5 h-5 text-slate-400 group-focus-within:text-brand-purple transition-colors" />
               </div>
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">Full Name</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">
+                {accountType === 'employer' ? 'Company Name' : 'Full Name'}
+              </label>
               <input
                 type="text"
                 className="w-full bg-slate-800/40 border border-white/5 rounded-xl pl-12 pr-4 py-4 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand-purple/50 focus:ring-1 focus:ring-brand-purple/50 transition-all shadow-inner"
-                placeholder="Enter your full name"
+                placeholder={accountType === 'employer' ? 'Enter company name' : 'Enter your full name'}
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required

@@ -36,7 +36,7 @@ export default function Sidebar() {
     router.push('/login');
   };
 
-  const navItems = [
+  let navItems = [
     { name: "Search", href: "/search", icon: Search },
     { name: "Feed", href: "/feed", icon: Home },
     { name: "Profile", href: "/profile", icon: User },
@@ -48,6 +48,10 @@ export default function Sidebar() {
     { name: "Rewards & Referrals", href: "/referrals", icon: Gift },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
+
+  if (profile?.accountType === 'employer') {
+    navItems = navItems.filter(item => item.name !== "Dating");
+  }
 
   return (
     <aside 

@@ -17,7 +17,8 @@ export const registerUser = async (
   password: string, 
   fullName: string, 
   username: string,
-  referralCode?: string
+  referralCode?: string,
+  accountType: 'standard' | 'employer' = 'standard'
 ) => {
   try {
     // 1. Create user in Firebase Auth
@@ -35,6 +36,7 @@ export const registerUser = async (
       fullName,
       username: username.toLowerCase().replace('@', ''),
       email,
+      accountType,
       bio: "",
       headline: "",
       location: { city: "", state: "", country: "" },

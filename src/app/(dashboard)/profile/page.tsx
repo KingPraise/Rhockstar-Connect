@@ -10,6 +10,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { getUserById, getUserByUsername } from "@/lib/services/users";
 import { sendConnectionRequest } from "@/lib/services/connections";
 import Link from "next/link";
+import { Briefcase } from "lucide-react";
 
 export default function ProfilePage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -123,18 +124,22 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center z-10">
               <h2 className="text-2xl font-bold flex items-center gap-3 text-white">
                 <Heart className="w-6 h-6 text-brand" />
-                About Me
+                {activeProfile?.accountType === 'employer' ? 'About Company' : 'About Me'}
               </h2>
-              <button onClick={() => setIsEditModalOpen(true)} className="text-slate-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all group-hover:scale-110">
-                <Plus className="w-5 h-5" />
-              </button>
+              {isOwnProfile && (
+                <button onClick={() => setIsEditModalOpen(true)} className="text-slate-400 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all group-hover:scale-110">
+                  <Plus className="w-5 h-5" />
+                </button>
+              )}
             </div>
             <p className="text-slate-300 text-lg leading-relaxed pt-2 whitespace-pre-wrap z-10">
-              {activeProfile?.bio || "No bio added yet. Click edit to tell the world about yourself!"}
+              {activeProfile?.bio || (activeProfile?.accountType === 'employer' ? "No company description added yet." : "No bio added yet. Click edit to tell the world about yourself!")}
             </p>
           </div>
 
-          {/* Experience Section */}
+          {activeProfile?.accountType !== 'employer' && (
+            <>
+              {/* Experience Section */}
           <div className="neo-card p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
             <div className="absolute top-0 left-0 w-1 h-full bg-brand-purple"></div>
             <div className="flex justify-between items-center z-10">
@@ -194,84 +199,122 @@ export default function ProfilePage() {
                   </div>
                 </div>
               ) : (
-                <p className="text-slate-400 text-lg leading-relaxed">No education added yet.</p>
-              )}
-            </div>
-          </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right Column (Sidebar Content) */}
         <div className="flex flex-col gap-8">
           
-          {/* Skills Section */}
-          <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
-            <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
-            <div className="flex justify-between items-center mb-6 z-10 relative">
-              <h2 className="text-xl font-bold flex items-center gap-3 text-white">
-                <Code2 className="w-5 h-5 text-blue-500" />
-                Top Skills
-              </h2>
-              <button onClick={() => setIsEditModalOpen(true)} className="text-slate-400 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-all">
-                <Plus className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="flex flex-wrap gap-2 z-10 relative">
-              {activeProfile?.skills && activeProfile.skills.length > 0 ? (
-                activeProfile.skills.map((skill: string, index: number) => (
-                  <span key={index} className="px-4 py-2 bg-slate-800/80 hover:bg-blue-500/10 text-slate-200 hover:text-blue-400 font-medium rounded-xl border border-white/10 hover:border-blue-500/30 transition-all cursor-default shadow-sm hover:shadow-[0_0_15px_rgba(59,130,246,0.15)]">
-                    {skill}
-                  </span>
-                ))
-              ) : (
-                <span className="text-slate-400 text-lg">No skills added yet.</span>
+          {activeProfile?.accountType === 'employer' ? (
+            <>
+              {isOwnProfile && (
+                <div className="neo-card p-6 relative overflow-hidden group bg-gradient-to-br from-brand to-brand-purple border-white/10 shadow-2xl">
+                  <h2 className="text-xl font-bold text-white mb-2">Hiring?</h2>
+                  <p className="text-white/80 text-sm mb-4">Post a new job and reach thousands of top professionals.</p>
+                  <button className="w-full py-3 bg-white text-slate-900 font-bold rounded-xl shadow-lg hover:scale-105 transition-transform flex justify-center items-center gap-2">
+                    <Plus className="w-5 h-5" /> Post a Job
+                  </button>
+                </div>
               )}
-            </div>
-          </div>
 
-          {/* Languages Section */}
-          <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
-            <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
-            <div className="flex justify-between items-center mb-6 z-10 relative">
-              <h2 className="text-xl font-bold flex items-center gap-3 text-white">
-                <Globe className="w-5 h-5 text-amber-500" />
-                Languages
-              </h2>
-              <button className="text-slate-400 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-all">
-                <Plus className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="flex flex-col gap-3 z-10 relative">
-              <div className="flex justify-between items-center p-4 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] transition-colors cursor-default border border-transparent hover:border-white/5">
-                <span className="font-bold text-white text-lg">English</span>
-                <span className="text-xs font-bold px-3 py-1 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20 uppercase tracking-wide">Native</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Certifications Section */}
-          <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
-            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400"></div>
-            <div className="flex justify-between items-center mb-6 z-10 relative">
-              <h2 className="text-xl font-bold flex items-center gap-3 text-white">
-                <Zap className="w-5 h-5 text-emerald-400" />
-                Certifications
-              </h2>
-            </div>
-            
-            <div className="flex flex-col gap-3 z-10 relative">
-              {activeProfile?.certifications && activeProfile.certifications.length > 0 ? (
-                activeProfile.certifications.map((cert: string, index: number) => (
-                  <div key={index} className="p-4 rounded-xl bg-slate-800/50 border border-white/5">
-                    <span className="font-bold text-white">{cert}</span>
+              <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                <h2 className="text-xl font-bold flex items-center gap-3 text-white mb-6">
+                  <Building2 className="w-5 h-5 text-blue-500" />
+                  Company Details
+                </h2>
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Industry</p>
+                    <p className="text-white font-medium">{activeProfile.industry || "Not specified"}</p>
                   </div>
-                ))
-              ) : (
-                <span className="text-slate-400">No certifications added.</span>
-              )}
-            </div>
-          </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Company Size</p>
+                    <p className="text-white font-medium">{activeProfile.companySize || "Not specified"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Founded</p>
+                    <p className="text-white font-medium">{activeProfile.foundedYear || "Not specified"}</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Skills Section */}
+              <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                <div className="flex justify-between items-center mb-6 z-10 relative">
+                  <h2 className="text-xl font-bold flex items-center gap-3 text-white">
+                    <Code2 className="w-5 h-5 text-blue-500" />
+                    Top Skills
+                  </h2>
+                  {isOwnProfile && (
+                    <button onClick={() => setIsEditModalOpen(true)} className="text-slate-400 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-all">
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+                
+                <div className="flex flex-wrap gap-2 z-10 relative">
+                  {activeProfile?.skills && activeProfile.skills.length > 0 ? (
+                    activeProfile.skills.map((skill: string, index: number) => (
+                      <span key={index} className="px-4 py-2 bg-slate-800/80 hover:bg-blue-500/10 text-slate-200 hover:text-blue-400 font-medium rounded-xl border border-white/10 hover:border-blue-500/30 transition-all cursor-default shadow-sm hover:shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+                        {skill}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 text-lg">No skills added yet.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Languages Section */}
+              <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
+                <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                <div className="flex justify-between items-center mb-6 z-10 relative">
+                  <h2 className="text-xl font-bold flex items-center gap-3 text-white">
+                    <Globe className="w-5 h-5 text-amber-500" />
+                    Languages
+                  </h2>
+                </div>
+                
+                <div className="flex flex-col gap-3 z-10 relative">
+                  <div className="flex justify-between items-center p-4 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] transition-colors cursor-default border border-transparent hover:border-white/5">
+                    <span className="font-bold text-white text-lg">English</span>
+                    <span className="text-xs font-bold px-3 py-1 bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20 uppercase tracking-wide">Native</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Certifications Section */}
+              <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-400"></div>
+                <div className="flex justify-between items-center mb-6 z-10 relative">
+                  <h2 className="text-xl font-bold flex items-center gap-3 text-white">
+                    <Zap className="w-5 h-5 text-emerald-400" />
+                    Certifications
+                  </h2>
+                </div>
+                
+                <div className="flex flex-col gap-3 z-10 relative">
+                  {activeProfile?.certifications && activeProfile.certifications.length > 0 ? (
+                    activeProfile.certifications.map((cert: string, index: number) => (
+                      <div key={index} className="p-4 rounded-xl bg-slate-800/50 border border-white/5">
+                        <span className="font-bold text-white">{cert}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-slate-400">No certifications added.</span>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Portfolio & Links */}
           <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
@@ -279,7 +322,7 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center mb-6 z-10 relative">
               <h2 className="text-xl font-bold flex items-center gap-3 text-white">
                 <Globe className="w-5 h-5 text-brand-purple" />
-                Portfolio
+                {activeProfile?.accountType === 'employer' ? 'Links' : 'Portfolio'}
               </h2>
             </div>
             
@@ -291,13 +334,13 @@ export default function ProfilePage() {
                   </a>
                 ))
               ) : (
-                <span className="text-slate-400">No portfolio links added.</span>
+                <span className="text-slate-400">No links added.</span>
               )}
             </div>
           </div>
 
           {/* Resume Download */}
-          {activeProfile?.resumeUrl && (
+          {activeProfile?.accountType !== 'employer' && activeProfile?.resumeUrl && (
             <a 
               href={activeProfile.resumeUrl} 
               target="_blank" 

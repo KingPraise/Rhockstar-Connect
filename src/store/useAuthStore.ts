@@ -32,6 +32,14 @@ export interface UserProfile {
 
   visibility?: 'public' | 'connections' | 'private';
   role?: 'admin' | 'user';
+  accountType?: 'standard' | 'employer';
+  
+  // Employer Fields
+  companySize?: string;
+  industry?: string;
+  foundedYear?: string;
+  companyJobs?: string[];
+
   subscriptionTier?: 'free' | 'pro' | 'elite';
   subscriptionStatus?: 'active' | 'inactive';
   savedPosts?: string[];
