@@ -15,6 +15,7 @@ export interface UserBasic {
   username: string;
   avatar: string;
   bio?: string;
+  headline?: string;
   accountType?: string;
   location?: any;
   industry?: string;
