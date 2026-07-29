@@ -21,6 +21,8 @@ export interface UserBasic {
   industry?: string;
   companySize?: string;
   foundedYear?: string;
+  website?: string;
+  portfolio?: string[];
   datingActive?: boolean;
   datingInterests?: string[];
   datingGoals?: string;
