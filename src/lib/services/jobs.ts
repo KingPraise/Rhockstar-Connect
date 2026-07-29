@@ -85,7 +85,7 @@ const MOCK_JOBS: JobListing[] = [
 ];
 
 export interface JobFilters {
-  query: string;
+  query?: string;
   type?: 'Full-time' | 'Part-time' | 'Contract' | 'Remote' | 'Internship' | 'All';
   companyId?: string;
   limitCount?: number;
