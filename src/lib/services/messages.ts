@@ -30,7 +30,7 @@ export interface Message {
   chatId: string;
   senderId: string;
   text: string;
-  type?: 'text' | 'image' | 'audio';
+  type?: 'text' | 'image' | 'audio' | 'document';
   mediaUrl?: string;
   status?: 'sent' | 'delivered' | 'read';
   createdAt: unknown;
@@ -79,7 +79,7 @@ export const sendMessage = async (
   chatId: string, 
   senderId: string, 
   text: string, 
-  type: 'text' | 'image' | 'audio' = 'text',
+  type: 'text' | 'image' | 'audio' | 'document' = 'text',
   mediaUrl?: string
 ) => {
   try {

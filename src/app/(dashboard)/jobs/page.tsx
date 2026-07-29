@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { getJobs, JobListing, JobFilters } from "@/lib/services/jobs";
 import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2, Filter } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -21,17 +21,41 @@ export default function JobsPage() {
   const [isApplying, setIsApplying] = useState<string | null>(null);
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
 
+  const [limitCount, setLimitCount] = useState(10);
+  const [hasMore, setHasMore] = useState(true);
+
+  const observer = useRef<IntersectionObserver | null>(null);
+  
+  const lastJobElementRef = useCallback((node: HTMLDivElement) => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setLimitCount(prev => prev + 10);
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [loading, hasMore]);
+
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true);
       const filters: JobFilters = {
         query: searchQuery,
-        type: activeFilter
+        type: activeFilter,
+        limitCount: limitCount
       };
       
       const res = await getJobs(filters);
       if (res.success && res.jobs) {
         setJobs(res.jobs);
+        if (res.jobs.length < limitCount) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
       }
       setLoading(false);
     };
@@ -42,7 +66,7 @@ export default function JobsPage() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, activeFilter]);
+  }, [searchQuery, activeFilter, limitCount]);
 
   const handleApply = async (jobId: string, isFeatured?: boolean) => {
     const isFree = !profile?.subscriptionTier || profile.subscriptionTier === 'free';
@@ -160,8 +184,16 @@ export default function JobsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {displayedJobs.length > 0 ? displayedJobs.map(job => (
-                <div key={job.id} className="neo-card p-6 rounded-3xl bg-slate-900/60 border border-white/5 flex flex-col group hover:border-brand/30 transition-all duration-300">
+              {displayedJobs.length > 0 ? (
+                <>
+                  {displayedJobs.map((job, index) => {
+                    const isLastElement = displayedJobs.length === index + 1;
+                    return (
+                      <div 
+                        key={job.id} 
+                        ref={isLastElement ? lastJobElementRef : null}
+                        className="neo-card p-6 rounded-3xl bg-slate-900/60 border border-white/5 flex flex-col group hover:border-brand/30 transition-all duration-300"
+                      >
                   
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-4">
@@ -216,9 +248,20 @@ export default function JobsPage() {
                       <ExternalLink className="w-5 h-5" />
                     </button>
                   </div>
-
-                </div>
-              )) : (
+                );
+              })}
+                  {hasMore && (
+                    <div className="col-span-full flex justify-center py-6">
+                      <Loader2 className="w-8 h-8 animate-spin text-brand" />
+                    </div>
+                  )}
+                  {!hasMore && displayedJobs.length > 0 && (
+                    <div className="col-span-full text-center py-6 text-slate-500">
+                      You have caught up with all jobs!
+                    </div>
+                  )}
+                </>
+              ) : (
                 <div className="col-span-full py-20 text-center text-slate-400 neo-card border border-white/5 rounded-3xl bg-slate-900/60">
                   <Briefcase className="w-16 h-16 text-slate-500 mx-auto mb-6 opacity-50" />
                   <p className="font-bold text-2xl text-white mb-2">No jobs found</p>

@@ -1,9 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2, FileText, Check } from "lucide-react";
 import { useState, useRef } from "react";
-import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, Post } from "@/lib/services/posts";
+import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, updatePost, updateComment, Post } from "@/lib/services/posts";
 import { getUserById } from "@/lib/services/users";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
@@ -31,6 +31,14 @@ export default function PostCard({ post }: PostCardProps) {
   const [likesUsers, setLikesUsers] = useState<any[]>([]);
   const [isLoadingLikes, setIsLoadingLikes] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: string; name: string } | null>(null);
+  
+  const [isEditingPost, setIsEditingPost] = useState(false);
+  const [editPostText, setEditPostText] = useState(post.content);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
+
   const commentInputRef = useRef<HTMLInputElement>(null);
 
   const handleOpenLikesModal = async () => {
@@ -147,6 +155,26 @@ export default function PostCard({ post }: PostCardProps) {
     }
   };
 
+  const handleSavePostEdit = async () => {
+    if (!editPostText.trim() || editPostText === post.content) {
+      setIsEditingPost(false);
+      return;
+    }
+    setIsSavingEdit(true);
+    await updatePost(post.id, editPostText.trim());
+    setIsSavingEdit(false);
+    setIsEditingPost(false);
+  };
+
+  const handleSaveCommentEdit = async (commentId: string, currentContent: string) => {
+    if (!editCommentText.trim() || editCommentText === currentContent) {
+      setEditingCommentId(null);
+      return;
+    }
+    await updateComment(post.id, commentId, editCommentText.trim());
+    setEditingCommentId(null);
+  };
+
   // Format timestamp safely
   let timeAgo = "Just now";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -186,7 +214,7 @@ export default function PostCard({ post }: PostCardProps) {
             <div className="absolute right-0 mt-2 w-48 rounded-xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden z-20 animate-in fade-in zoom-in-95 duration-200">
               {profile?.uid === post.userId ? (
                 <>
-                  <button onClick={() => { /* Handle Edit */ }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
+                  <button onClick={() => { setIsEditingPost(true); setEditPostText(post.content); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
                     <Edit2 className="w-4 h-4" /> Edit Post
                   </button>
                   <button onClick={handleDeletePost} disabled={isDeleting} className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors flex items-center gap-2 disabled:opacity-50">
@@ -204,9 +232,37 @@ export default function PostCard({ post }: PostCardProps) {
       </div>
 
       {/* Body */}
-      <div className="mb-4 text-slate-300 leading-relaxed whitespace-pre-wrap">
-        {post.content}
-      </div>
+      {isEditingPost ? (
+        <div className="mb-4">
+          <textarea
+            value={editPostText}
+            onChange={(e) => setEditPostText(e.target.value)}
+            className="neo-input w-full min-h-[100px] resize-none bg-slate-900/40 text-sm text-slate-200 p-3 rounded-xl border border-brand/50 focus:outline-none focus:ring-1 focus:ring-brand"
+            disabled={isSavingEdit}
+          />
+          <div className="flex justify-end gap-2 mt-2">
+            <button 
+              onClick={() => setIsEditingPost(false)}
+              disabled={isSavingEdit}
+              className="px-3 py-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleSavePostEdit}
+              disabled={isSavingEdit || !editPostText.trim()}
+              className="px-3 py-1.5 text-xs font-semibold bg-brand text-white rounded-lg hover:bg-brand/80 transition-colors flex items-center gap-1"
+            >
+              {isSavingEdit ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Save
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-4 text-slate-300 leading-relaxed whitespace-pre-wrap">
+          {post.content}
+        </div>
+      )}
 
       {/* Image Attachment */}
       {post.imageUrl && (
@@ -245,6 +301,31 @@ export default function PostCard({ post }: PostCardProps) {
             </div>
           )}
         </>
+      )}
+
+      {/* Document Attachment */}
+      {post.documentUrl && (
+        <div className="mb-6">
+          <a 
+            href={post.documentUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-slate-800/40 hover:bg-slate-800/80 transition-colors group"
+          >
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold text-white truncate">{post.documentName || "Document"}</span>
+                <span className="text-xs text-slate-400">Click to view/download</span>
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 group-hover:bg-brand group-hover:text-white transition-colors shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </div>
+          </a>
+        </div>
       )}
 
       {/* Action Bar */}
@@ -330,7 +411,21 @@ export default function PostCard({ post }: PostCardProps) {
                           <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors">{comment.user.name}</Link>
                           <span className="text-xs text-slate-500">{cTimeAgo}</span>
                         </div>
-                        <p className="text-sm text-slate-300">{comment.content}</p>
+                        {editingCommentId === comment.id ? (
+                          <div className="mt-1 mb-2">
+                            <textarea
+                              value={editCommentText}
+                              onChange={(e) => setEditCommentText(e.target.value)}
+                              className="w-full bg-slate-900 text-sm text-white p-2 rounded-lg border border-brand/50 focus:outline-none resize-none"
+                            />
+                            <div className="flex justify-end gap-2 mt-2">
+                              <button onClick={() => setEditingCommentId(null)} className="text-xs text-slate-400 hover:text-white">Cancel</button>
+                              <button onClick={() => handleSaveCommentEdit(comment.id, comment.content)} className="text-xs bg-brand text-white px-3 py-1 rounded">Save</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-300">{comment.content}</p>
+                        )}
                         <div className="mt-2 pt-1 border-t border-white/5 flex items-center justify-between">
                           <button
                             type="button"
@@ -341,13 +436,22 @@ export default function PostCard({ post }: PostCardProps) {
                             Reply
                           </button>
                           {profile?.uid === comment.userId && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteComment(comment.id)}
-                              className="text-xs font-semibold text-slate-500 hover:text-red-400 flex items-center gap-1 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => { setEditingCommentId(comment.id); setEditCommentText(comment.content); }}
+                                className="text-xs font-semibold text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-xs font-semibold text-slate-500 hover:text-red-400 flex items-center gap-1 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -372,9 +476,30 @@ export default function PostCard({ post }: PostCardProps) {
                                   <Link href={`/profile?uid=${reply.userId}`} className="font-bold text-white text-xs hover:text-brand transition-colors">{reply.user.name}</Link>
                                   <span className="text-[10px] text-slate-500">{rTimeAgo}</span>
                                 </div>
-                                <p className="text-xs text-slate-300">{reply.content}</p>
+                                {editingCommentId === reply.id ? (
+                                  <div className="mt-1">
+                                    <textarea
+                                      value={editCommentText}
+                                      onChange={(e) => setEditCommentText(e.target.value)}
+                                      className="w-full bg-slate-800 text-xs text-white p-2 rounded-lg border border-brand/50 focus:outline-none resize-none"
+                                    />
+                                    <div className="flex justify-end gap-2 mt-1">
+                                      <button onClick={() => setEditingCommentId(null)} className="text-[10px] text-slate-400 hover:text-white">Cancel</button>
+                                      <button onClick={() => handleSaveCommentEdit(reply.id, reply.content)} className="text-[10px] bg-brand text-white px-2 py-0.5 rounded">Save</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-300">{reply.content}</p>
+                                )}
                                 {profile?.uid === reply.userId && (
-                                  <div className="mt-1 pt-1 border-t border-white/5 flex justify-end">
+                                  <div className="mt-1 pt-1 border-t border-white/5 flex justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => { setEditingCommentId(reply.id); setEditCommentText(reply.content); }}
+                                      className="text-[10px] font-semibold text-slate-500 hover:text-white transition-colors flex items-center gap-1"
+                                    >
+                                      <Edit2 className="w-3 h-3" />
+                                    </button>
                                     <button
                                       type="button"
                                       onClick={() => handleDeleteComment(reply.id)}

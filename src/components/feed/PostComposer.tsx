@@ -3,31 +3,39 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { Image as ImageIcon, Video, Send, X, Loader2, Sparkles, AlertCircle } from "lucide-react";
+import { Image as ImageIcon, Video, Send, X, Loader2, Sparkles, AlertCircle, FileText } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createPost } from "@/lib/services/posts";
 
 export default function PostComposer() {
   const { profile } = useAuthStore();
   const [content, setContent] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<{ url: string, type: 'image' | 'document', name?: string } | null>(null);
   const [isPosting, setIsPosting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
+      setMediaFile(file);
+      
+      const isDocument = file.type.includes('pdf') || file.type.includes('document') || file.name.endsWith('.pdf') || file.name.endsWith('.doc') || file.name.endsWith('.docx');
+      
+      if (isDocument) {
+        setMediaPreview({ url: '', type: 'document', name: file.name });
+      } else {
+        setMediaPreview({ url: URL.createObjectURL(file), type: 'image' });
+      }
+      
       setErrorMsg(null);
     }
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  const removeMedia = () => {
+    setMediaFile(null);
+    setMediaPreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -35,13 +43,13 @@ export default function PostComposer() {
 
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!content.trim() && !imageFile) || !profile) return;
+    if ((!content.trim() && !mediaFile) || !profile) return;
     
     setIsPosting(true);
     setErrorMsg(null);
 
     // 15 second timeout safety condition
-    const postPromise = createPost(profile, content, imageFile);
+    const postPromise = createPost(profile, content, mediaFile);
     const timeoutPromise = new Promise<{ success: boolean; error?: string }>((resolve) => {
       setTimeout(() => {
         resolve({ 
@@ -56,7 +64,7 @@ export default function PostComposer() {
 
     if (result.success) {
       setContent("");
-      removeImage();
+      removeMedia();
       setErrorMsg(null);
     } else {
       setErrorMsg(result.error || "Failed to create post. Please try again.");
@@ -129,13 +137,22 @@ export default function PostComposer() {
               disabled={isPosting}
             />
             
-            {imagePreview && (
-              <div className="relative rounded-xl overflow-hidden border border-white/10 w-full max-w-sm">
-                <img src={imagePreview} alt="Upload preview" className="w-full h-auto object-cover" />
+            {mediaPreview && (
+              <div className="relative rounded-xl overflow-hidden border border-white/10 w-full max-w-sm mt-2">
+                {mediaPreview.type === 'image' ? (
+                  <img src={mediaPreview.url} alt="Upload preview" className="w-full h-auto object-cover" />
+                ) : (
+                  <div className="flex items-center gap-3 p-4 bg-slate-800/80">
+                    <div className="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <span className="text-sm font-medium text-white truncate pr-6">{mediaPreview.name}</span>
+                  </div>
+                )}
                 <button
                   type="button"
-                  onClick={removeImage}
-                  className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full text-white hover:bg-black/80 transition-colors backdrop-blur-sm"
+                  onClick={removeMedia}
+                  className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full text-white hover:bg-black/80 transition-colors backdrop-blur-sm shadow-md"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -148,10 +165,10 @@ export default function PostComposer() {
           <div className="flex gap-3">
             <input 
               type="file" 
-              accept="image/*" 
+              accept="image/*,application/pdf,.doc,.docx" 
               className="hidden" 
               ref={fileInputRef}
-              onChange={handleImageSelect}
+              onChange={handleMediaSelect}
               disabled={isPosting}
             />
             <button 
@@ -159,6 +176,7 @@ export default function PostComposer() {
               onClick={() => fileInputRef.current?.click()}
               disabled={isPosting}
               className="w-10 h-10 rounded-full neo-card bg-slate-800/40 flex items-center justify-center text-slate-400 hover:text-brand hover:border-brand/30 transition-all group disabled:opacity-50"
+              title="Add Image or Document"
             >
               <ImageIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
             </button>
@@ -169,7 +187,7 @@ export default function PostComposer() {
 
           <button
             type="submit"
-            disabled={(!content.trim() && !imageFile) || isPosting}
+            disabled={(!content.trim() && !mediaFile) || isPosting}
             className="neo-button-primary !w-auto px-6 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center min-w-[100px] justify-center"
           >
             {isPosting ? (

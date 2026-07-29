@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import PostComposer from "@/components/feed/PostComposer";
 import PostCard from "@/components/feed/PostCard";
 import { subscribeToFeed, Post } from "@/lib/services/posts";
@@ -9,15 +9,38 @@ import { Loader2 } from "lucide-react";
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [limitCount, setLimitCount] = useState(10);
+  const [hasMore, setHasMore] = useState(true);
+
+  const observer = useRef<IntersectionObserver | null>(null);
+  
+  const lastPostElementRef = useCallback((node: HTMLDivElement) => {
+    if (loading) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        setLimitCount(prev => prev + 10);
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [loading, hasMore]);
 
   useEffect(() => {
-    const unsubscribe = subscribeToFeed((newPosts) => {
+    const unsubscribe = subscribeToFeed(limitCount, (newPosts) => {
       setPosts(newPosts);
       setLoading(false);
+      // If we got fewer posts than the limit, we've reached the end
+      if (newPosts.length < limitCount) {
+        setHasMore(false);
+      } else {
+        setHasMore(true);
+      }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [limitCount]);
 
   return (
     <div className="w-full">
@@ -57,9 +80,29 @@ export default function FeedPage() {
             ))}
           </div>
         ) : posts.length > 0 ? (
-          posts.map(post => (
-            <PostCard key={post.id} post={post} />
-          ))
+          <>
+            {posts.map((post, index) => {
+              if (posts.length === index + 1) {
+                return (
+                  <div ref={lastPostElementRef} key={post.id}>
+                    <PostCard post={post} />
+                  </div>
+                );
+              } else {
+                return <PostCard key={post.id} post={post} />;
+              }
+            })}
+            {hasMore && (
+              <div className="flex justify-center py-6">
+                <Loader2 className="w-6 h-6 text-brand animate-spin" />
+              </div>
+            )}
+            {!hasMore && posts.length > 0 && (
+              <div className="text-center py-6 text-slate-500 text-sm">
+                You have caught up with all posts!
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center p-12 neo-card">
             <p className="text-slate-400">No posts yet. Be the first to post!</p>

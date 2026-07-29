@@ -1,5 +1,5 @@
 import { db } from "../firebase";
-import { collection, doc, getDoc, getDocs, setDoc, serverTimestamp, query, orderBy } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, serverTimestamp, query, orderBy, limit } from "firebase/firestore";
 
 export interface JobListing {
   id: string;
@@ -88,6 +88,7 @@ export interface JobFilters {
   query: string;
   type?: 'Full-time' | 'Part-time' | 'Contract' | 'Remote' | 'Internship' | 'All';
   companyId?: string;
+  limitCount?: number;
 }
 
 export const createJob = async (jobData: Omit<JobListing, "id" | "postedAt" | "logo">, employerId: string) => {
@@ -122,7 +123,10 @@ export const getJobs = async (filters?: JobFilters): Promise<{ success: boolean;
   try {
     const jobsRef = collection(db, "jobs");
     // Sort by newest first
-    const q = query(jobsRef, orderBy("postedAt", "desc"));
+    let q = query(jobsRef, orderBy("postedAt", "desc"));
+    if (filters?.limitCount) {
+      q = query(jobsRef, orderBy("postedAt", "desc"), limit(filters.limitCount));
+    }
     const snapshot = await getDocs(q);
     
     let fetchedJobs: JobListing[] = [];

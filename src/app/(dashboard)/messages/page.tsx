@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus } from "@/lib/services/messages";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
-import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square } from "lucide-react";
+import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText } from "lucide-react";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { markMessagesAsRead } from "@/lib/services/messages";
@@ -28,17 +28,20 @@ export default function MessagesPage() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !activeChat || !profile?.uid) return;
     
     // Validate file
-    if (!file.type.startsWith('image/')) {
-      alert("Please select an image file.");
+    const isImage = file.type.startsWith('image/');
+    const isDoc = file.type.includes('pdf') || file.type.includes('document') || file.name.endsWith('.pdf') || file.name.endsWith('.doc') || file.name.endsWith('.docx');
+    
+    if (!isImage && !isDoc) {
+      alert("Please select a valid image or document file.");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image size must be less than 5MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File size must be less than 10MB.");
       return;
     }
 
@@ -49,10 +52,13 @@ export default function MessagesPage() {
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
       
-      await sendMessage(activeChat.id, profile.uid, "Sent an image", "image", downloadURL);
+      const type = isImage ? 'image' : 'document';
+      const msgText = isImage ? "Sent an image" : file.name;
+      
+      await sendMessage(activeChat.id, profile.uid, msgText, type, downloadURL);
     } catch (error) {
-      console.error("Error uploading image:", error);
-      alert("Failed to upload image. Please try again.");
+      console.error("Error uploading file:", error);
+      alert("Failed to upload file. Please try again.");
     } finally {
       setIsUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -374,6 +380,13 @@ export default function MessagesPage() {
                         <img src={msg.mediaUrl} alt="Attachment" className="max-w-full h-auto max-h-64 object-contain" />
                         {msg.text !== "Sent an image" && <p className="leading-relaxed text-sm md:text-base break-words mt-2 px-1">{msg.text}</p>}
                       </div>
+                    ) : msg.type === 'document' && msg.mediaUrl ? (
+                      <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 mb-1 bg-slate-900/50 rounded-xl border border-white/10 hover:bg-slate-900/80 transition-colors">
+                        <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <span className="text-sm font-medium truncate min-w-0 max-w-[150px] md:max-w-[200px]">{msg.text}</span>
+                      </a>
                     ) : msg.type === 'audio' && msg.mediaUrl ? (
                       <div className="mb-1">
                         <audio controls className="max-w-[200px] md:max-w-[250px] h-10">
@@ -423,10 +436,10 @@ export default function MessagesPage() {
             <form onSubmit={handleSendMessage} className="relative flex items-center w-full bg-slate-800/60 border border-white/10 rounded-2xl pl-[4.5rem] pr-14 py-1.5 focus-within:border-brand/50 focus-within:ring-1 focus-within:ring-brand/50 transition-all shadow-inner">
               <input 
                 type="file" 
-                accept="image/*" 
+                accept="image/*,application/pdf,.doc,.docx" 
                 className="hidden" 
                 ref={fileInputRef} 
-                onChange={handleImageUpload} 
+                onChange={handleFileUpload} 
               />
               <div className="absolute left-1.5 bottom-1.5 flex items-center gap-0.5">
                 <button

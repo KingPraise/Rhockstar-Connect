@@ -12,7 +12,8 @@ import {
   arrayRemove,
   getDoc,
   deleteDoc,
-  getDocs
+  getDocs,
+  limit
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { UserProfile } from '../../store/useAuthStore';
@@ -27,6 +28,8 @@ export interface Post {
   };
   content: string;
   imageUrl?: string;
+  documentUrl?: string; // Support for PDFs/Docs
+  documentName?: string;
   createdAt: unknown;
   likes: string[];
   commentsCount: number;
@@ -72,25 +75,34 @@ const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.
   });
 };
 
-const uploadImageWithFallback = async (imageFile: File, userUid: string): Promise<string> => {
-  const compressedBase64 = await compressImage(imageFile);
+const uploadMediaFile = async (mediaFile: File, userUid: string): Promise<{ url: string, isDocument: boolean }> => {
+  const isDocument = mediaFile.type.includes('pdf') || mediaFile.type.includes('document') || mediaFile.name.endsWith('.pdf');
+  let fallbackData = "";
+
+  if (!isDocument) {
+    fallbackData = await compressImage(mediaFile);
+  }
 
   try {
     const uploadPromise = (async () => {
-      const safeName = imageFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
+      const safeName = mediaFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
       const storageRef = ref(storage, `posts/${userUid}_${Date.now()}_${safeName}`);
-      const snapshot = await uploadBytes(storageRef, imageFile);
+      const snapshot = await uploadBytes(storageRef, mediaFile);
       return await getDownloadURL(snapshot.ref);
     })();
 
     const timeoutPromise = new Promise<string>((_, reject) => 
-      setTimeout(() => reject(new Error("Storage upload timed out")), 3000)
+      setTimeout(() => reject(new Error("Storage upload timed out")), 5000)
     );
 
-    return await Promise.race([uploadPromise, timeoutPromise]);
+    const url = await Promise.race([uploadPromise, timeoutPromise]);
+    return { url, isDocument };
   } catch (err) {
-    console.warn("Storage upload failed or timed out. Falling back to compressed image data URL:", err);
-    return compressedBase64;
+    console.warn("Storage upload failed or timed out. Falling back if image:", err);
+    if (!isDocument && fallbackData) {
+      return { url: fallbackData, isDocument: false };
+    }
+    throw new Error("Failed to upload document");
   }
 };
 
@@ -98,13 +110,21 @@ const uploadImageWithFallback = async (imageFile: File, userUid: string): Promis
 export const createPost = async (
   user: UserProfile, 
   content: string, 
-  imageFile?: File | null
+  mediaFile?: File | null
 ) => {
   try {
     let imageUrl = null;
+    let documentUrl = null;
+    let documentName = null;
 
-    if (imageFile) {
-      imageUrl = await uploadImageWithFallback(imageFile, user.uid);
+    if (mediaFile) {
+      const result = await uploadMediaFile(mediaFile, user.uid);
+      if (result.isDocument) {
+        documentUrl = result.url;
+        documentName = mediaFile.name;
+      } else {
+        imageUrl = result.url;
+      }
     }
 
     // Add post to Firestore
@@ -117,6 +137,7 @@ export const createPost = async (
       },
       content,
       ...(imageUrl && { imageUrl }),
+      ...(documentUrl && { documentUrl, documentName }),
       createdAt: serverTimestamp(),
       likes: [],
       commentsCount: 0
@@ -130,9 +151,25 @@ export const createPost = async (
   }
 };
 
+// Update a post
+export const updatePost = async (postId: string, newContent: string) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    await updateDoc(postRef, { content: newContent });
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Error updating post:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
 // Subscribe to real-time feed updates
-export const subscribeToFeed = (callback: (posts: Post[]) => void) => {
-  const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+export const subscribeToFeed = (limitCount: number, callback: (posts: Post[]) => void) => {
+  const q = query(
+    collection(db, 'posts'), 
+    orderBy('createdAt', 'desc'),
+    limit(limitCount)
+  );
   
   return onSnapshot(q, (querySnapshot) => {
     const posts: Post[] = [];
@@ -144,9 +181,13 @@ export const subscribeToFeed = (callback: (posts: Post[]) => void) => {
 };
 
 // Fetch feed posts once
-export const getFeedPosts = async () => {
+export const getFeedPosts = async (limitCount: number = 20) => {
   try {
-    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+    const q = query(
+      collection(db, 'posts'), 
+      orderBy('createdAt', 'desc'),
+      limit(limitCount)
+    );
     const snapshot = await getDocs(q);
     const posts: Post[] = [];
     snapshot.forEach((doc) => {
@@ -262,6 +303,31 @@ export const addComment = async (postId: string, user: UserProfile, content: str
     return { success: false, error: "Post not found" };
   } catch (error: unknown) {
     console.error("Error adding comment:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
+// Update a comment
+export const updateComment = async (postId: string, commentId: string, newContent: string) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postSnap = await getDoc(postRef);
+
+    if (postSnap.exists()) {
+      const currentComments = postSnap.data().comments || [];
+      const updatedComments = currentComments.map((c: Comment) => {
+        if (c.id === commentId) {
+          return { ...c, content: newContent };
+        }
+        return c;
+      });
+      
+      await updateDoc(postRef, { comments: updatedComments });
+      return { success: true };
+    }
+    return { success: false, error: "Post not found" };
+  } catch (error: unknown) {
+    console.error("Error updating comment:", error);
     return { success: false, error: (error as Error).message };
   }
 };
