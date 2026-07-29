@@ -15,6 +15,11 @@ export interface UserBasic {
   username: string;
   avatar: string;
   bio?: string;
+  accountType?: string;
+  location?: any;
+  industry?: string;
+  companySize?: string;
+  foundedYear?: string;
   datingActive?: boolean;
   datingInterests?: string[];
   datingGoals?: string;
@@ -39,6 +44,11 @@ export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBas
           username: data.username,
           avatar: data.avatar || data.fullName.substring(0, 2).toUpperCase(),
           bio: data.bio,
+          accountType: data.accountType,
+          location: data.location,
+          industry: data.industry,
+          companySize: data.companySize,
+          foundedYear: data.foundedYear,
           datingActive: data.datingActive,
           datingInterests: data.datingInterests,
           datingGoals: data.datingGoals,
