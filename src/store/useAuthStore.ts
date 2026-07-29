@@ -21,6 +21,15 @@ export interface UserProfile {
   portfolio?: string[];
   resumeUrl?: string;
   socialLinks?: Record<string, string>;
+  
+  // Dating Fields
+  datingActive?: boolean;
+  datingInterests?: string[];
+  datingGoals?: string;
+  datingPhotos?: string[];
+  datingPrompts?: Array<{ prompt: string; answer: string }>;
+  datingVoiceIntro?: string;
+
   visibility?: 'public' | 'connections' | 'private';
   role?: 'admin' | 'user';
   subscriptionTier?: 'free' | 'pro' | 'elite';

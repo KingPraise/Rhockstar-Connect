@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { getDatingProspects, recordDatingAction } from "@/lib/services/dating";
-import { Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, Eye } from "lucide-react";
+import { Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, Eye, Settings } from "lucide-react";
 import { getOrCreateChat } from "@/lib/services/messages";
 import { useRouter } from "next/navigation";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
@@ -114,6 +114,13 @@ export default function DatingPage() {
             <p className="text-slate-400 font-medium">Connect with professionals on a deeper level.</p>
           </div>
         </div>
+        <button 
+          onClick={() => router.push('/dating/profile')}
+          className="neo-button flex items-center gap-2"
+        >
+          <Settings className="w-4 h-4" />
+          <span className="hidden sm:inline">Dating Profile</span>
+        </button>
       </div>
 
       {/* WHO LIKED YOU - PREMIUM LOCKED BANNER */}
@@ -148,7 +155,7 @@ export default function DatingPage() {
       </div>
 
       {/* SWIPE STACK */}
-      <div className="relative w-full max-w-md mx-auto h-[600px] flex items-center justify-center">
+      <div className="relative w-full max-w-md mx-auto h-[650px] flex items-center justify-center">
         {prospects.length === 0 ? (
           <div className="neo-card w-full h-full p-10 flex flex-col items-center justify-center text-center bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-[3rem]">
             <Sparkles className="w-16 h-16 text-brand-purple mb-6 opacity-50" />
@@ -169,31 +176,101 @@ export default function DatingPage() {
             {/* CURRENT CARD */}
             {currentProspect && (
               <div 
-                className={`absolute inset-0 neo-card bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-[3rem] overflow-hidden flex flex-col transition-all duration-300 shadow-2xl z-10 ${
+                className={`absolute inset-0 neo-card bg-slate-900 border border-white/10 rounded-[3rem] flex flex-col transition-all duration-300 shadow-2xl z-10 overflow-hidden ${
                   animatingCard === 'like' ? 'translate-x-full opacity-0 rotate-12' : 
                   animatingCard === 'pass' ? '-translate-x-full opacity-0 -rotate-12' : 
                   'translate-x-0 opacity-100 rotate-0'
                 }`}
               >
-                {/* Image Placeholder (Using avatar initial) */}
-                <div className="flex-1 w-full bg-gradient-to-b from-slate-800 to-slate-900 flex flex-col items-center justify-center relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-20 mix-blend-screen pointer-events-none" />
-                  <div className="w-64 h-64 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.3)] mb-8 ring-8 ring-slate-900 group-hover:scale-105 transition-transform duration-500">
-                    <span className="text-8xl font-extrabold text-white drop-shadow-lg">{currentProspect.avatar}</span>
+                {/* Scrollable Content Area */}
+                <div className="flex-1 overflow-y-auto pb-32 hide-scrollbar">
+                  {/* Main Photo / Avatar Area */}
+                  <div className="w-full aspect-[3/4] bg-slate-800 relative">
+                    {currentProspect.datingPhotos && currentProspect.datingPhotos.length > 0 ? (
+                      <img src={currentProspect.datingPhotos[0]} alt="Dating Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                         <div className="w-32 h-32 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.3)]">
+                          <span className="text-5xl font-extrabold text-white">{currentProspect.avatar}</span>
+                         </div>
+                      </div>
+                    )}
+                    
+                    {/* Gradient Overlay for Text */}
+                    <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-slate-900 via-slate-900/80 to-transparent flex flex-col justify-end p-6">
+                      <h2 className="text-3xl font-extrabold text-white mb-1 tracking-tight flex items-center gap-2">
+                        {currentProspect.fullName}
+                      </h2>
+                      <p className="text-brand-purple font-medium text-lg">@{currentProspect.username}</p>
+                      
+                      {currentProspect.datingGoals && (
+                        <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-white/10 backdrop-blur text-white text-xs font-bold border border-white/10 self-start">
+                          🎯 {currentProspect.datingGoals}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Extended Info */}
+                  <div className="p-6 flex flex-col gap-6 bg-slate-900">
+                    
+                    {currentProspect.bio && (
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">About Me</h3>
+                        <p className="text-white text-lg font-medium leading-relaxed">{currentProspect.bio}</p>
+                      </div>
+                    )}
+
+                    {currentProspect.datingVoiceIntro && (
+                      <div className="p-4 rounded-2xl bg-brand-purple/10 border border-brand-purple/20">
+                        <h3 className="text-sm font-bold text-brand-purple mb-2 flex items-center gap-2">
+                           Voice Intro
+                        </h3>
+                        <audio controls src={currentProspect.datingVoiceIntro} className="w-full h-10" />
+                      </div>
+                    )}
+
+                    {currentProspect.datingInterests && currentProspect.datingInterests.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">Interests</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {currentProspect.datingInterests.map((interest: string, i: number) => (
+                            <span key={i} className="px-3 py-1 rounded-full bg-slate-800 text-slate-300 text-sm border border-white/5">
+                              {interest}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {currentProspect.datingPrompts && currentProspect.datingPrompts.length > 0 && (
+                      <div className="flex flex-col gap-4">
+                        {currentProspect.datingPrompts.map((p, i) => (
+                          <div key={i} className="p-4 rounded-2xl bg-slate-800/50 border border-white/5">
+                            <p className="text-sm font-bold text-brand-purple mb-1">{p.prompt}</p>
+                            <p className="text-white text-lg font-medium">{p.answer}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Additional Photos */}
+                    {currentProspect.datingPhotos && currentProspect.datingPhotos.length > 1 && (
+                      <div className="flex flex-col gap-4">
+                         {currentProspect.datingPhotos.slice(1).map((photoUrl, i) => (
+                           <div key={i} className="w-full aspect-square rounded-3xl overflow-hidden border border-white/5">
+                             <img src={photoUrl} alt={`Dating Photo ${i+2}`} className="w-full h-full object-cover" />
+                           </div>
+                         ))}
+                      </div>
+                    )}
+                    
                   </div>
                 </div>
 
-                {/* Info */}
-                <div className="h-48 p-8 bg-slate-900/90 relative z-10 border-t border-white/5">
-                  <div className="flex justify-between items-end mb-6">
-                    <div>
-                      <h2 className="text-3xl font-extrabold text-white mb-1 tracking-tight">{currentProspect.fullName}</h2>
-                      <p className="text-brand-purple font-medium text-lg">@{currentProspect.username}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-center gap-6 mt-4">
+                {/* Fixed Action Buttons (Overlay at bottom) */}
+                <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-slate-900 via-slate-900/90 to-transparent pointer-events-none flex items-end justify-center pb-8 z-20">
+                  <div className="flex items-center justify-center gap-6 pointer-events-auto">
                     <button 
                       onClick={() => handleAction('pass')}
                       disabled={isProcessing}

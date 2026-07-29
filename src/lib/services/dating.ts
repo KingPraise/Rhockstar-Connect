@@ -89,8 +89,8 @@ export const getDatingProspects = async (currentUserId: string, allUsers: UserBa
       interactedUserIds.add(docSnap.data().toUserId);
     });
 
-    // Filter out current user and already interacted users
-    const prospects = allUsers.filter(u => u.uid !== currentUserId && !interactedUserIds.has(u.uid));
+    // Filter out current user, already interacted users, and users who aren't active in dating
+    const prospects = allUsers.filter(u => u.uid !== currentUserId && !interactedUserIds.has(u.uid) && u.datingActive);
     
     return { success: true, prospects };
   } catch (error: unknown) {

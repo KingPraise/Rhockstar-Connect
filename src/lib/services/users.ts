@@ -14,6 +14,13 @@ export interface UserBasic {
   fullName: string;
   username: string;
   avatar: string;
+  bio?: string;
+  datingActive?: boolean;
+  datingInterests?: string[];
+  datingGoals?: string;
+  datingPhotos?: string[];
+  datingPrompts?: Array<{ prompt: string; answer: string }>;
+  datingVoiceIntro?: string;
 }
 
 export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> => {
@@ -30,7 +37,14 @@ export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBas
           uid: docSnap.id,
           fullName: data.fullName,
           username: data.username,
-          avatar: data.avatar || data.fullName.substring(0, 2).toUpperCase()
+          avatar: data.avatar || data.fullName.substring(0, 2).toUpperCase(),
+          bio: data.bio,
+          datingActive: data.datingActive,
+          datingInterests: data.datingInterests,
+          datingGoals: data.datingGoals,
+          datingPhotos: data.datingPhotos,
+          datingPrompts: data.datingPrompts,
+          datingVoiceIntro: data.datingVoiceIntro,
         });
       }
     });
