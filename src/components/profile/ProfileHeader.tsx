@@ -14,11 +14,13 @@ interface ProfileHeaderProps {
 import { useState } from "react";
 import { Crown } from "lucide-react";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
+import { useLightboxStore } from "@/store/useLightboxStore";
 
 export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile = true, onConnectClick }: ProfileHeaderProps) {
   const { profile: loggedInProfile } = useAuthStore();
   const profile = customProfile || loggedInProfile;
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
+  const { openLightbox } = useLightboxStore();
 
   if (!profile) return null; // Or a skeleton loader
 
@@ -41,7 +43,14 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
       <div className="px-8 pb-8 relative">
         {/* Avatar */}
         <div className="absolute -top-24 left-8 rounded-full p-2 bg-slate-900 shadow-2xl z-10 transition-transform duration-300 hover:scale-[1.02]">
-          <div className="w-40 h-40 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center text-white text-6xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-slate-800">
+          <div 
+            onClick={() => {
+              if (profile.avatar) {
+                openLightbox([profile.avatar]);
+              }
+            }}
+            className={`w-40 h-40 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center text-white text-6xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-slate-800 ${profile.avatar ? 'cursor-pointer' : ''}`}
+          >
             {profile.avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={profile.avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -52,7 +61,7 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
           </div>
           {isOwnProfile && (
             <button 
-              onClick={onEditClick}
+              onClick={(e) => { e.stopPropagation(); onEditClick(); }}
               className="absolute bottom-2 right-2 w-10 h-10 rounded-full bg-slate-800 shadow-lg flex items-center justify-center text-white hover:text-brand-purple transition-all hover:scale-110 border border-white/10"
             >
               <Camera className="w-4 h-4" />

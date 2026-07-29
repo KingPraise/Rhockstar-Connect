@@ -8,10 +8,12 @@ import { Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, Eye, Sett
 import { getOrCreateChat } from "@/lib/services/messages";
 import { useRouter } from "next/navigation";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
+import { useLightboxStore } from "@/store/useLightboxStore";
 
 export default function DatingPage() {
   const { profile } = useAuthStore();
   const router = useRouter();
+  const { openLightbox } = useLightboxStore();
   const [prospects, setProspects] = useState<UserBasic[]>([]);
   const [loading, setLoading] = useState(true);
   const [matchModal, setMatchModal] = useState<UserBasic | null>(null);
@@ -226,7 +228,12 @@ export default function DatingPage() {
                   {/* Main Photo / Avatar Area */}
                   <div className="w-full aspect-[3/4] bg-slate-800 relative">
                     {currentProspect.datingPhotos && currentProspect.datingPhotos.length > 0 ? (
-                      <img src={currentProspect.datingPhotos[0]} alt="Dating Profile" className="w-full h-full object-cover" />
+                      <img 
+                        src={currentProspect.datingPhotos[0]} 
+                        alt="Dating Profile" 
+                        className="w-full h-full object-cover cursor-pointer"
+                        onClick={() => openLightbox(currentProspect.datingPhotos!, 0)}
+                      />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
                          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.3)]">
@@ -319,7 +326,12 @@ export default function DatingPage() {
                       <div className="flex flex-col gap-4">
                          {currentProspect.datingPhotos.slice(1).map((photoUrl, i) => (
                            <div key={i} className="w-full aspect-square rounded-3xl overflow-hidden border border-white/5">
-                             <img src={photoUrl} alt={`Dating Photo ${i+2}`} className="w-full h-full object-cover" />
+                             <img 
+                               src={photoUrl} 
+                               alt={`Dating Photo ${i+2}`} 
+                               className="w-full h-full object-cover cursor-pointer" 
+                               onClick={() => openLightbox(currentProspect.datingPhotos!, i + 1)}
+                             />
                            </div>
                          ))}
                       </div>
@@ -358,7 +370,12 @@ export default function DatingPage() {
             <div key={prospect.uid} className="neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden flex flex-col group hover:border-brand-purple/30 transition-all duration-300">
               <div className="w-full aspect-[4/5] bg-slate-800 relative overflow-hidden">
                 {prospect.datingPhotos && prospect.datingPhotos.length > 0 ? (
-                  <img src={prospect.datingPhotos[0]} alt={prospect.fullName} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img 
+                    src={prospect.datingPhotos[0]} 
+                    alt={prospect.fullName} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 cursor-pointer"
+                    onClick={() => openLightbox(prospect.datingPhotos!, 0)}
+                  />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
                     <span className="text-4xl font-extrabold text-white opacity-50">{prospect.avatar}</span>

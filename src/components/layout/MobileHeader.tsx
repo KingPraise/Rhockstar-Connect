@@ -38,19 +38,25 @@ export default function MobileHeader() {
     router.push('/login');
   };
 
-  const navLinks = [
+  const socialLinks = [
     { name: "Search", href: "/search", icon: Search },
     { name: "Feed", href: "/feed", icon: Home },
-    { name: "Profile", href: "/profile", icon: User },
-    { name: "Connections", href: "/network", icon: Users },
+    { name: "Network", href: "/network", icon: Users },
     { name: "Messages", href: "/messages", icon: MessageSquare },
     { name: "Dating", href: "/dating", icon: Heart },
+  ].filter(item => !(item.name === "Dating" && profile?.accountType === 'employer'));
+
+  const careerLinks = [
     { name: "Jobs", href: "/jobs", icon: Briefcase },
-    { name: "Notifications", href: "/notifications", icon: Bell },
-    { name: "Rewards & Referrals", href: "/referrals", icon: Gift, badge: "NEW" },
+    { name: "Insights", href: "/insights", icon: Sparkles },
+    { name: "Career Hub", href: "/resources/career", icon: FileText },
+  ];
+
+  const accountLinks = [
+    { name: "Profile", href: "/profile", icon: User },
+    { name: "Rewards", href: "/referrals", icon: Gift, badge: "NEW" },
     { name: "Premium", href: "/premium", icon: Sparkles, badge: "PRO" },
     { name: "Settings", href: "/settings", icon: Settings },
-    { name: "Terms of Service", href: "/terms", icon: FileText },
   ];
 
   return (
@@ -121,35 +127,94 @@ export default function MobileHeader() {
             </div>
 
             {/* Menu Items List */}
-            <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
-              {navLinks.map((item) => {
-                const isActive = pathname === item.href || (item.href !== '/feed' && pathname.startsWith(item.href));
+            <nav className="flex-1 p-4 overflow-y-auto custom-scrollbar flex flex-col gap-6">
+              
+              {/* Social Section */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-2">Social</p>
+                <div className="space-y-1">
+                  {socialLinks.map((item) => {
+                    const isActive = pathname === item.href || (item.href !== '/feed' && pathname.startsWith(item.href));
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-all ${
+                          isActive 
+                            ? "bg-brand/10 text-brand shadow-[inset_0_0_15px_rgba(56,189,248,0.1)] border border-brand/20" 
+                            : "text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <item.icon className={`w-5 h-5 ${isActive ? 'text-brand' : 'text-slate-400'}`} />
+                          <span>{item.name}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
 
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    prefetch={true}
-                    onClick={() => setIsOpen(false)}
-                    className={`flex items-center justify-between px-4 py-3.5 rounded-xl font-semibold transition-all ${
-                      isActive 
-                        ? "bg-brand/10 text-brand shadow-[inset_0_0_15px_rgba(56,189,248,0.1)] border border-brand/20" 
-                        : "text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon className={`w-5 h-5 ${isActive ? 'text-brand' : 'text-slate-400'}`} />
-                      <span>{item.name}</span>
-                    </div>
+              {/* Career Section */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-2">Career</p>
+                <div className="space-y-1">
+                  {careerLinks.map((item) => {
+                    const isActive = pathname.startsWith(item.href);
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-all ${
+                          isActive 
+                            ? "bg-brand/10 text-brand shadow-[inset_0_0_15px_rgba(56,189,248,0.1)] border border-brand/20" 
+                            : "text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <item.icon className={`w-5 h-5 ${isActive ? 'text-brand' : 'text-slate-400'}`} />
+                          <span>{item.name}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
 
-                    {item.badge && (
-                      <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-gradient-to-r from-brand to-brand-purple text-white shadow-sm">
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
+              {/* Account Section */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 px-2">Account</p>
+                <div className="space-y-1">
+                  {accountLinks.map((item) => {
+                    const isActive = pathname.startsWith(item.href);
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-all ${
+                          isActive 
+                            ? "bg-brand/10 text-brand shadow-[inset_0_0_15px_rgba(56,189,248,0.1)] border border-brand/20" 
+                            : "text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <item.icon className={`w-5 h-5 ${isActive ? 'text-brand' : 'text-slate-400'}`} />
+                          <span>{item.name}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-gradient-to-r from-brand to-brand-purple text-white shadow-sm">
+                            {item.badge}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
             </nav>
 
             {/* Drawer Footer / Logout */}

@@ -3,6 +3,7 @@ import MobileNav from "@/components/layout/MobileNav";
 import MobileHeader from "@/components/layout/MobileHeader";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import AIAssistantWidget from "@/components/ai/AIAssistantWidget";
+import ImageLightbox from "@/components/ui/ImageLightbox";
 
 export default function DashboardLayout({
   children,
@@ -32,6 +33,9 @@ export default function DashboardLayout({
 
       {/* Global AI Assistant */}
       <AIAssistantWidget />
+
+      {/* Global Image Lightbox */}
+      <ImageLightbox />
     </div>
   );
 }

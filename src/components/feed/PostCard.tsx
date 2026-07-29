@@ -8,6 +8,7 @@ import { getUserById } from "@/lib/services/users";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { useLightboxStore } from "@/store/useLightboxStore";
 
 import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
 
@@ -26,10 +27,11 @@ export default function PostCard({ post }: PostCardProps) {
   const [authActionName, setAuthActionName] = useState("interact");
   const [showMenu, setShowMenu] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isLikesModalOpen, setIsLikesModalOpen] = useState(false);
   const [likesUsers, setLikesUsers] = useState<any[]>([]);
   const [isLoadingLikes, setIsLoadingLikes] = useState(false);
+  
+  const { openLightbox } = useLightboxStore();
   const [replyingTo, setReplyingTo] = useState<{ id: string; name: string } | null>(null);
   
   const [isEditingPost, setIsEditingPost] = useState(false);
@@ -271,41 +273,15 @@ export default function PostCard({ post }: PostCardProps) {
 
       {/* Image Attachment */}
       {post.imageUrl && (
-        <>
-          <div className="mb-6 rounded-xl overflow-hidden border border-white/5 bg-black/20 max-h-[500px] flex items-center justify-center">
-            <img 
-              src={post.imageUrl} 
-              alt="Post attachment" 
-              className="max-w-full max-h-[500px] object-contain cursor-pointer hover:opacity-90 transition-opacity"
-              loading="lazy"
-              onClick={() => setIsImageModalOpen(true)}
-            />
-          </div>
-
-          {/* Fullscreen Image Lightbox Modal */}
-          {isImageModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm animate-in fade-in duration-200">
-              <button 
-                onClick={() => setIsImageModalOpen(false)}
-                className="absolute top-4 right-4 md:top-6 md:right-6 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-50"
-              >
-                <Trash2 className="w-6 h-6 hidden" /> {/* Dummy icon to fix import if needed, wait we have X? */}
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-              
-              <div 
-                className="absolute inset-0" 
-                onClick={() => setIsImageModalOpen(false)}
-              />
-              
-              <img 
-                src={post.imageUrl} 
-                alt="Post attachment fullscreen" 
-                className="relative z-10 max-w-[95vw] max-h-[90vh] object-contain"
-              />
-            </div>
-          )}
-        </>
+        <div className="mb-6 rounded-xl overflow-hidden border border-white/5 bg-black/20 max-h-[500px] flex items-center justify-center">
+          <img 
+            src={post.imageUrl} 
+            alt="Post attachment" 
+            className="max-w-full max-h-[500px] object-contain cursor-pointer hover:opacity-90 transition-opacity"
+            loading="lazy"
+            onClick={() => openLightbox([post.imageUrl!])}
+          />
+        </div>
       )}
 
       {/* Document Attachment */}

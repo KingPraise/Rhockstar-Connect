@@ -36,22 +36,24 @@ export default function Sidebar() {
     router.push('/login');
   };
 
-  let navItems = [
-    { name: "Search", href: "/search", icon: Search },
+  const primaryNavItems = [
     { name: "Feed", href: "/feed", icon: Home },
-    { name: "Profile", href: "/profile", icon: User },
-    { name: "Connections", href: "/network", icon: Users },
+    { name: "Network", href: "/network", icon: Users },
+    { name: "Jobs", href: "/jobs", icon: Briefcase },
     { name: "Messages", href: "/messages", icon: MessageSquare },
     { name: "Dating", href: "/dating", icon: Heart },
-    { name: "Jobs", href: "/jobs", icon: Briefcase },
     { name: "Notifications", href: "/notifications", icon: Bell },
-    { name: "Rewards & Referrals", href: "/referrals", icon: Gift },
+  ].filter(item => !(item.name === "Dating" && profile?.accountType === 'employer'));
+
+  const secondaryNavItems = [
+    { name: "Search", href: "/search", icon: Search },
+    { name: "Insights", href: "/insights", icon: Sparkles }, // Wait, BarChart2 is not imported. Use Sparkles or Bell
+    { name: "Career Hub", href: "/resources/career", icon: Briefcase },
+    { name: "Rewards", href: "/referrals", icon: Gift },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 
-  if (profile?.accountType === 'employer') {
-    navItems = navItems.filter(item => item.name !== "Dating");
-  }
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   return (
     <aside 
@@ -108,7 +110,8 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-2 px-4 flex-1">
-        {navItems.map((item) => {
+        {/* Primary Nav */}
+        {primaryNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname.startsWith(item.href);
 
@@ -132,6 +135,48 @@ export default function Sidebar() {
             </Link>
           );
         })}
+
+        {/* More Options Section */}
+        <div className="mt-2">
+          {!isMinimized && (
+            <button
+              onClick={() => setIsMoreOpen(!isMoreOpen)}
+              className="w-full flex items-center justify-between px-5 py-3 rounded-xl font-semibold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all group"
+            >
+              <div className="flex items-center gap-4">
+                <Search className="w-5 h-5 group-hover:scale-110 transition-transform opacity-0" /> {/* Spacer */}
+                <span className="-ml-9">Explore More</span>
+              </div>
+              <ChevronRight className={`w-4 h-4 transition-transform ${isMoreOpen ? 'rotate-90' : ''}`} />
+            </button>
+          )}
+
+          {(isMoreOpen || isMinimized) && (
+            <div className={`flex flex-col gap-2 ${isMinimized ? 'mt-4 border-t border-white/5 pt-4' : 'mt-1 pl-4 border-l-2 border-white/5 ml-7'}`}>
+              {secondaryNavItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname.startsWith(item.href);
+
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    prefetch={true}
+                    className={`flex items-center ${isMinimized ? "justify-center px-0" : "gap-4 px-4"} py-2.5 rounded-xl font-semibold transition-all group relative ${
+                      isActive 
+                        ? "text-brand bg-brand/5" 
+                        : "text-slate-400 hover:text-white hover:bg-slate-800/30"
+                    }`}
+                    title={isMinimized ? item.name : undefined}
+                  >
+                    <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${isActive ? 'text-brand' : 'text-slate-500 group-hover:text-white'}`} />
+                    {!isMinimized && <span className="text-sm">{item.name}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </nav>
 
       {/* BOTTOM SECTION */}
