@@ -11,7 +11,8 @@ import {
   getDoc,
   setDoc,
   doc,
-  updateDoc
+  updateDoc,
+  arrayUnion
 } from 'firebase/firestore';
 
 import { createNotification } from './notifications';
@@ -34,6 +35,11 @@ export interface Message {
   mediaUrl?: string;
   status?: 'sent' | 'delivered' | 'read';
   createdAt: unknown;
+  replyToId?: string;
+  replyToText?: string;
+  isEdited?: boolean;
+  isDeleted?: boolean;
+  deletedForMe?: string[];
 }
 
 // Ensure a chat exists between two users
@@ -80,7 +86,9 @@ export const sendMessage = async (
   senderId: string, 
   text: string, 
   type: 'text' | 'image' | 'audio' | 'document' = 'text',
-  mediaUrl?: string
+  mediaUrl?: string,
+  replyToId?: string,
+  replyToText?: string
 ) => {
   try {
     const messagesRef = collection(db, `chats/${chatId}/messages`);
@@ -96,6 +104,12 @@ export const sendMessage = async (
     };
     if (mediaUrl) {
       messageData.mediaUrl = mediaUrl;
+    }
+    if (replyToId) {
+      messageData.replyToId = replyToId;
+    }
+    if (replyToText) {
+      messageData.replyToText = replyToText;
     }
 
     await addDoc(messagesRef, messageData);
@@ -172,6 +186,39 @@ export const updateTypingStatus = async (chatId: string, userId: string, isTypin
     });
   } catch (error) {
     console.error("Error updating typing status:", error);
+  }
+};
+
+export const editMessage = async (chatId: string, messageId: string, newText: string) => {
+  try {
+    const msgRef = doc(db, `chats/${chatId}/messages`, messageId);
+    await updateDoc(msgRef, {
+      text: newText,
+      isEdited: true
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error editing message:", error);
+    return { success: false };
+  }
+};
+
+export const deleteMessage = async (chatId: string, messageId: string, userId: string, mode: 'forMe' | 'forEveryone') => {
+  try {
+    const msgRef = doc(db, `chats/${chatId}/messages`, messageId);
+    if (mode === 'forEveryone') {
+      await updateDoc(msgRef, {
+        isDeleted: true
+      });
+    } else {
+      await updateDoc(msgRef, {
+        deletedForMe: arrayUnion(userId)
+      });
+    }
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting message:", error);
+    return { success: false };
   }
 };
 

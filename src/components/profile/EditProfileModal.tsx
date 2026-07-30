@@ -4,6 +4,7 @@ import { useState } from "react";
 import { X, Upload, Save, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { updateUserProfile, UserBasic } from "@/lib/services/users";
+import { logoutUser } from "@/lib/auth";
 import { uploadBytes, ref, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import toast from "react-hot-toast";
@@ -13,7 +14,7 @@ interface EditProfileModalProps {
 }
 
 export default function EditProfileModal({ onClose }: EditProfileModalProps) {
-  const { profile, setProfile } = useAuthStore();
+  const { profile, setProfile, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"personal" | "professional" | "social" | "privacy">("personal");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -81,36 +82,65 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
     setIsSaving(true);
 
     try {
+      // Age Verification Check (Must be 18+)
+      if (formData.dob) {
+        const dobDate = new Date(formData.dob);
+        const today = new Date();
+        let age = today.getFullYear() - dobDate.getFullYear();
+        const m = today.getMonth() - dobDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+          age--;
+        }
+        
+        if (age < 18) {
+          await updateUserProfile(profile.uid, { isLocked: true });
+          await logoutUser();
+          logout();
+          toast.error("Account locked: You do not meet the minimum age requirement (18+) as per our Privacy Policy. Please contact admin.");
+          onClose(); // Will unmount, and user is logged out
+          window.location.href = '/login';
+          return;
+        }
+      }
+
       let avatarUrl = profile.avatar;
       let resumeUrl = profile.resumeUrl;
       
       if (avatarFile) {
-        // Create a timeout promise to prevent hanging
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Upload timed out. Check your internet connection or Firebase Storage rules.")), 15000);
-        });
+        try {
+          // Create a timeout promise to prevent hanging
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Upload timed out. Check your internet connection or Firebase Storage rules.")), 15000);
+          });
 
-        const storageRef = ref(storage, `avatars/${profile.uid}_${Date.now()}`);
-        
-        // Race the upload against the 15-second timeout
-        const snapshot = await Promise.race([
-          uploadBytes(storageRef, avatarFile),
-          timeoutPromise
-        ]) as any;
+          const storageRef = ref(storage, `avatars/${profile.uid}_${Date.now()}`);
+          
+          // Race the upload against the 15-second timeout
+          const snapshot = await Promise.race([
+            uploadBytes(storageRef, avatarFile),
+            timeoutPromise
+          ]) as any;
 
-        avatarUrl = await getDownloadURL(snapshot.ref);
+          avatarUrl = await getDownloadURL(snapshot.ref);
+        } catch (e: any) {
+          toast.error("Avatar upload failed: " + e.message);
+        }
       }
 
       if (resumeFile) {
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Upload timed out.")), 15000);
-        });
-        const storageRef = ref(storage, `resumes/${profile.uid}_${Date.now()}_${resumeFile.name}`);
-        const snapshot = await Promise.race([
-          uploadBytes(storageRef, resumeFile),
-          timeoutPromise
-        ]) as any;
-        resumeUrl = await getDownloadURL(snapshot.ref);
+        try {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Upload timed out.")), 15000);
+          });
+          const storageRef = ref(storage, `resumes/${profile.uid}_${Date.now()}_${resumeFile.name}`);
+          const snapshot = await Promise.race([
+            uploadBytes(storageRef, resumeFile),
+            timeoutPromise
+          ]) as any;
+          resumeUrl = await getDownloadURL(snapshot.ref);
+        } catch (e: any) {
+          toast.error("Resume upload failed: " + e.message);
+        }
       }
 
       const updateData = {
@@ -246,11 +276,11 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium text-secondary ml-1">Relationship Status</label>
-                      <select name="relationship" value={formData.relationship} onChange={handleInputChange} className="neo-input cursor-pointer bg-transparent">
-                        <option>Single</option>
-                        <option>In a Relationship</option>
-                        <option>Married</option>
-                        <option>Complicated</option>
+                      <select name="relationship" value={formData.relationship} onChange={handleInputChange} className="neo-input cursor-pointer bg-slate-900 text-white border border-white/10">
+                        <option className="bg-slate-900 text-white">Single</option>
+                        <option className="bg-slate-900 text-white">In a Relationship</option>
+                        <option className="bg-slate-900 text-white">Married</option>
+                        <option className="bg-slate-900 text-white">Complicated</option>
                       </select>
                     </div>
                   </div>

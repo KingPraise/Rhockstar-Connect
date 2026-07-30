@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead } from "@/lib/services/messages";
+import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead, editMessage, deleteMessage } from "@/lib/services/messages";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
-import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText } from "lucide-react";
+import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, Trash2, MoreHorizontal } from "lucide-react";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import toast from "react-hot-toast";
@@ -23,6 +23,12 @@ export default function MessagesPage() {
   
   const [showNewChat, setShowNewChat] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -47,24 +53,15 @@ export default function MessagesPage() {
       return;
     }
 
-    try {
-      setIsUploadingImage(true);
-      const timestamp = Date.now();
-      const storageRef = ref(storage, `chats/${activeChat.id}/${timestamp}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      
-      const type = isImage ? 'image' : 'document';
-      const msgText = isImage ? "Sent an image" : file.name;
-      
-      await sendMessage(activeChat.id, profile.uid, msgText, type, downloadURL);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      toast.error("Failed to upload file. Please try again.");
-    } finally {
-      setIsUploadingImage(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+    setMediaFile(file);
+    if (isImage) {
+      setMediaPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setMediaPreviewUrl(file.name); // Just use name for documents
     }
+    
+    // Clear input so same file can be selected again if cancelled
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const [isRecording, setIsRecording] = useState(false);
@@ -186,16 +183,60 @@ export default function MessagesPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.uid || !activeChat || !newMessage.trim()) return;
+    if (!profile?.uid || !activeChat) return;
+    if (!newMessage.trim() && !mediaFile) return;
+
+    if (editingMessage) {
+      if (newMessage.trim() === editingMessage.text) {
+        setEditingMessage(null);
+        setNewMessage("");
+        return;
+      }
+      await editMessage(activeChat.id, editingMessage.id, newMessage.trim());
+      setEditingMessage(null);
+      setNewMessage("");
+      return;
+    }
 
     const text = newMessage;
+    const file = mediaFile;
+    const replyId = replyingTo?.id;
+    const replyText = replyingTo?.text;
+
     setNewMessage(""); // Optimistic clear
+    setMediaFile(null);
+    setMediaPreviewUrl(null);
+    setReplyingTo(null);
     
     // Clear typing status
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     updateTypingStatus(activeChat.id, profile.uid, false);
     
-    await sendMessage(activeChat.id, profile.uid, text);
+    let uploadedMediaUrl = undefined;
+    let type: 'text' | 'image' | 'audio' | 'document' = 'text';
+    let finalMsgText = text;
+
+    if (file) {
+      try {
+        setIsUploadingImage(true);
+        const timestamp = Date.now();
+        const storageRef = ref(storage, `chats/${activeChat.id}/${timestamp}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        uploadedMediaUrl = await getDownloadURL(storageRef);
+        
+        type = file.type.startsWith('image/') ? 'image' : 'document';
+        if (!finalMsgText) {
+           finalMsgText = type === 'image' ? "Sent an image" : file.name;
+        }
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        toast.error("Failed to upload file. Sending message without attachment.");
+      } finally {
+        setIsUploadingImage(false);
+      }
+    }
+
+    await sendMessage(activeChat.id, profile.uid, finalMsgText, type, uploadedMediaUrl, replyId, replyText);
   };
 
   const startNewChat = async (otherUserId: string) => {
@@ -224,88 +265,100 @@ export default function MessagesPage() {
   );
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full h-[calc(100vh-100px)] gap-4 p-4 lg:p-6 lg:gap-8">
+    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100vh-100px)] gap-2 md:gap-4 p-2 md:p-4 lg:p-6 lg:gap-6">
       
       {/* SIDEBAR: CHAT LIST */}
       <div className={`${activeChat ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl`}>
-        <div className="p-6 border-b border-white/5 bg-slate-900/80 sticky top-0 z-10 backdrop-blur-md">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-white tracking-tight">Messages</h2>
-            <button 
-              onClick={() => setShowNewChat(!showNewChat)}
-              className="p-2 rounded-xl bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
-            >
-              <MessageSquarePlus className="w-5 h-5" />
-            </button>
-          </div>
-          
-          <div className="relative group">
-            <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-brand transition-colors" />
+        {/* Sidebar Header */}
+        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-slate-900/80 backdrop-blur-md">
+          <h2 className="text-xl font-bold text-white">Messages</h2>
+          <button 
+            onClick={() => setShowNewChat(true)}
+            className="p-2 rounded-xl bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
+          >
+            <MessageSquarePlus className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="p-4 border-b border-white/5">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
-              type="text"
-              placeholder={showNewChat ? "Search to start chat..." : "Search messages..."}
-              className="w-full bg-slate-800/50 border border-white/5 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50 focus:ring-1 focus:ring-brand/50 transition-all shadow-inner"
+              type="text" 
+              placeholder="Search conversations..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-800/50 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50 transition-colors"
             />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-2">
+        {/* Chats List */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
           {showNewChat ? (
-            // NEW CHAT VIEW
-            <div className="space-y-1">
-              <p className="px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider">Suggested Connections</p>
-              {availableUsers.map(u => (
-                <button
-                  key={u.uid}
-                  onClick={() => startNewChat(u.uid)}
-                  className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-white/5 transition-colors text-left"
-                >
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg flex-shrink-0">
-                    <span className="text-lg font-bold text-white">{u.avatar}</span>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white">{u.fullName}</h3>
-                    <p className="text-sm text-slate-400">@{u.username}</p>
-                  </div>
-                </button>
-              ))}
+            <div className="p-2 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Start New Chat</div>
+              {availableUsers.length > 0 ? (
+                availableUsers.map((u) => (
+                  <button
+                    key={u.uid}
+                    onClick={() => startNewChat(u.uid)}
+                    className="w-full p-3 flex items-center gap-3 hover:bg-white/5 rounded-xl transition-all text-left group"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shrink-0 shadow-lg group-hover:scale-105 transition-transform">
+                      <span className="text-sm font-bold text-white">{u.avatar}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm text-slate-200 truncate group-hover:text-white transition-colors">{u.fullName}</h3>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="p-4 text-center text-sm text-slate-500">
+                  {searchQuery ? "No matching connections found." : "No connections available to chat."}
+                </div>
+              )}
             </div>
           ) : (
-            // EXISTING CHATS VIEW
             chats.length > 0 ? chats.map((chat) => {
-              const otherUserId = chat.participants.find(p => p !== profile.uid) || chat.participants[0];
+              const otherUserId = chat.participants.find(p => p !== profile?.uid) || chat.participants[0];
               const otherUser = users[otherUserId];
-              
-              if (!otherUser) return null;
+              const isTyping = chat.typingStatus?.[otherUserId];
+              const isActive = activeChat?.id === chat.id;
 
               return (
                 <button
                   key={chat.id}
                   onClick={() => setActiveChat(chat)}
-                  className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all text-left ${
-                    activeChat?.id === chat.id 
-                      ? 'bg-gradient-to-r from-brand/10 to-transparent border-l-2 border-brand shadow-inner' 
-                      : 'hover:bg-white/5'
+                  className={`w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-all text-left border-b border-white/5 last:border-0 relative ${
+                    isActive ? 'bg-white/5 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : ''
                   }`}
                 >
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg flex-shrink-0">
-                      <span className="text-lg font-bold text-white">{otherUser.avatar}</span>
+                  {otherUser ? (
+                    <>
+                      <div className="relative">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-lg transition-transform ${isActive ? 'bg-gradient-to-br from-brand to-brand-purple scale-105' : 'bg-slate-800'}`}>
+                          <span className={`text-lg font-bold ${isActive ? 'text-white' : 'text-slate-300'}`}>{otherUser.avatar}</span>
+                        </div>
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="flex justify-between items-baseline mb-0.5">
+                          <h3 className={`font-semibold truncate ${isActive ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
+                          <span className="text-[10px] text-slate-500 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
+                        </div>
+                        <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : 'text-slate-400'}`}>
+                          {isTyping ? 'Typing...' : chat.lastMessage || 'Start a conversation'}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="animate-pulse flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-white/10" />
+                      <div className="h-4 w-32 bg-white/10 rounded" />
                     </div>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className={`font-bold truncate ${activeChat?.id === chat.id ? 'text-brand' : 'text-white'}`}>
-                        {otherUser.fullName}
-                      </h3>
-                    </div>
-                    <p className="text-sm text-slate-400 truncate">
-                      {chat.lastMessage || "No messages yet"}
-                    </p>
-                  </div>
+                  )}
                 </button>
               );
             }) : (
@@ -367,48 +420,85 @@ export default function MessagesPage() {
 
             {messages.map((msg) => {
               const isMine = msg.senderId === profile.uid;
+              if (msg.deletedForMe?.includes(profile.uid)) return null;
+
               const formattedTime = formatMessageTime(msg.createdAt);
               const isRead = msg.status === 'read';
 
               return (
-                <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2.5 flex flex-col gap-1 ${
-                    isMine 
-                      ? 'bg-gradient-to-br from-brand to-brand-purple text-white rounded-tr-sm shadow-[0_5px_15px_rgba(56,189,248,0.2)]' 
-                      : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-white/5'
-                  }`}>
-                    {msg.type === 'image' && msg.mediaUrl ? (
-                      <div className="rounded-xl overflow-hidden mb-1 relative bg-slate-900/50">
-                        <img src={msg.mediaUrl} alt="Attachment" className="max-w-full h-auto max-h-64 object-contain" />
-                        {msg.text !== "Sent an image" && <p className="leading-relaxed text-sm md:text-base break-words mt-2 px-1">{msg.text}</p>}
-                      </div>
-                    ) : msg.type === 'document' && msg.mediaUrl ? (
-                      <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 mb-1 bg-slate-900/50 rounded-xl border border-white/10 hover:bg-slate-900/80 transition-colors">
-                        <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
-                          <FileText className="w-4 h-4" />
-                        </div>
-                        <span className="text-sm font-medium truncate min-w-0 max-w-[150px] md:max-w-[200px]">{msg.text}</span>
-                      </a>
-                    ) : msg.type === 'audio' && msg.mediaUrl ? (
-                      <div className="mb-1">
-                        <audio controls className="max-w-[200px] md:max-w-[250px] h-10">
-                          <source src={msg.mediaUrl} type="audio/webm" />
-                        </audio>
-                      </div>
-                    ) : (
-                      <p className="leading-relaxed text-sm md:text-base break-words">{msg.text}</p>
-                    )}
+                <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'} group relative`}>
+                  <div className={`relative max-w-[85%] md:max-w-[70%] flex flex-col gap-1`}>
                     
-                    {/* Timestamp & Status Ticks */}
-                    <div className={`flex items-center gap-1 text-[10px] ${isMine ? 'justify-end text-white/80' : 'justify-start text-slate-400'}`}>
-                      <span>{formattedTime}</span>
-                      {isMine && (
-                        isRead ? (
-                          <CheckCheck className="w-3.5 h-3.5 text-cyan-200 inline" />
-                        ) : (
-                          <Check className="w-3.5 h-3.5 text-white/70 inline" />
-                        )
+                    {/* Action buttons on hover */}
+                    <div className={`absolute top-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 ${isMine ? 'right-full mr-2' : 'left-full ml-2'}`}>
+                      <button onClick={() => { setReplyingTo(msg); setEditingMessage(null); }} className="p-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-full border border-white/10 hover:bg-slate-700 transition-colors" title="Reply">
+                        <Reply className="w-3.5 h-3.5" />
+                      </button>
+                      {isMine && !msg.isDeleted && msg.type === 'text' && (
+                        <button onClick={() => { setEditingMessage(msg); setNewMessage(msg.text); setReplyingTo(null); }} className="p-1.5 bg-slate-800 text-slate-300 hover:text-white rounded-full border border-white/10 hover:bg-slate-700 transition-colors" title="Edit">
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
                       )}
+                      <button onClick={() => {
+                        if (isMine && !msg.isDeleted) {
+                          const confirmEveryone = window.confirm("Delete for everyone? Cancel to delete for yourself only.");
+                          deleteMessage(activeChat.id, msg.id, profile.uid, confirmEveryone ? 'forEveryone' : 'forMe');
+                        } else {
+                          deleteMessage(activeChat.id, msg.id, profile.uid, 'forMe');
+                        }
+                      }} className="p-1.5 bg-slate-800 text-slate-300 hover:text-red-400 rounded-full border border-white/10 hover:bg-slate-700 transition-colors" title="Delete">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className={`rounded-2xl px-4 py-2.5 flex flex-col gap-1 ${
+                      isMine 
+                        ? 'bg-gradient-to-br from-brand to-brand-purple text-white rounded-tr-sm shadow-[0_5px_15px_rgba(56,189,248,0.2)]' 
+                        : 'bg-slate-800 text-slate-100 rounded-tl-sm border border-white/5'
+                    }`}>
+                      {msg.replyToText && (
+                        <div className="mb-2 pl-3 border-l-2 border-white/30 bg-black/10 p-2 rounded text-xs opacity-80 overflow-hidden line-clamp-2">
+                          <span className="font-semibold block mb-0.5">Replying to</span>
+                          {msg.replyToText}
+                        </div>
+                      )}
+                      
+                      {msg.isDeleted ? (
+                         <p className="italic text-white/50 text-sm">This message was deleted</p>
+                      ) : msg.type === 'image' && msg.mediaUrl ? (
+                        <div className="rounded-xl overflow-hidden mb-1 relative bg-slate-900/50">
+                          <img src={msg.mediaUrl} alt="Attachment" className="max-w-full h-auto max-h-64 object-contain" />
+                          {msg.text !== "Sent an image" && <p className="leading-relaxed text-sm md:text-base break-words mt-2 px-1">{msg.text}</p>}
+                        </div>
+                      ) : msg.type === 'document' && msg.mediaUrl ? (
+                        <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 p-3 mb-1 bg-slate-900/50 rounded-xl border border-white/10 hover:bg-slate-900/80 transition-colors">
+                          <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <span className="text-sm font-medium truncate min-w-0 max-w-[150px] md:max-w-[200px]">{msg.text}</span>
+                        </a>
+                      ) : msg.type === 'audio' && msg.mediaUrl ? (
+                        <div className="mb-1">
+                          <audio controls className="max-w-[200px] md:max-w-[250px] h-10">
+                            <source src={msg.mediaUrl} type="audio/webm" />
+                          </audio>
+                        </div>
+                      ) : (
+                        <p className="leading-relaxed text-sm md:text-base break-words whitespace-pre-wrap">{msg.text}</p>
+                      )}
+                      
+                      {/* Timestamp & Status Ticks */}
+                      <div className={`flex items-center gap-1 text-[10px] ${isMine ? 'justify-end text-white/80' : 'justify-start text-slate-400'}`}>
+                        {msg.isEdited && <span className="mr-1">(edited)</span>}
+                        <span>{formattedTime}</span>
+                        {isMine && (
+                          isRead ? (
+                            <CheckCheck className="w-3.5 h-3.5 text-cyan-200 inline" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5 text-white/70 inline" />
+                          )
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -433,6 +523,43 @@ export default function MessagesPage() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Active States above Input */}
+          {(replyingTo || editingMessage || mediaPreviewUrl) && (
+            <div className="px-4 py-3 bg-slate-800/80 border-t border-white/10 flex items-center justify-between text-sm">
+              <div className="flex items-center gap-3 overflow-hidden">
+                {replyingTo && (
+                  <>
+                    <Reply className="w-4 h-4 text-brand shrink-0" />
+                    <div className="truncate text-slate-300">Replying to: <span className="font-semibold text-white">{replyingTo.text}</span></div>
+                  </>
+                )}
+                {editingMessage && (
+                  <>
+                    <Edit2 className="w-4 h-4 text-brand shrink-0" />
+                    <div className="truncate text-slate-300">Editing message</div>
+                  </>
+                )}
+                {mediaPreviewUrl && (
+                  <>
+                    <ImageIcon className="w-4 h-4 text-brand shrink-0" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-300 truncate max-w-[200px]">{mediaFile?.name}</span>
+                      {mediaFile?.type.startsWith('image/') && (
+                        <img src={mediaPreviewUrl} alt="Preview" className="h-10 w-10 object-cover rounded" />
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+              <button 
+                onClick={() => { setReplyingTo(null); setEditingMessage(null); setMediaFile(null); setMediaPreviewUrl(null); if (!editingMessage) setNewMessage(""); }} 
+                className="p-1 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Message Input - Embedded Send Button guarantee visible on mobile */}
           <div className="p-3 md:p-6 border-t border-white/5 bg-slate-900/80 backdrop-blur-md">
             <form onSubmit={handleSendMessage} className="relative flex items-center w-full bg-slate-800/60 border border-white/10 rounded-2xl pl-[4.5rem] pr-14 py-1.5 focus-within:border-brand/50 focus-within:ring-1 focus-within:ring-brand/50 transition-all shadow-inner">
@@ -447,16 +574,16 @@ export default function MessagesPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingImage || isRecording || isUploadingAudio}
+                  disabled={isUploadingImage || isRecording || isUploadingAudio || !!editingMessage}
                   className="p-2 rounded-xl text-slate-400 hover:text-brand hover:bg-white/5 transition-colors disabled:opacity-50"
-                  title="Attach Photo"
+                  title="Attach Photo or Document"
                 >
                   {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
                 </button>
                 <button
                   type="button"
                   onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isUploadingAudio || isUploadingImage}
+                  disabled={isUploadingAudio || isUploadingImage || !!editingMessage}
                   className={`p-2 rounded-xl transition-colors disabled:opacity-50 ${isRecording ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'text-slate-400 hover:text-brand hover:bg-white/5'}`}
                   title={isRecording ? "Stop Recording" : "Record Voice Note"}
                 >
@@ -470,7 +597,7 @@ export default function MessagesPage() {
                 </div>
               )}
               <textarea 
-                placeholder="Type your message... (Shift+Enter for new line)"
+                placeholder="Type your message..."
                 className="w-full bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none resize-none min-h-[24px] max-h-[120px] scrollbar-thin my-2"
                 value={newMessage}
                 rows={1}
@@ -490,7 +617,7 @@ export default function MessagesPage() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    if (newMessage.trim()) {
+                    if (newMessage.trim() || mediaFile) {
                       handleSendMessage(e as any);
                     }
                   }
@@ -498,11 +625,11 @@ export default function MessagesPage() {
               />
               <button 
                 type="submit"
-                disabled={!newMessage.trim()}
+                disabled={(!newMessage.trim() && !mediaFile) || isUploadingImage}
                 className="absolute right-1.5 bottom-1.5 p-2.5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white shadow-md disabled:opacity-40 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center cursor-pointer"
                 aria-label="Send Message"
               >
-                <Send className="w-5 h-5" />
+                {isUploadingImage ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
               </button>
             </form>
           </div>
