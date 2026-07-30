@@ -308,7 +308,7 @@ export default function MessagesPage() {
                   </div>
                 </button>
               );
-            ) : (
+            }) : (
               <div className="h-full flex flex-col items-center justify-center">
                 <EmptyState 
                   icon={MessageSquarePlus}
