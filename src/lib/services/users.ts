@@ -29,6 +29,8 @@ export interface UserBasic {
   datingPhotos?: string[];
   datingPrompts?: Array<{ prompt: string; answer: string }>;
   datingVoiceIntro?: string;
+  subscriptionTier?: string;
+  subscriptionStatus?: string;
 }
 
 export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> => {
