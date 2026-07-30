@@ -119,7 +119,7 @@ export const getUserByUsername = async (username: string): Promise<{ success: bo
 
 export const updateUserProfile = async (
   userId: string,
-  data: Partial<Omit<UserBasic, 'uid'>> & { bio?: string; headline?: string; location?: any; phone?: string; dob?: string; relationship?: string }
+  data: Partial<Omit<UserBasic, 'uid'>> & { bio?: string; headline?: string; location?: any; phone?: string; dob?: string; relationship?: string; isLocked?: boolean }
 ) => {
   try {
     const userRef = doc(db, 'users', userId);
