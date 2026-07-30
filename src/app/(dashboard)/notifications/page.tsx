@@ -10,8 +10,10 @@ import {
   markAllNotificationsAsRead 
 } from "@/lib/services/notifications";
 import { formatDistanceToNow } from "date-fns";
+import { useRouter } from "next/navigation";
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const { profile } = useAuthStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -28,8 +30,33 @@ export default function NotificationsPage() {
     await markAllNotificationsAsRead(profile.uid);
   };
 
-  const handleMarkAsRead = async (id: string) => {
-    await markNotificationAsRead(id);
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.read) {
+      await markNotificationAsRead(notification.id);
+    }
+
+    if (notification.link) {
+      router.push(notification.link);
+      return;
+    }
+
+    switch (notification.type) {
+      case "match":
+        router.push("/dating");
+        break;
+      case "message":
+        router.push("/messages");
+        break;
+      case "connection":
+        router.push("/network");
+        break;
+      case "job":
+        router.push("/jobs");
+        break;
+      default:
+        router.push("/feed");
+        break;
+    }
   };
 
   const getIconForType = (type: string) => {
@@ -77,7 +104,7 @@ export default function NotificationsPage() {
           return (
             <div 
               key={notification.id} 
-              onClick={() => handleMarkAsRead(notification.id)}
+              onClick={() => handleNotificationClick(notification)}
               className={`neo-card p-4 sm:p-6 flex items-start gap-4 transition-all duration-300 cursor-pointer ${
                 notification.read 
                   ? "bg-slate-900/40 border-white/5 opacity-70 hover:opacity-100" 
