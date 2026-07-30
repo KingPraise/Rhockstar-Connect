@@ -191,8 +191,12 @@ export default function PostCard({ post }: PostCardProps) {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <Link href={`/profile?uid=${post.userId}`} className="flex items-center gap-4 group">
-          <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white shadow-inner group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow">
-            {post.user.avatar}
+          <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white shadow-inner overflow-hidden group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow">
+            {post.user.avatar?.startsWith('http') || post.user.avatar?.startsWith('/') ? (
+              <img src={post.user.avatar} alt={post.user.name} className="w-full h-full object-cover" />
+            ) : (
+              post.user.avatar || post.user.name?.charAt(0) || 'U'
+            )}
           </div>
           <div>
             <h4 className="font-bold text-white group-hover:text-brand transition-colors">{post.user.name}</h4>
@@ -385,8 +389,14 @@ export default function PostCard({ post }: PostCardProps) {
                 return (
                   <div key={comment.id} className="flex flex-col gap-3">
                     <div className="flex gap-3">
-                      <Link href={`/profile?uid=${comment.userId}`} className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0 hover:ring-2 hover:ring-brand transition-all">
-                        {comment.user.avatar}
+                      <Link href={`/profile?uid=${comment.userId}`}>
+                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-sm shrink-0 shadow-inner overflow-hidden">
+                          {comment.user.avatar?.startsWith('http') || comment.user.avatar?.startsWith('/') ? (
+                            <img src={comment.user.avatar} alt={comment.user.name} className="w-full h-full object-cover" />
+                          ) : (
+                            comment.user.avatar || comment.user.name?.charAt(0) || 'U'
+                          )}
+                        </div>
                       </Link>
                       <div className="flex-1 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
                         <div className="flex items-center justify-between mb-1">
@@ -450,8 +460,14 @@ export default function PostCard({ post }: PostCardProps) {
                           }
                           return (
                             <div key={reply.id} className="flex gap-3 relative before:absolute before:left-[-22px] before:top-4 before:w-4 before:h-px before:bg-white/10">
-                              <Link href={`/profile?uid=${reply.userId}`} className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center font-bold text-white text-[10px] shrink-0 hover:ring-2 hover:ring-brand transition-all">
-                                {reply.user.avatar}
+                              <Link href={`/profile?uid=${reply.userId}`}>
+                                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-inner overflow-hidden">
+                                  {reply.user.avatar?.startsWith('http') || reply.user.avatar?.startsWith('/') ? (
+                                    <img src={reply.user.avatar} alt={reply.user.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    reply.user.avatar || reply.user.name?.charAt(0) || 'U'
+                                  )}
+                                </div>
                               </Link>
                               <div className="flex-1 bg-slate-900/50 rounded-2xl rounded-tl-sm p-3 border border-white/5">
                                 <div className="flex items-center justify-between mb-1">
@@ -509,8 +525,12 @@ export default function PostCard({ post }: PostCardProps) {
 
           {/* Add Comment Input */}
           <form onSubmit={handleAddComment} className="flex gap-2 items-center mt-4">
-            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white text-xs shrink-0">
-              {profile?.avatar || profile?.fullName?.substring(0, 2).toUpperCase() || 'U'}
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-white shadow-md shrink-0 overflow-hidden">
+              {profile?.avatar?.startsWith('http') || profile?.avatar?.startsWith('/') ? (
+                <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                profile?.avatar || profile?.fullName?.substring(0, 2).toUpperCase() || 'U'
+              )}
             </div>
             <input
               ref={commentInputRef}
@@ -561,8 +581,12 @@ export default function PostCard({ post }: PostCardProps) {
               ) : likesUsers.length > 0 ? (
                 likesUsers.map(u => (
                   <Link href={`/profile?uid=${u.uid}`} key={u.uid} onClick={() => setIsLikesModalOpen(false)} className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-white shrink-0 text-sm shadow-md">
-                      {u.avatar || u.fullName?.charAt(0)}
+                    <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white shrink-0 overflow-hidden">
+                      {u.avatar?.startsWith('http') || u.avatar?.startsWith('/') ? (
+                        <img src={u.avatar} alt={u.fullName} className="w-full h-full object-cover" />
+                      ) : (
+                        u.avatar || u.fullName?.charAt(0) || 'U'
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-white font-semibold text-sm truncate group-hover:text-brand transition-colors">{u.fullName}</p>

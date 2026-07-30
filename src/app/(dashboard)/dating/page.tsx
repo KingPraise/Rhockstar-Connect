@@ -249,9 +249,13 @@ export default function DatingPage() {
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                         <div className="w-32 h-32 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.3)]">
-                          <span className="text-5xl font-extrabold text-white">{currentProspect.avatar}</span>
-                         </div>
+                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.3)] overflow-hidden">
+                          {currentProspect.avatar?.startsWith('http') || currentProspect.avatar?.startsWith('/') ? (
+                            <img src={currentProspect.avatar} alt={currentProspect.fullName} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-5xl font-extrabold text-white">{currentProspect.avatar}</span>
+                          )}
+                        </div>
                       </div>
                     )}
                     

@@ -6,7 +6,8 @@ import {
   getDoc,
   updateDoc,
   query,
-  where
+  where,
+  writeBatch
 } from 'firebase/firestore';
 
 export interface UserBasic {
@@ -123,6 +124,34 @@ export const updateUserProfile = async (
   try {
     const userRef = doc(db, 'users', userId);
     await updateDoc(userRef, data);
+
+    // If avatar, name, or username changed, update all their posts
+    if (data.avatar !== undefined || data.fullName !== undefined || data.username !== undefined) {
+      const postsQuery = query(collection(db, 'posts'), where('userId', '==', userId));
+      const snapshot = await getDocs(postsQuery);
+      
+      if (!snapshot.empty) {
+        const batch = writeBatch(db);
+        let count = 0;
+        
+        snapshot.docs.forEach(postDoc => {
+          const postData = postDoc.data();
+          if (postData.user) {
+            batch.update(postDoc.ref, {
+              'user.name': data.fullName !== undefined ? data.fullName : postData.user.name,
+              'user.handle': data.username !== undefined ? data.username : postData.user.handle,
+              'user.avatar': data.avatar !== undefined ? data.avatar : postData.user.avatar,
+            });
+            count++;
+          }
+        });
+        
+        if (count > 0) {
+          await batch.commit();
+        }
+      }
+    }
+
     return { success: true };
   } catch (error: unknown) {
     console.error("Error updating user profile:", error);
