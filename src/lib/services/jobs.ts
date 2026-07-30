@@ -131,10 +131,7 @@ export const getJobs = async (filters?: JobFilters): Promise<{ success: boolean;
     
     let fetchedJobs: JobListing[] = [];
     
-    if (snapshot.empty) {
-      // If Firestore is empty, fallback to MOCK_JOBS to ensure the UI looks good
-      fetchedJobs = MOCK_JOBS;
-    } else {
+    if (!snapshot.empty) {
       fetchedJobs = snapshot.docs.map(doc => {
         const data = doc.data();
         let postedAtStr = "Just now";

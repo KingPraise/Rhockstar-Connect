@@ -3,14 +3,28 @@
 import { useState } from "react";
 import { 
   Settings as SettingsIcon, User, Lock, Bell, 
-  Shield, Eye, Smartphone, Globe, CreditCard 
+  Shield, Eye, Smartphone, Globe, CreditCard,
+  LogOut
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useRouter } from "next/navigation";
+import { logoutUser } from "@/lib/auth";
 
 export default function SettingsPage() {
-  const { user, profile } = useAuthStore();
+  const { user, profile, logout } = useAuthStore();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      logout();
+      router.push('/login');
+    } catch (error) {
+      toast.error("Failed to log out");
+    }
+  };
 
   const tabs = [
     { id: "account", label: "Account", icon: User },
@@ -161,9 +175,20 @@ export default function SettingsPage() {
                 <div className="pt-6 border-t border-white/10">
                   <h3 className="text-rose-500 font-bold mb-2">Danger Zone</h3>
                   <p className="text-slate-400 text-sm mb-4">Once you delete your account, there is no going back. Please be certain.</p>
-                  <button className="bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors">
-                    Delete Account
-                  </button>
+                  
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <button 
+                      onClick={handleLogout}
+                      className="bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-800 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors flex items-center justify-center gap-2"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      Logout Account
+                    </button>
+                    
+                    <button className="bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors">
+                      Delete Account
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

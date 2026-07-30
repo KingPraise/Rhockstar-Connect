@@ -66,7 +66,8 @@ export default function MobileHeader() {
       {/* Top Bar for Mobile */}
       <header className="md:hidden sticky top-0 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-lg">
         <Link href="/feed" className="flex items-center gap-2 pl-2">
-          <Image src="/logo-light.png" alt="Rhockstar Connect" width={300} height={80} priority className="h-16 w-auto object-contain scale-[1.35] origin-left drop-shadow-md" />
+          <Image src="/icon.png" alt="Rhockstar Connect" width={32} height={32} priority className="object-contain" />
+          <span className="font-extrabold text-xl tracking-tight text-white">Rhockstar <span className="text-brand">Connect</span></span>
         </Link>
 
         <div className="flex items-center gap-2">
@@ -250,13 +251,6 @@ export default function MobileHeader() {
                   <span>Super Admin Portal</span>
                 </Link>
               )}
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-bold transition-all active:scale-95"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Logout Account</span>
-              </button>
             </div>
           </div>
         </div>

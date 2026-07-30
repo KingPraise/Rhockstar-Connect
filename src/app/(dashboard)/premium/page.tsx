@@ -70,8 +70,9 @@ export default function PremiumPage() {
           <div className="space-y-4 mb-10 flex-1">
             {[
               "Verified Badge on your profile",
-              "Advanced search filters",
+              "Advanced Search Filters & Global Smart Search",
               "See who viewed your profile",
+              "Enhanced Media Lightbox Viewer",
               "Unlimited messaging",
               "Priority support"
             ].map((feature, i) => (

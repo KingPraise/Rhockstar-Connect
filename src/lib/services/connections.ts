@@ -5,6 +5,7 @@ import {
   query, 
   where, 
   getDocs,
+  getDoc,
   doc,
   updateDoc,
   deleteDoc,
@@ -67,8 +68,8 @@ export const updateConnectionStatus = async (connectionId: string, status: 'acce
       await updateDoc(docRef, { status });
 
       // Get connection doc to notify sender
-      const connSnap = await getDocs(query(collection(db, 'connections')));
-      const connData = connSnap.docs.find(d => d.id === connectionId)?.data();
+      const docSnap = await getDoc(docRef);
+      const connData = docSnap.data();
       if (connData?.fromUserId) {
         await createNotification({
           userId: connData.fromUserId,
