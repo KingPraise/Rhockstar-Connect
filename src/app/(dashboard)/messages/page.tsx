@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus } from "@/lib/services/messages";
+import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead } from "@/lib/services/messages";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText } from "lucide-react";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { markMessagesAsRead } from "@/lib/services/messages";
+import toast from "react-hot-toast";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function MessagesPage() {
   const { profile } = useAuthStore();
@@ -37,11 +39,11 @@ export default function MessagesPage() {
     const isDoc = file.type.includes('pdf') || file.type.includes('document') || file.name.endsWith('.pdf') || file.name.endsWith('.doc') || file.name.endsWith('.docx');
     
     if (!isImage && !isDoc) {
-      alert("Please select a valid image or document file.");
+      toast.error("Please select a valid image or document file.");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      alert("File size must be less than 10MB.");
+      toast.error("File size must be less than 10MB.");
       return;
     }
 
@@ -58,7 +60,7 @@ export default function MessagesPage() {
       await sendMessage(activeChat.id, profile.uid, msgText, type, downloadURL);
     } catch (error) {
       console.error("Error uploading file:", error);
-      alert("Failed to upload file. Please try again.");
+      toast.error("Failed to upload file. Please try again.");
     } finally {
       setIsUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -97,7 +99,7 @@ export default function MessagesPage() {
           await sendMessage(activeChat.id, profile.uid, "Sent a voice note", "audio", downloadURL);
         } catch (error) {
           console.error("Error uploading audio:", error);
-          alert("Failed to upload voice note.");
+          toast.error("Failed to upload voice note.");
         } finally {
           setIsUploadingAudio(false);
           // Stop all tracks to release mic
@@ -109,7 +111,7 @@ export default function MessagesPage() {
       setIsRecording(true);
     } catch (err) {
       console.error("Error accessing microphone:", err);
-      alert("Could not access microphone. Please check your permissions.");
+      toast.error("Could not access microphone. Please check your permissions.");
     }
   };
 
@@ -306,13 +308,13 @@ export default function MessagesPage() {
                   </div>
                 </button>
               );
-            }) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
-                <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                  <MessageSquarePlus className="w-8 h-8 text-slate-500" />
-                </div>
-                <p className="font-medium text-white mb-2">No messages yet</p>
-                <p className="text-sm">Start a conversation with a connection!</p>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center">
+                <EmptyState 
+                  icon={MessageSquarePlus}
+                  title="No messages yet"
+                  description="Start a conversation with a connection!"
+                />
               </div>
             )
           )}
@@ -506,13 +508,12 @@ export default function MessagesPage() {
           </div>
         </div>
       ) : (
-        <div className="hidden md:flex flex-1 flex-col items-center justify-center neo-card bg-slate-900/60 border border-white/5 rounded-3xl text-slate-400 p-8 text-center shadow-2xl relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-5 mix-blend-screen pointer-events-none" />
-          <div className="w-24 h-24 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(56,189,248,0.2)]">
-            <Send className="w-10 h-10 text-brand ml-2" />
-          </div>
-          <h2 className="text-3xl font-extrabold text-white mb-3">Your Messages</h2>
-          <p className="max-w-sm font-medium">Select a conversation from the sidebar or start a new chat to begin networking.</p>
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center neo-card bg-slate-900/60 border border-white/5 rounded-3xl relative overflow-hidden shadow-2xl">
+          <EmptyState 
+            icon={Send}
+            title="Your Messages"
+            description="Select a conversation from the sidebar or start a new chat to begin networking."
+          />
         </div>
       )}
     </div>

@@ -4,8 +4,10 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import PostComposer from "@/components/feed/PostComposer";
 import PostCard from "@/components/feed/PostCard";
 import { subscribeToFeed, Post } from "@/lib/services/posts";
-import { Loader2 } from "lucide-react";
+import { Loader2, MessageSquarePlus } from "lucide-react";
 import PullToRefresh from "@/components/ui/PullToRefresh";
+import PostCardSkeleton from "@/components/feed/PostCardSkeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function FeedPage() {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -66,25 +68,7 @@ export default function FeedPage() {
           {loading ? (
             <div className="space-y-6 w-full">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="neo-card p-6 animate-pulse">
-                  <div className="flex gap-4 items-center mb-4">
-                    <div className="w-12 h-12 rounded-full bg-slate-800"></div>
-                    <div className="space-y-2 flex-1">
-                      <div className="h-4 bg-slate-800 rounded w-1/4"></div>
-                      <div className="h-3 bg-slate-800/50 rounded w-1/5"></div>
-                    </div>
-                  </div>
-                  <div className="space-y-2 mb-4">
-                    <div className="h-4 bg-slate-800 rounded w-3/4"></div>
-                    <div className="h-4 bg-slate-800 rounded w-1/2"></div>
-                  </div>
-                  <div className="h-64 bg-slate-800/50 rounded-xl mb-4"></div>
-                  <div className="flex gap-6 border-t border-white/5 pt-4">
-                    <div className="w-16 h-8 bg-slate-800 rounded-lg"></div>
-                    <div className="w-16 h-8 bg-slate-800 rounded-lg"></div>
-                    <div className="w-16 h-8 bg-slate-800 rounded-lg"></div>
-                  </div>
-                </div>
+                <PostCardSkeleton key={i} />
               ))}
             </div>
           ) : posts.length > 0 ? (
@@ -112,8 +96,12 @@ export default function FeedPage() {
               )}
             </>
           ) : (
-            <div className="text-center p-12 neo-card">
-              <p className="text-slate-400">No posts yet. Be the first to post!</p>
+            <div className="neo-card flex items-center justify-center min-h-[40vh]">
+              <EmptyState 
+                icon={MessageSquarePlus}
+                title="No posts yet"
+                description="Your feed is quiet. Be the first to start a conversation or connect with more professionals."
+              />
             </div>
           )}
         </div>

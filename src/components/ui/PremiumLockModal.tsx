@@ -29,8 +29,8 @@ export default function PremiumLockModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 p-6 md:p-8 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.2)] relative overflow-hidden text-center space-y-6">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 p-6 md:p-8 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.2)] relative overflow-hidden text-center space-y-6 animate-in zoom-in-95 duration-200">
         
         {/* CLOSE BUTTON */}
         <button

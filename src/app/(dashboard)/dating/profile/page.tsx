@@ -7,6 +7,7 @@ import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { Heart, Loader2, Save, Upload, Plus, Trash2, Mic, Settings, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 const PROMPTS = [
   "A shower thought I recently had...",
@@ -59,7 +60,7 @@ export default function DatingProfileSetup() {
       const files = Array.from(e.target.files);
       const totalPhotos = existingPhotos.length + newPhotos.length + files.length;
       if (totalPhotos > 4) {
-        alert("You can only have up to 4 dating photos.");
+        toast.error("You can only have up to 4 dating photos.");
         return;
       }
       setNewPhotos(prev => [...prev, ...files]);
@@ -76,7 +77,7 @@ export default function DatingProfileSetup() {
 
   const addPrompt = () => {
     if (prompts.length >= 3) {
-      alert("You can only have up to 3 prompts.");
+      toast.error("You can only have up to 3 prompts.");
       return;
     }
     setPrompts([...prompts, { prompt: PROMPTS[0], answer: "" }]);
@@ -94,7 +95,7 @@ export default function DatingProfileSetup() {
 
   const handleSave = async () => {
     if (datingActive && existingPhotos.length === 0 && newPhotos.length === 0 && !profile.avatar) {
-      alert("You must have at least one photo (Profile Avatar or Dating Photo) to activate your dating profile.");
+      toast.error("You must have at least one photo (Profile Avatar or Dating Photo) to activate your dating profile.");
       return;
     }
 
@@ -132,13 +133,14 @@ export default function DatingProfileSetup() {
       
       if (result.success) {
         setProfile({ ...profile, ...updateData } as any);
+        toast.success("Dating profile saved successfully!");
         router.push('/dating');
       } else {
-        alert("Failed to save dating profile.");
+        toast.error("Failed to save dating profile.");
       }
     } catch (error) {
       console.error(error);
-      alert("An error occurred while saving.");
+      toast.error("An error occurred while saving.");
     } finally {
       setIsSaving(false);
     }

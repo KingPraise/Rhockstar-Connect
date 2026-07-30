@@ -97,7 +97,7 @@
   }
 
   .neo-button-primary:active {
-    transform: translateY(1px);
+    transform: translateY(1px) scale(0.95);
     box-shadow: inset 4px 4px 10px rgba(0, 0, 0, 0.4);
   }
 
@@ -118,6 +118,10 @@
     background: rgba(255, 255, 255, 0.08);
     box-shadow: var(--neo-shadow);
     transform: translateY(-2px);
+  }
+
+  .neo-button-secondary:active {
+    transform: translateY(1px) scale(0.95);
   }
 
   /* Gradient Text */
@@ -178,4 +182,48 @@
 .no-scrollbar {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+}
+
+/* Animations for Modals and Overlays */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-in {
+  animation-duration: 200ms;
+  animation-fill-mode: forwards;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.zoom-in-95 {
+  animation-name: zoom-in;
+}
+
+@keyframes slide-left {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slide-left {
+  animation: slide-left 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
 }

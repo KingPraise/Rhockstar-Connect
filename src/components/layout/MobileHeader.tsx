@@ -23,11 +23,13 @@ import {
   Search
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSearchStore } from "@/store/useSearchStore";
 import { logoutUser } from "@/lib/auth";
 
 export default function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const { profile, logout } = useAuthStore();
+  const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -135,6 +137,25 @@ export default function MobileHeader() {
                 <div className="space-y-1">
                   {socialLinks.map((item) => {
                     const isActive = pathname === item.href || (item.href !== '/feed' && pathname.startsWith(item.href));
+                    
+                    if (item.name === "Search") {
+                      return (
+                        <button
+                          key={item.name}
+                          onClick={() => {
+                            setIsOpen(false);
+                            openSearch();
+                          }}
+                          className={`flex items-center justify-between px-4 py-3 rounded-xl font-semibold transition-all w-full text-left text-slate-300 hover:text-white hover:bg-slate-800/50 border border-transparent`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <item.icon className={`w-5 h-5 text-slate-400`} />
+                            <span>{item.name}</span>
+                          </div>
+                        </button>
+                      );
+                    }
+
                     return (
                       <Link
                         key={item.name}

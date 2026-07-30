@@ -9,6 +9,8 @@ import { getOrCreateChat } from "@/lib/services/messages";
 import { useRouter } from "next/navigation";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import { useLightboxStore } from "@/store/useLightboxStore";
+import { Skeleton } from "@/components/ui/Skeleton";
+import toast from "react-hot-toast";
 
 export default function DatingPage() {
   const { profile } = useAuthStore();
@@ -113,8 +115,19 @@ export default function DatingPage() {
 
   if (loading || !profile) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-100px)]">
-        <Loader2 className="w-10 h-10 animate-spin text-brand-purple" />
+      <div className="flex-1 w-full max-w-4xl mx-auto p-4 lg:p-8 relative">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-14 h-14 rounded-2xl shrink-0" />
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-5 w-48" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-32 rounded-lg" />
+        </div>
+        <Skeleton className="h-24 w-full rounded-2xl mb-8" />
+        <Skeleton className="w-full max-w-md mx-auto h-[600px] rounded-[3rem]" />
       </div>
     );
   }
@@ -267,10 +280,10 @@ export default function DatingPage() {
                       
                       {activeMenu === currentProspect.uid && (
                         <div className="absolute right-0 mt-2 w-48 rounded-xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden z-40 animate-in fade-in zoom-in-95">
-                          <button onClick={() => { setActiveMenu(null); alert("User reported."); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
+                          <button onClick={() => { setActiveMenu(null); toast.success("User reported."); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
                             <Flag className="w-4 h-4" /> Report User
                           </button>
-                          <button onClick={() => { setActiveMenu(null); alert("User blocked."); handleAction('pass', currentProspect.uid); }} className="w-full px-4 py-3 text-left text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors flex items-center gap-2 border-t border-white/5">
+                          <button onClick={() => { setActiveMenu(null); toast.success("User blocked."); handleAction('pass', currentProspect.uid); }} className="w-full px-4 py-3 text-left text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors flex items-center gap-2 border-t border-white/5">
                             <X className="w-4 h-4" /> Block User
                           </button>
                         </div>
@@ -399,10 +412,10 @@ export default function DatingPage() {
                   
                   {activeMenu === prospect.uid && (
                     <div className="absolute right-0 mt-2 w-48 rounded-xl bg-slate-900 border border-white/10 shadow-2xl overflow-hidden z-40 animate-in fade-in zoom-in-95">
-                      <button onClick={() => { setActiveMenu(null); alert("User reported."); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
+                      <button onClick={() => { setActiveMenu(null); toast.success("User reported."); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
                         <Flag className="w-4 h-4" /> Report User
                       </button>
-                      <button onClick={() => { setActiveMenu(null); alert("User blocked."); handleAction('pass', prospect.uid); }} className="w-full px-4 py-3 text-left text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors flex items-center gap-2 border-t border-white/5">
+                      <button onClick={() => { setActiveMenu(null); toast.success("User blocked."); handleAction('pass', prospect.uid); }} className="w-full px-4 py-3 text-left text-sm text-rose-400 hover:bg-slate-800 hover:text-rose-300 transition-colors flex items-center gap-2 border-t border-white/5">
                         <X className="w-4 h-4" /> Block User
                       </button>
                     </div>

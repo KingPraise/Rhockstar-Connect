@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Settings, User, Bell, CreditCard, Lock, Shield } from "lucide-react";
+import { 
+  Settings as SettingsIcon, User, Lock, Bell, 
+  Shield, Eye, Smartphone, Globe, CreditCard 
+} from "lucide-react";
+import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function SettingsPage() {
@@ -70,9 +74,9 @@ export default function SettingsPage() {
                     const res = await updateUserProfile(profile.uid, { fullName, username });
                     if (res.success) {
                       useAuthStore.getState().setProfile({ ...profile, fullName, username } as any);
-                      alert('Profile updated successfully!');
+                      toast.success('Profile updated successfully!');
                     } else {
-                      alert('Failed to update profile');
+                      toast.error('Failed to update profile');
                     }
                   }
                 }}

@@ -83,7 +83,7 @@ export default function ReferralsPage() {
       setClaimSuccessMsg(`🎉 Success! You unlocked: ${tier.title}`);
       setTimeout(() => setClaimSuccessMsg(null), 4000);
     } else {
-      alert(res.error || "Failed to claim reward.");
+      toast.error(res.error || "Failed to claim reward.");
     }
   };
 

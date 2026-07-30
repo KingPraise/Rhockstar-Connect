@@ -3,9 +3,9 @@
 import { Check, Crown, Star, Shield, Zap, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { db } from "@/lib/firebase";
-import { doc, updateDoc } from "firebase/firestore";
+import { updateUserProfile } from "@/lib/services/users";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export default function PremiumPage() {
   const { profile, setProfile } = useAuthStore();
@@ -20,23 +20,21 @@ export default function PremiumPage() {
       // Mock payment delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      const userRef = doc(db, "users", profile.uid);
-      await updateDoc(userRef, {
+      const res = await updateUserProfile(profile.uid, {
         subscriptionTier: tier,
         subscriptionStatus: "active"
       });
 
-      setProfile({
-        ...profile,
-        subscriptionTier: tier,
-        subscriptionStatus: "active"
-      });
-
-      alert(`Successfully upgraded to ${tier.toUpperCase()}!`);
-      router.push("/profile");
+      if (res.success) {
+        setProfile({ ...profile, subscriptionTier: tier } as any);
+        toast.success(`Successfully upgraded to ${tier.toUpperCase()}!`);
+        router.push('/feed');
+      } else {
+        toast.error("Failed to process subscription.");
+      }
     } catch (error) {
       console.error("Subscription error:", error);
-      alert("Failed to process subscription.");
+      toast.error("Failed to process subscription.");
     } finally {
       setProcessingTier(null);
     }

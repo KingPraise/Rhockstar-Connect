@@ -9,6 +9,8 @@ import {
   sendConnectionRequest, 
   updateConnectionStatus 
 } from "@/lib/services/connections";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Loader2, Users, UserPlus, Check, X, Search, Lock, Crown, Filter } from "lucide-react";
 import Link from "next/link";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
@@ -80,8 +82,23 @@ export default function NetworkPage() {
 
   if (!profile || loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-100px)]">
-        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+      <div className="flex-1 max-w-7xl mx-auto w-full">
+        <div className="mb-8">
+          <Skeleton className="h-10 w-48 mb-2" />
+          <Skeleton className="h-6 w-96" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="neo-card p-5 rounded-2xl flex items-center gap-4 bg-slate-900/40">
+              <Skeleton className="w-14 h-14 rounded-full shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+              <Skeleton className="w-10 h-10 rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -256,10 +273,12 @@ export default function NetworkPage() {
               </div>
             );
           }) : (
-            <div className="col-span-full py-12 text-center text-slate-400 neo-card border border-white/5 rounded-3xl">
-              <Users className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-              <p className="font-medium text-lg text-white">No professionals found</p>
-              <p>Try adjusting your search terms.</p>
+            <div className="col-span-full">
+              <EmptyState 
+                icon={Users}
+                title="No professionals found"
+                description={searchQuery ? "We couldn't find anyone matching your search." : "Your network is empty. Start connecting with others!"}
+              />
             </div>
           )}
         </div>

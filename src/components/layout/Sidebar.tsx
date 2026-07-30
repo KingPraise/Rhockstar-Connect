@@ -22,10 +22,12 @@ import {
   Search
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSearchStore } from "@/store/useSearchStore";
 import { logoutUser } from "@/lib/auth";
 
 export default function Sidebar() {
   const { profile, logout } = useAuthStore();
+  const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
   const [isMinimized, setIsMinimized] = useState(false);
@@ -156,6 +158,20 @@ export default function Sidebar() {
               {secondaryNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname.startsWith(item.href);
+
+                if (item.name === "Search") {
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={openSearch}
+                      className={`flex items-center ${isMinimized ? "justify-center px-0" : "gap-4 px-4"} py-2.5 rounded-xl font-semibold transition-all group relative text-slate-400 hover:text-white hover:bg-slate-800/30 w-full text-left`}
+                      title={isMinimized ? item.name : undefined}
+                    >
+                      <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 text-slate-500 group-hover:text-white`} />
+                      {!isMinimized && <span className="text-sm">{item.name}</span>}
+                    </button>
+                  );
+                }
 
                 return (
                   <Link

@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { X, Upload, Save, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { updateUserProfile } from "@/lib/services/users";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { updateUserProfile, UserBasic } from "@/lib/services/users";
+import { uploadBytes, ref, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
+import toast from "react-hot-toast";
 
 interface EditProfileModalProps {
   onClose: () => void;
@@ -139,13 +140,14 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           ...profile,
           ...updateData
         } as any);
+        toast.success("Profile updated successfully");
         onClose();
       } else {
-        alert("Failed to update profile");
+        toast.error("Failed to update profile");
       }
     } catch (error) {
       console.error(error);
-      alert("An error occurred");
+      toast.error("An error occurred");
     } finally {
       setIsSaving(false);
     }

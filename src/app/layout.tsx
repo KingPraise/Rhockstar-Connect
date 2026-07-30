@@ -34,6 +34,7 @@ export const metadata: Metadata = {
 };
 
 import NextTopLoader from 'nextjs-toploader';
+import ToastProvider from '@/components/ui/ToastProvider';
 
 export default function RootLayout({
   children,
@@ -55,6 +56,7 @@ export default function RootLayout({
           shadow="0 0 10px #38bdf8,0 0 5px #38bdf8"
         />
         <AuthProvider>
+          <ToastProvider />
           {children}
         </AuthProvider>
       </body>

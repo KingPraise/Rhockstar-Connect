@@ -7,6 +7,8 @@ import { useAuthStore } from "@/store/useAuthStore";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import ApplicationTracker from "@/components/jobs/ApplicationTracker";
 import PullToRefresh from "@/components/ui/PullToRefresh";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default function JobsPage() {
   const { profile } = useAuthStore();
@@ -188,8 +190,34 @@ export default function JobsPage() {
         ) : (
           <>
             {loading && jobs.length === 0 ? (
-              <div className="flex justify-center py-20">
-                <Loader2 className="w-10 h-10 animate-spin text-brand" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="neo-card p-6 rounded-3xl bg-slate-900/60 flex flex-col">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        <Skeleton className="w-16 h-16 rounded-2xl shrink-0" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-6 w-32" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-6 w-16 rounded-full" />
+                    </div>
+                    <div className="flex flex-wrap gap-4 mb-6">
+                      <Skeleton className="h-8 w-24 rounded-lg" />
+                      <Skeleton className="h-8 w-28 rounded-lg" />
+                      <Skeleton className="h-8 w-20 rounded-lg" />
+                    </div>
+                    <div className="space-y-2 mb-6 flex-1">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-5/6" />
+                    </div>
+                    <div className="pt-4 border-t border-white/5 flex gap-4">
+                      <Skeleton className="h-12 flex-1 rounded-xl" />
+                      <Skeleton className="h-12 w-12 rounded-xl" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -272,10 +300,12 @@ export default function JobsPage() {
                     )}
                   </>
                 ) : (
-                  <div className="col-span-full py-20 text-center text-slate-400 neo-card border border-white/5 rounded-3xl bg-slate-900/60">
-                    <Briefcase className="w-16 h-16 text-slate-500 mx-auto mb-6 opacity-50" />
-                    <p className="font-bold text-2xl text-white mb-2">No jobs found</p>
-                    <p>Try adjusting your search filters to find more opportunities.</p>
+                  <div className="col-span-full">
+                    <EmptyState 
+                      icon={Briefcase}
+                      title="No jobs found"
+                      description="Try adjusting your search filters to find more opportunities."
+                    />
                   </div>
                 )}
               </div>
