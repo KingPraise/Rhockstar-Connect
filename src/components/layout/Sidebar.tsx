@@ -241,15 +241,6 @@ export default function Sidebar() {
           </Link>
         )}
 
-        {/* LOGOUT */}
-        <button 
-          onClick={handleLogout}
-          title={isMinimized ? "Log Out" : undefined}
-          className={`w-full p-3 rounded-xl flex items-center ${isMinimized ? "justify-center" : "justify-center gap-2"} text-rose-500 bg-rose-500/10 hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20 shadow-lg`}
-        >
-          <LogOut className="w-5 h-5" />
-          {!isMinimized && <span className="text-sm font-bold">Log Out</span>}
-        </button>
       </div>
     </aside>
   );

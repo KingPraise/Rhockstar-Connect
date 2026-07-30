@@ -114,11 +114,19 @@ export default function NetworkPage() {
   const accepted = connections.filter(c => c.status === 'accepted');
 
   const getStatusForUser = (userId: string) => {
-    const conn = connections.find(c => c.fromUserId === userId || c.toUserId === userId);
-    if (!conn) return 'none';
-    if (conn.status === 'accepted') return 'connected';
-    if (conn.status === 'pending' && conn.fromUserId === profile.uid) return 'sent';
-    if (conn.status === 'pending' && conn.toUserId === profile.uid) return 'received';
+    const userConns = connections.filter(c => c.fromUserId === userId || c.toUserId === userId);
+    if (userConns.length === 0) return 'none';
+    
+    // If any connection is accepted, they are connected
+    if (userConns.some(c => c.status === 'accepted')) return 'connected';
+    
+    // Otherwise, check for pending ones
+    const pendingSent = userConns.find(c => c.status === 'pending' && c.fromUserId === profile.uid);
+    if (pendingSent) return 'sent';
+    
+    const pendingReceived = userConns.find(c => c.status === 'pending' && c.toUserId === profile.uid);
+    if (pendingReceived) return 'received';
+    
     return 'none';
   };
 

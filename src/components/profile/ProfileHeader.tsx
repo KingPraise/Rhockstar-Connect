@@ -1,8 +1,9 @@
 "use client";
 
-import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock } from "lucide-react";
+import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock, Settings } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { format } from "date-fns";
+import Link from "next/link";
 
 interface ProfileHeaderProps {
   onEditClick: () => void;
@@ -88,6 +89,14 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
                 <Pencil className="w-4 h-4" />
                 Edit Profile
               </button>
+              
+              <Link 
+                href="/settings"
+                className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition-all border border-white/5 shadow-lg flex items-center justify-center hover:border-white/10 md:hidden"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </Link>
             </>
           ) : (
             <button 
