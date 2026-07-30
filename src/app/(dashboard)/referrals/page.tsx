@@ -18,7 +18,7 @@ import {
   Lock
 } from "lucide-react";
 import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
-
+import toast from "react-hot-toast";
 export default function ReferralsPage() {
   const { profile, setProfile } = useAuthStore();
   const [copied, setCopied] = useState(false);
