@@ -32,6 +32,7 @@ export default function MobileHeader() {
   const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
+  const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
 
   const handleLogout = async () => {
     setIsOpen(false);
@@ -59,7 +60,7 @@ export default function MobileHeader() {
     { name: "Rewards", href: "/referrals", icon: Gift, badge: "NEW" },
     { name: "Premium", href: "/premium", icon: Sparkles, badge: "PRO" },
     { name: "Settings", href: "/settings", icon: Settings },
-  ];
+  ].filter(item => !(item.name === "Premium" && isPremium));
 
   return (
     <>
@@ -123,7 +124,14 @@ export default function MobileHeader() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-bold text-white truncate">{profile?.fullName || 'User'}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-base font-bold text-white truncate">{profile?.fullName || 'User'}</p>
+                    {isPremium && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">
+                        {profile.subscriptionTier}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-brand font-medium truncate">@{profile?.username || 'username'}</p>
                 </div>
               </Link>

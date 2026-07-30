@@ -31,6 +31,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMinimized, setIsMinimized] = useState(false);
+  const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
 
   const handleLogout = async () => {
     await logoutUser();
@@ -105,7 +106,14 @@ export default function Sidebar() {
           </div>
           {!isMinimized && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate group-hover:text-brand transition-colors">{profile?.fullName || 'User'}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-white truncate group-hover:text-brand transition-colors">{profile?.fullName || 'User'}</p>
+                {isPremium && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">
+                    {profile.subscriptionTier}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-400 truncate">@{profile?.username || 'user'}</p>
             </div>
           )}
@@ -199,24 +207,26 @@ export default function Sidebar() {
       {/* BOTTOM SECTION */}
       <div className="p-4 mt-8 space-y-4">
         {/* PREMIUM CARD */}
-        {!isMinimized ? (
-          <div className="neo-card p-4 bg-gradient-to-br from-brand-purple/20 to-brand/20 border-brand-purple/30 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors" />
-            <div className="relative z-10 text-center">
-              <h4 className="font-bold text-white mb-1 flex items-center justify-center gap-2">
-                <Sparkles className="w-4 h-4 text-brand-purple animate-pulse" />
-                Premium
-              </h4>
-              <p className="text-xs text-slate-300 mb-3">Get verified, boost visibility, and message anyone.</p>
-              <Link href="/premium" className="block w-full py-2 bg-gradient-to-r from-brand to-brand-purple text-white text-sm font-bold rounded-xl shadow-lg hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transition-shadow">
-                Upgrade Now
-              </Link>
+        {!isPremium && (
+          !isMinimized ? (
+            <div className="neo-card p-4 bg-gradient-to-br from-brand-purple/20 to-brand/20 border-brand-purple/30 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors" />
+              <div className="relative z-10 text-center">
+                <h4 className="font-bold text-white mb-1 flex items-center justify-center gap-2">
+                  <Sparkles className="w-4 h-4 text-brand-purple animate-pulse" />
+                  Premium
+                </h4>
+                <p className="text-xs text-slate-300 mb-3">Get verified, boost visibility, and message anyone.</p>
+                <Link href="/premium" className="block w-full py-2 bg-gradient-to-r from-brand to-brand-purple text-white text-sm font-bold rounded-xl shadow-lg hover:shadow-[0_0_15px_rgba(168,85,247,0.5)] transition-shadow">
+                  Upgrade Now
+                </Link>
+              </div>
             </div>
-          </div>
-        ) : (
-          <Link href="/premium" className="flex items-center justify-center p-3 rounded-xl bg-gradient-to-br from-brand-purple/20 to-brand/20 border border-brand-purple/30 group hover:border-brand-purple/60 transition-colors" title="Upgrade to Premium">
-            <Sparkles className="w-5 h-5 text-brand-purple group-hover:scale-110 transition-transform animate-pulse" />
-          </Link>
+          ) : (
+            <Link href="/premium" className="flex items-center justify-center p-3 rounded-xl bg-gradient-to-br from-brand-purple/20 to-brand/20 border border-brand-purple/30 group hover:border-brand-purple/60 transition-colors" title="Upgrade to Premium">
+              <Sparkles className="w-5 h-5 text-brand-purple group-hover:scale-110 transition-transform animate-pulse" />
+            </Link>
+          )
         )}
 
         {/* SUPER ADMIN SHORTCUT */}
