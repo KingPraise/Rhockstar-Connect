@@ -24,7 +24,7 @@ export default function SettingsPage() {
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex items-center gap-4 bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-white/5 shadow-2xl">
         <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center text-white shadow-lg">
-          <Settings className="w-7 h-7" />
+          <SettingsIcon className="w-7 h-7" />
         </div>
         <div>
           <h1 className="text-3xl font-extrabold text-white">Settings</h1>
