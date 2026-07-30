@@ -2,7 +2,8 @@
 "use client";
 
 import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2, FileText, Check } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, updatePost, updateComment, Post } from "@/lib/services/posts";
 import { getUserById } from "@/lib/services/users";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -43,6 +44,11 @@ export default function PostCard({ post }: PostCardProps) {
   const [editCommentText, setEditCommentText] = useState("");
 
   const commentInputRef = useRef<HTMLInputElement>(null);
+  
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleOpenLikesModal = async () => {
     setIsLikesModalOpen(true);
@@ -564,9 +570,15 @@ export default function PostCard({ post }: PostCardProps) {
       )}
 
       {/* Likes Modal */}
-      {isLikesModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-sm mx-4 overflow-hidden shadow-2xl">
+      {isLikesModalOpen && mounted && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setIsLikesModalOpen(false)}
+        >
+          <div 
+            className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-sm mx-4 overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center p-4 border-b border-white/10 bg-slate-800/50">
               <h3 className="text-lg font-bold text-white">Likes</h3>
               <button onClick={() => setIsLikesModalOpen(false)} className="text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/5">
@@ -599,7 +611,8 @@ export default function PostCard({ post }: PostCardProps) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
