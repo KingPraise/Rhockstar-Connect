@@ -32,6 +32,7 @@ export interface UserBasic {
   datingVoiceIntro?: string;
   subscriptionTier?: string;
   subscriptionStatus?: string;
+  lastLogin?: any;
 }
 
 export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> => {
@@ -49,18 +50,24 @@ export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBas
           fullName: data.fullName,
           username: data.username,
           avatar: data.avatar || data.fullName.substring(0, 2).toUpperCase(),
-          bio: data.bio,
-          accountType: data.accountType,
+          bio: data.bio || '',
+          headline: data.headline || '',
           location: data.location,
           industry: data.industry,
+          accountType: data.accountType,
           companySize: data.companySize,
           foundedYear: data.foundedYear,
+          website: data.website,
+          portfolio: data.portfolio,
           datingActive: data.datingActive,
           datingInterests: data.datingInterests,
           datingGoals: data.datingGoals,
           datingPhotos: data.datingPhotos,
           datingPrompts: data.datingPrompts,
           datingVoiceIntro: data.datingVoiceIntro,
+          subscriptionTier: data.subscriptionTier,
+          subscriptionStatus: data.subscriptionStatus,
+          lastLogin: data.lastLogin
         });
       }
     });

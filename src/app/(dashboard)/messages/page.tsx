@@ -10,6 +10,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { formatDistanceToNow } from "date-fns";
 
 export default function MessagesPage() {
   const { profile } = useAuthStore();
@@ -181,6 +182,18 @@ export default function MessagesPage() {
     }
   };
 
+  const getUserStatus = (lastLogin: any) => {
+    if (!lastLogin) return { isOnline: false, text: "Offline" };
+    try {
+      const date = lastLogin.toDate ? lastLogin.toDate() : new Date(lastLogin);
+      const isOnline = (new Date().getTime() - date.getTime()) < 5 * 60 * 1000;
+      if (isOnline) return { isOnline: true, text: "Online" };
+      return { isOnline: false, text: `Last seen ${formatDistanceToNow(date, { addSuffix: true })}` };
+    } catch {
+      return { isOnline: false, text: "Offline" };
+    }
+  };
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.uid || !activeChat) return;
@@ -341,7 +354,9 @@ export default function MessagesPage() {
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-lg transition-transform ${isActive ? 'bg-gradient-to-br from-brand to-brand-purple scale-105' : 'bg-slate-800'}`}>
                           <span className={`text-lg font-bold ${isActive ? 'text-white' : 'text-slate-300'}`}>{otherUser.avatar}</span>
                         </div>
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                        {getUserStatus(otherUser.lastLogin).isOnline && (
+                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <div className="flex justify-between items-baseline mb-0.5">
@@ -393,12 +408,19 @@ export default function MessagesPage() {
               
               return otherUser ? (
                 <>
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg">
-                    <span className="text-lg font-bold text-white">{otherUser.avatar}</span>
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg">
+                      <span className="text-lg font-bold text-white">{otherUser.avatar}</span>
+                    </div>
+                    {getUserStatus(otherUser.lastLogin).isOnline && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                    )}
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-white leading-tight">{otherUser.fullName}</h2>
-                    <p className="text-xs font-medium text-emerald-400">Online</p>
+                    <p className={`text-xs font-medium ${getUserStatus(otherUser.lastLogin).isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+                      {getUserStatus(otherUser.lastLogin).text}
+                    </p>
                   </div>
                 </>
               ) : (
