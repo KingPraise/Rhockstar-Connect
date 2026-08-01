@@ -22,12 +22,11 @@ export default function NetworkPage() {
   const [connections, setConnections] = useState<ConnectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string[]>([]);
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
 
   const fetchData = async () => {
     if (!profile?.uid) return;
-    setLoading(true);
     
     const [usersRes, connRes] = await Promise.all([
       getAllUsers(),
@@ -42,8 +41,6 @@ export default function NetworkPage() {
     if (connRes.success && connRes.connections) {
       setConnections(connRes.connections);
     }
-    
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -67,17 +64,17 @@ export default function NetworkPage() {
 
   const handleConnect = async (toUserId: string) => {
     if (!profile?.uid) return;
-    setActionLoading(toUserId);
+    setActionLoading(prev => [...prev, toUserId]);
     await sendConnectionRequest(profile.uid, toUserId);
     await fetchData();
-    setActionLoading(null);
+    setActionLoading(prev => prev.filter(id => id !== toUserId));
   };
 
   const handleRespond = async (connectionId: string, status: 'accepted' | 'rejected') => {
-    setActionLoading(connectionId);
+    setActionLoading(prev => [...prev, connectionId]);
     await updateConnectionStatus(connectionId, status);
     await fetchData();
-    setActionLoading(null);
+    setActionLoading(prev => prev.filter(id => id !== connectionId));
   };
 
   if (!profile || loading) {
@@ -204,14 +201,14 @@ export default function NetworkPage() {
                   <div className="flex items-center gap-2">
                     <button 
                       onClick={() => handleRespond(conn.id, 'accepted')}
-                      disabled={actionLoading === conn.id}
+                      disabled={actionLoading.includes(conn.id)}
                       className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all"
                     >
-                      {actionLoading === conn.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
+                      {actionLoading.includes(conn.id) ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
                     </button>
                     <button 
                       onClick={() => handleRespond(conn.id, 'rejected')}
-                      disabled={actionLoading === conn.id}
+                      disabled={actionLoading.includes(conn.id)}
                       className="w-10 h-10 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
                     >
                       <X className="w-5 h-5" />
@@ -249,10 +246,10 @@ export default function NetworkPage() {
                 {status === 'none' && (
                   <button 
                     onClick={() => handleConnect(user.uid)}
-                    disabled={actionLoading === user.uid}
+                    disabled={actionLoading.includes(user.uid)}
                     className="w-full py-3 rounded-xl bg-brand/10 text-brand font-bold hover:bg-brand hover:text-white transition-all flex items-center justify-center gap-2"
                   >
-                    {actionLoading === user.uid ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                    {actionLoading.includes(user.uid) ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                       <>
                         <UserPlus className="w-5 h-5" />
                         Connect
