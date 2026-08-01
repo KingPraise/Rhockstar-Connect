@@ -47,9 +47,9 @@ export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBas
       if (data.role !== 'admin') {
         users.push({
           uid: docSnap.id,
-          fullName: data.fullName,
-          username: data.username,
-          avatar: data.avatar || data.fullName.substring(0, 2).toUpperCase(),
+          fullName: data.fullName || 'Unknown User',
+          username: data.username || '',
+          avatar: data.avatar || (data.fullName ? data.fullName.substring(0, 2).toUpperCase() : '??'),
           bio: data.bio || '',
           headline: data.headline || '',
           location: data.location,
