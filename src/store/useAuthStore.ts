@@ -56,6 +56,7 @@ interface AuthState {
   setUser: (user: FirebaseUser | null) => void;
   setProfile: (profile: UserProfile | null) => void;
   setLoading: (isLoading: boolean) => void;
+  unreadNotifications: number;
   setUnreadNotifications: (count: number) => void;
   logout: () => void;
 }
