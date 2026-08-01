@@ -92,7 +92,7 @@ export default function AdminProfilePage() {
       )}
 
       {/* PROFILE CARD & FORM */}
-      <div className="p-6 md:p-8 rounded-2xl bg-slate-900/60 border border-rose-500/20 backdrop-blur-md space-y-6 shadow-2xl">
+      <div className="p-6 md:p-8 rounded-2xl bg-slate-900/60 border border-rose-500/20 space-y-6 shadow-2xl">
         {/* AVATAR SELECTOR */}
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className="w-24 h-24 rounded-full overflow-hidden bg-rose-500/20 relative border-2 border-rose-500 shadow-xl flex-shrink-0">

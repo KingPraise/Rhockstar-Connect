@@ -34,7 +34,7 @@ export default function AdminSidebar() {
   return (
     <>
       {/* MOBILE TOP BAR FOR ADMIN */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-xl border-b border-rose-500/20 px-4 py-3 flex items-center justify-between shadow-xl">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-slate-900/95 backdrop-blur-sm border-b border-rose-500/20 px-4 py-3 flex items-center justify-between shadow-xl">
         <Link href="/admin" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center text-white font-bold text-xs shadow-md">
             <Shield className="w-4 h-4" />
@@ -60,7 +60,7 @@ export default function AdminSidebar() {
 
       {/* SIDEBAR CONTAINER (Desktop Sidebar + Mobile Drawer) */}
       <aside className={`
-        fixed lg:sticky top-0 left-0 h-screen z-50 bg-slate-900/95 backdrop-blur-xl border-r border-rose-500/20 flex flex-col justify-between py-6 px-4 transition-all duration-300 overflow-y-auto overscroll-contain no-scrollbar
+        fixed lg:sticky top-0 left-0 h-screen z-50 bg-slate-900/95 md:backdrop-blur-xl border-r border-rose-500/20 flex flex-col justify-between py-6 px-4 transition-all duration-300 overflow-y-auto overscroll-contain no-scrollbar
         ${mobileOpen ? "translate-x-0 w-64 shadow-2xl pt-20 lg:pt-6" : "-translate-x-full lg:translate-x-0 w-64"}
       `}>
         <div>

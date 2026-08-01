@@ -90,7 +90,7 @@ export default function AdminSubscriptionsPage() {
 
       {/* METRICS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-amber-500/20 backdrop-blur-md">
+        <div className="p-5 rounded-2xl bg-slate-900/60 border border-amber-500/20">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Revenue (Est.)</span>
             <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -98,7 +98,7 @@ export default function AdminSubscriptionsPage() {
           <p className="text-3xl font-black text-white">${estRevenue.toFixed(2)}<span className="text-xs font-semibold text-slate-400">/mo</span></p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-brand-purple/20 backdrop-blur-md">
+        <div className="p-5 rounded-2xl bg-slate-900/60 border border-brand-purple/20">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Paid Subscribers</span>
             <Users className="w-4 h-4 text-brand-purple" />
@@ -106,7 +106,7 @@ export default function AdminSubscriptionsPage() {
           <p className="text-3xl font-black text-white">{totalPaid}</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-blue-500/20 backdrop-blur-md">
+        <div className="p-5 rounded-2xl bg-slate-900/60 border border-blue-500/20">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pro Members</span>
             <Star className="w-4 h-4 text-blue-400" />
@@ -114,7 +114,7 @@ export default function AdminSubscriptionsPage() {
           <p className="text-3xl font-black text-blue-400">{proCount}</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-rose-500/20 backdrop-blur-md">
+        <div className="p-5 rounded-2xl bg-slate-900/60 border border-rose-500/20">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Elite VIP Members</span>
             <Crown className="w-4 h-4 text-rose-400" />
@@ -229,7 +229,7 @@ export default function AdminSubscriptionsPage() {
 
       {/* GRANT MODAL */}
       {grantModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
           <div className="w-full max-w-md bg-slate-900 border border-amber-500/30 p-6 rounded-2xl shadow-2xl relative">
             <button onClick={() => setGrantModalUser(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white">
               <X className="w-5 h-5" />

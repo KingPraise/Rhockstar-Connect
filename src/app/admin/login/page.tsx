@@ -34,8 +34,8 @@ export default function AdminLoginPage() {
     <div className="min-h-screen relative overflow-hidden bg-[#020617] text-white flex items-center justify-center">
       
       {/* Background elements */}
-      <div className="neo-glow bg-rose-500/10 w-[800px] h-[800px] top-[-300px] left-[-200px]" />
-      <div className="neo-glow bg-brand-purple/10 w-[600px] h-[600px] bottom-[-200px] right-[-100px]" />
+      {/* Optimized Background Radial Glows (Replaced neo-glow for better mobile performance) */}
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(244,63,94,0.08),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(168,85,247,0.08),transparent_50%)] z-0" />
 
       <div className="w-full max-w-md relative z-10 p-6 sm:p-12 animate-slide-up">
         <Link href="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8 text-sm font-medium">

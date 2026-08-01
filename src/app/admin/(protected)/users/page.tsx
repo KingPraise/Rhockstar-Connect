@@ -144,7 +144,7 @@ export default function AdminUsersPage() {
       )}
 
       {/* CONTROLS BAR: SEARCH & TABS */}
-      <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center bg-slate-900/60 backdrop-blur-md p-4 rounded-2xl border border-rose-500/10">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between items-stretch lg:items-center bg-slate-900/95 p-4 rounded-2xl border border-rose-500/10">
         {/* SEARCH INPUT */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
@@ -316,7 +316,7 @@ export default function AdminUsersPage() {
 
       {/* GRANT SUBSCRIPTION MODAL */}
       {grantModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-in fade-in">
           <div className="w-full max-w-md bg-slate-900 border border-rose-500/30 p-6 rounded-2xl shadow-2xl relative">
             <button
               onClick={() => setGrantModalUser(null)}

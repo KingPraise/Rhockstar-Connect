@@ -40,7 +40,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8 pt-12 lg:pt-0 animate-fade-in">
       {/* COMMAND CENTER HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-900/60 backdrop-blur-md p-6 rounded-2xl border border-rose-500/20 shadow-2xl relative overflow-hidden gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-900/90 p-6 rounded-2xl border border-rose-500/20 shadow-2xl relative overflow-hidden gap-4">
         <div className="absolute inset-0 bg-gradient-to-r from-rose-500/5 to-transparent z-0"></div>
         <div className="flex items-center gap-4 relative z-10">
           <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center text-white shadow-[0_0_15px_rgba(244,63,94,0.3)] shrink-0">
@@ -60,7 +60,7 @@ export default function AdminDashboardPage() {
       {/* STATS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, i) => (
-          <div key={i} className="p-6 bg-slate-900/60 backdrop-blur-md border border-rose-500/10 rounded-2xl shadow-xl hover:border-rose-500/30 transition-all group">
+          <div key={i} className="p-6 bg-slate-900/90 border border-rose-500/10 rounded-2xl shadow-xl hover:border-rose-500/30 transition-all group">
             <div className="flex justify-between items-start mb-4">
               <div className={`p-3 rounded-xl bg-slate-800/80 border border-white/5 ${stat.color} group-hover:scale-110 transition-transform`}>
                 <stat.icon className="w-6 h-6" />
@@ -78,7 +78,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* QUICK ACTIONS GRID */}
-      <div className="p-6 bg-slate-900/60 backdrop-blur-md border border-rose-500/10 rounded-2xl shadow-2xl space-y-4">
+      <div className="p-6 bg-slate-900/90 border border-rose-500/10 rounded-2xl shadow-2xl space-y-4">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-rose-500" />
           Super Admin Modules
