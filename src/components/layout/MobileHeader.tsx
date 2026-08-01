@@ -64,6 +64,30 @@ export default function MobileHeader() {
     };
   }, []);
 
+  // Handle hardware back button for mobile drawer
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      window.history.pushState({ drawerOpen: true }, "");
+
+      const handlePopState = () => {
+        setIsOpen(false);
+      };
+
+      window.addEventListener("popstate", handlePopState);
+
+      return () => {
+        document.body.style.overflow = "unset";
+        window.removeEventListener("popstate", handlePopState);
+        if (window.history.state && window.history.state.drawerOpen) {
+          window.history.back();
+        }
+      };
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [isOpen]);
+
   const handleLogout = async () => {
     setIsOpen(false);
     await logoutUser();

@@ -33,14 +33,39 @@ export default function GlobalSearchModal() {
   // Focus input when opened
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = "hidden";
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
     } else {
+      document.body.style.overflow = "unset";
       setQuery("");
       setResults([]);
     }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
   }, [isOpen]);
+
+  // Handle hardware back button on mobile
+  useEffect(() => {
+    if (isOpen) {
+      window.history.pushState({ searchModalOpen: true }, "");
+
+      const handlePopState = () => {
+        closeSearch();
+      };
+
+      window.addEventListener("popstate", handlePopState);
+
+      return () => {
+        window.removeEventListener("popstate", handlePopState);
+        if (window.history.state && window.history.state.searchModalOpen) {
+          window.history.back();
+        }
+      };
+    }
+  }, [isOpen, closeSearch]);
 
   // Mock search logic
   useEffect(() => {
