@@ -23,6 +23,9 @@ export interface Notification {
   read: boolean;
   createdAt: any;
   link?: string;
+  senderId?: string;
+  senderName?: string;
+  senderAvatar?: string;
 }
 
 export const createNotification = async (notification: Omit<Notification, 'id' | 'read' | 'createdAt'>) => {

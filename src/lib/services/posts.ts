@@ -231,7 +231,10 @@ export const toggleLike = async (postId: string, userId: string) => {
               type: "like",
               title,
               message: messageBody,
-              link: `/`
+              link: `/`,
+              senderId: userId,
+              senderName: likerName,
+              senderAvatar: userRes.success && userRes.user ? userRes.user.avatar : ''
             });
 
             fetch('/api/notify', {
@@ -279,6 +282,7 @@ export const addComment = async (postId: string, user: UserProfile, content: str
     const postSnap = await getDoc(postRef);
 
     if (postSnap.exists()) {
+      const postData = postSnap.data() as Post;
       const newComment: Comment = {
         id: Date.now().toString(),
         userId: user.uid,
@@ -297,6 +301,41 @@ export const addComment = async (postId: string, user: UserProfile, content: str
         comments: [...currentComments, newComment],
         commentsCount: (postSnap.data().commentsCount || 0) + 1
       });
+
+      // Notify post author if not their own comment
+      if (postData.userId !== user.uid) {
+        (async () => {
+          try {
+            const { createNotification } = await import('./notifications');
+            const title = "New Comment";
+            const messageBody = `${user.fullName} commented on your post.`;
+            
+            await createNotification({
+              userId: postData.userId,
+              type: "comment",
+              title,
+              message: messageBody,
+              link: `/`,
+              senderId: user.uid,
+              senderName: user.fullName,
+              senderAvatar: user.avatar || ''
+            });
+
+            fetch('/api/notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: postData.userId,
+                title,
+                body: messageBody,
+                url: "/"
+              })
+            }).catch(console.error);
+          } catch (e) {
+            console.error(e);
+          }
+        })();
+      }
 
       return { success: true };
     }

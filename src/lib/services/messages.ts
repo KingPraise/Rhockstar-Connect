@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 
 import { createNotification } from './notifications';
+import { getUserById } from './users';
 
 export interface Chat {
   id: string;
@@ -125,7 +126,12 @@ export const sendMessage = async (
       const participants: string[] = chatSnap.data().participants || [];
       const recipientId = participants.find(p => p !== senderId);
       if (recipientId) {
-        const title = "New Message";
+        // Fetch sender profile to include in notification
+        const { user: senderProfile } = await getUserById(senderId);
+        const senderName = senderProfile?.fullName || 'Someone';
+        const senderAvatar = senderProfile?.avatar || '';
+
+        const title = `New Message from ${senderName}`;
         const messageBody = type === 'text' ? (text.length > 50 ? `${text.substring(0, 50)}...` : text) : `Sent an ${type}`;
         
         await createNotification({
@@ -133,7 +139,10 @@ export const sendMessage = async (
           type: "message",
           title,
           message: messageBody,
-          link: "/messages"
+          link: "/messages",
+          senderId: senderId,
+          senderName,
+          senderAvatar
         });
 
         // Trigger FCM Push Notification

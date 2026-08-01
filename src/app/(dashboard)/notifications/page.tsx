@@ -111,9 +111,21 @@ export default function NotificationsPage() {
                   : "bg-slate-800/80 border-brand/30 shadow-[0_0_20px_rgba(56,189,248,0.1)] hover:border-brand/60"
               }`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${bg} ${color}`}>
-                <Icon className="w-6 h-6" />
-              </div>
+              {notification.senderAvatar ? (
+                <img 
+                  src={notification.senderAvatar} 
+                  alt={notification.senderName || 'Sender'} 
+                  className="w-12 h-12 rounded-xl object-cover shrink-0 border border-white/10"
+                />
+              ) : notification.senderName ? (
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-white text-lg ${bg}`}>
+                  {notification.senderName.charAt(0).toUpperCase()}
+                </div>
+              ) : (
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${bg} ${color}`}>
+                  <Icon className="w-6 h-6" />
+                </div>
+              )}
               
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start mb-1">

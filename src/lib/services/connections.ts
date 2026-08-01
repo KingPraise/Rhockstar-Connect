@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 
 import { createNotification } from './notifications';
+import { getUserById } from './users';
 
 export interface ConnectionRequest {
   id: string;
@@ -43,13 +44,21 @@ export const sendConnectionRequest = async (fromUserId: string, toUserId: string
     };
     await addDoc(connRef, data);
 
+    // Fetch sender profile to include in notification
+    const { user: senderProfile } = await getUserById(fromUserId);
+    const senderName = senderProfile?.fullName || 'Someone';
+    const senderAvatar = senderProfile?.avatar || '';
+
     // Trigger notification to recipient
     await createNotification({
       userId: toUserId,
       type: "connection",
       title: "New Connection Request",
-      message: "Sent you a connection request.",
-      link: "/network"
+      message: `${senderName} sent you a connection request.`,
+      link: "/network",
+      senderId: fromUserId,
+      senderName,
+      senderAvatar
     });
 
     return { success: true };
@@ -70,13 +79,21 @@ export const updateConnectionStatus = async (connectionId: string, status: 'acce
       // Get connection doc to notify sender
       const docSnap = await getDoc(docRef);
       const connData = docSnap.data();
-      if (connData?.fromUserId) {
+      if (connData?.fromUserId && connData?.toUserId) {
+        // Fetch acceptor profile to include in notification
+        const { user: acceptorProfile } = await getUserById(connData.toUserId);
+        const acceptorName = acceptorProfile?.fullName || 'Someone';
+        const acceptorAvatar = acceptorProfile?.avatar || '';
+
         await createNotification({
           userId: connData.fromUserId,
           type: "connection",
           title: "Connection Accepted",
-          message: "Accepted your connection request!",
-          link: "/network"
+          message: `${acceptorName} accepted your connection request!`,
+          link: "/network",
+          senderId: connData.toUserId,
+          senderName: acceptorName,
+          senderAvatar: acceptorAvatar
         });
       }
     }
