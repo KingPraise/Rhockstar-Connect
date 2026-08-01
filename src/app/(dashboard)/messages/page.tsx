@@ -125,7 +125,7 @@ export default function MessagesPage() {
     const fetchData = async () => {
       if (!profile?.uid) return;
       
-      const { success, users } = await getAllUsers();
+      const { success, users } = await getAllUsers(false); // don't exclude admins
       if (success && users) {
         const usersMap: Record<string, UserBasic> = {};
         users.forEach(u => usersMap[u.uid] = u);

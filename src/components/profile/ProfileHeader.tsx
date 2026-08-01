@@ -71,12 +71,12 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end pt-4 pb-2 gap-2">
+        <div className="flex gap-3 justify-end pt-4 pb-2">
           {isOwnProfile ? (
             <>
               <button 
                 onClick={() => setPremiumLockOpen(true)}
-                className="py-2 px-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-300 border border-amber-500/30 hover:border-amber-400 font-bold text-sm flex items-center gap-1.5 transition-all shadow-md"
+                className="py-2 px-5 rounded-xl bg-gradient-to-r from-brand/10 to-brand-purple/10 hover:from-brand/20 hover:to-brand-purple/20 text-white font-medium text-sm flex items-center gap-2 transition-all border border-brand/20 shadow-[0_0_15px_rgba(56,189,248,0.1)] hover:shadow-[0_0_20px_rgba(56,189,248,0.2)]"
               >
                 {isFree ? <Lock className="w-4 h-4 text-amber-400" /> : <Crown className="w-4 h-4 text-amber-400" />}
                 <span>Boost Profile</span>
@@ -99,13 +99,34 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
               </Link>
             </>
           ) : (
-            <button 
-              onClick={onConnectClick}
-              className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:scale-105"
-            >
-              <Users className="w-4 h-4" />
-              Connect
-            </button>
+            <>
+              {connectionStatus === 'accepted' ? (
+                <button 
+                  disabled
+                  className="py-2.5 px-6 rounded-xl bg-slate-800 text-brand font-bold text-sm flex items-center gap-2 border border-brand/20 shadow-[inset_0_0_15px_rgba(56,189,248,0.1)]"
+                >
+                  <Users className="w-4 h-4" />
+                  Connected
+                </button>
+              ) : connectionStatus === 'pending' ? (
+                <button 
+                  disabled
+                  className="py-2.5 px-6 rounded-xl bg-slate-800 text-slate-400 font-bold text-sm flex items-center gap-2 border border-white/10"
+                >
+                  <Check className="w-4 h-4" />
+                  Pending
+                </button>
+              ) : (
+                <button 
+                  onClick={onConnectClick}
+                  disabled={actionLoading}
+                  className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                >
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                  Connect
+                </button>
+              )}
+            </>
           )}
         </div>
 

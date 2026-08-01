@@ -23,30 +23,49 @@ export default function ProfilePage() {
 
   const [targetUser, setTargetUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [connectSuccess, setConnectSuccess] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     const fetchTargetUser = async () => {
+      let fetchedUser = null;
       if (queryUser) {
         setLoading(true);
         const res = await getUserByUsername(queryUser);
         if (res.success && res.user) {
-          setTargetUser(res.user);
+          fetchedUser = res.user;
+          setTargetUser(fetchedUser);
         }
         setLoading(false);
       } else if (queryUid) {
         setLoading(true);
         const res = await getUserById(queryUid);
         if (res.success && res.user) {
-          setTargetUser(res.user);
+          fetchedUser = res.user;
+          setTargetUser(fetchedUser);
         }
         setLoading(false);
       } else {
         setTargetUser(null);
       }
+
+      // Fetch connection status if viewing someone else
+      if (fetchedUser && loggedInProfile && fetchedUser.uid !== loggedInProfile.uid) {
+        const { getUserConnections } = await import("@/lib/services/connections");
+        const connRes = await getUserConnections(loggedInProfile.uid);
+        if (connRes.success && connRes.connections) {
+          const conn = connRes.connections.find((c: any) => 
+            (c.fromUserId === loggedInProfile.uid && c.toUserId === fetchedUser.uid) ||
+            (c.toUserId === loggedInProfile.uid && c.fromUserId === fetchedUser.uid)
+          );
+          if (conn) {
+            setConnectionStatus(conn.status);
+          }
+        }
+      }
     };
     fetchTargetUser();
-  }, [queryUser, queryUid]);
+  }, [queryUser, queryUid, loggedInProfile]);
 
   const activeProfile = targetUser || loggedInProfile;
   const isOwnProfile = Boolean(!targetUser || (loggedInProfile && targetUser?.uid === loggedInProfile.uid));
@@ -57,9 +76,10 @@ export default function ProfilePage() {
       return;
     }
     if (activeProfile?.uid) {
+      setActionLoading(true);
       await sendConnectionRequest(loggedInProfile.uid, activeProfile.uid);
-      setConnectSuccess(true);
-      setTimeout(() => setConnectSuccess(false), 3000);
+      setConnectionStatus('pending');
+      setActionLoading(false);
     }
   };
 
@@ -107,6 +127,8 @@ export default function ProfilePage() {
         customProfile={activeProfile}
         isOwnProfile={isOwnProfile}
         onConnectClick={handleConnect}
+        connectionStatus={connectionStatus}
+        actionLoading={actionLoading}
       />
       {connectSuccess && (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-center animate-fade-in">

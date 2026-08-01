@@ -35,7 +35,7 @@ export interface UserBasic {
   lastLogin?: any;
 }
 
-export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> => {
+export const getAllUsers = async (excludeAdmins = true): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> => {
   try {
     const usersRef = collection(db, 'users');
     const snapshot = await getDocs(usersRef);
@@ -43,8 +43,8 @@ export const getAllUsers = async (): Promise<{ success: boolean; users?: UserBas
     
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      // Exclude super admins from public listings
-      if (data.role !== 'admin') {
+      // Exclude super admins from public listings if requested
+      if (!excludeAdmins || data.role !== 'admin') {
         users.push({
           uid: docSnap.id,
           fullName: data.fullName || 'Unknown User',

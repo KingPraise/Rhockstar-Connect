@@ -65,22 +65,90 @@ export default function AIAssistantWidget() {
     }]);
   };
 
+  const [position, setPosition] = useState({ bottom: 80, right: 16 }); // Default position
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, startRight: 0, startBottom: 0, hasMoved: false });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+      if (!isDragging) return;
+      
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      
+      const diffX = dragRef.current.startX - clientX;
+      const diffY = dragRef.current.startY - clientY;
+      
+      if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) {
+        dragRef.current.hasMoved = true;
+      }
+      
+      setPosition({
+        right: dragRef.current.startRight + diffX,
+        bottom: dragRef.current.startBottom + diffY,
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleMouseMove, { passive: false });
+      window.addEventListener('touchend', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleMouseMove);
+      window.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isOpen) return;
+    setIsDragging(true);
+    dragRef.current.hasMoved = false;
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    dragRef.current.startX = clientX;
+    dragRef.current.startY = clientY;
+    dragRef.current.startRight = position.right;
+    dragRef.current.startBottom = position.bottom;
+  };
+
+  const handleButtonClick = () => {
+    if (!dragRef.current.hasMoved) {
+      setIsOpen(true);
+    }
+  };
+
   if (isDismissed) return null;
 
   return (
     <>
       {/* Floating Action Button */}
-      <div className={`fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 transition-all ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
+      <div 
+        className={`fixed z-50 transition-transform ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        style={{ bottom: `${position.bottom}px`, right: `${position.right}px`, touchAction: 'none' }}
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
+      >
         <button
-          onClick={() => setIsDismissed(true)}
+          onClick={(e) => { e.stopPropagation(); setIsDismissed(true); }}
           className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 hover:text-white rounded-full p-1 border border-white/10 shadow-md z-10"
           aria-label="Dismiss AI Assistant"
         >
           <X className="w-3 h-3" />
         </button>
         <button
-          onClick={() => setIsOpen(true)}
-          className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-[0_4px_14px_0_rgb(0,118,255,39%)] hover:shadow-[0_6px_20px_rgba(168,85,247,0.5)] hover:scale-110 transition-all"
+          onClick={handleButtonClick}
+          className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-[0_4px_14px_0_rgb(0,118,255,39%)] hover:shadow-[0_6px_20px_rgba(168,85,247,0.5)] hover:scale-110 transition-all pointer-events-none"
         >
           <Sparkles className="w-6 h-6 animate-pulse" />
         </button>

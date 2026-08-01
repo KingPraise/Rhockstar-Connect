@@ -21,8 +21,9 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
   
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
+      const scrollParent = document.getElementById('main-scroll-container');
       // Only pull if we're at the top of the container
-      if (containerRef.current && containerRef.current.scrollTop === 0) {
+      if (scrollParent && scrollParent.scrollTop <= 0) {
         setStartY(e.touches[0].clientY);
       } else {
         setStartY(0);
@@ -35,8 +36,9 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
       const y = e.touches[0].clientY;
       const diff = y - startY;
       
+      const scrollParent = document.getElementById('main-scroll-container');
       // Only care about pulling down
-      if (diff > 0 && containerRef.current && containerRef.current.scrollTop === 0) {
+      if (diff > 0 && scrollParent && scrollParent.scrollTop <= 0) {
         setIsPulling(true);
         setCurrentY(Math.min(diff, MAX_PULL));
         // Prevent default scrolling when pulling to refresh
@@ -80,7 +82,7 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
   }, [startY, currentY, isPulling, isRefreshing, onRefresh]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
+    <div className="relative w-full h-full">
       {/* Refresh Indicator */}
       <div 
         className="absolute top-0 left-0 right-0 flex justify-center items-center z-50 pointer-events-none transition-transform duration-200"
@@ -102,7 +104,7 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
       {/* Content Container */}
       <div 
         ref={containerRef}
-        className="w-full h-full overflow-y-auto hide-scrollbar transition-transform duration-200"
+        className="w-full h-full transition-transform duration-200"
         style={{
           transform: `translateY(${isRefreshing ? 50 : (isPulling ? currentY * 0.5 : 0)}px)`
         }}

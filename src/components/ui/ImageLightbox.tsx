@@ -31,25 +31,7 @@ export default function ImageLightbox() {
     };
   }, [isOpen]);
 
-  // Handle hardware back button on mobile
-  useEffect(() => {
-    if (isOpen) {
-      window.history.pushState({ lightboxOpen: true }, "");
-
-      const handlePopState = () => {
-        closeLightbox();
-      };
-
-      window.addEventListener("popstate", handlePopState);
-
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-        if (window.history.state && window.history.state.lightboxOpen) {
-          window.history.back();
-        }
-      };
-    }
-  }, [isOpen, closeLightbox]);
+  // The hardware back button pushState logic was removed as it breaks Next.js App Router
 
   if (!isOpen || images.length === 0) return null;
 
