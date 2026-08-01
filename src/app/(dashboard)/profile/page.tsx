@@ -130,11 +130,7 @@ export default function ProfilePage() {
         connectionStatus={connectionStatus}
         actionLoading={actionLoading}
       />
-      {connectSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold text-center animate-fade-in">
-          Connection request sent successfully!
-        </div>
-      )}
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
