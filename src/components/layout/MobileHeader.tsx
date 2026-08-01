@@ -133,7 +133,9 @@ export default function MobileHeader() {
           >
             <Bell className="w-5 h-5" />
             {unreadNotifications > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-red-500 text-[10px] font-bold text-white rounded-full px-1 border-2 border-slate-900 animate-in zoom-in">
+                {unreadNotifications > 99 ? '99+' : unreadNotifications}
+              </span>
             )}
           </Link>
 
