@@ -10,6 +10,8 @@ interface ProfileHeaderProps {
   customProfile?: any;
   isOwnProfile?: boolean;
   onConnectClick?: () => void;
+  connectionStatus?: 'pending' | 'accepted' | 'rejected' | 'none';
+  actionLoading?: boolean;
 }
 
 import { useState } from "react";
@@ -17,7 +19,7 @@ import { Crown } from "lucide-react";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import { useLightboxStore } from "@/store/useLightboxStore";
 
-export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile = true, onConnectClick }: ProfileHeaderProps) {
+export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile = true, onConnectClick, connectionStatus, actionLoading }: ProfileHeaderProps) {
   const { profile: loggedInProfile } = useAuthStore();
   const profile = customProfile || loggedInProfile;
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
