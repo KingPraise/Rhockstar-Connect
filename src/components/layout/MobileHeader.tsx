@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -28,11 +28,41 @@ import { logoutUser } from "@/lib/auth";
 
 export default function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  
   const { profile, logout } = useAuthStore();
   const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
+
+  useEffect(() => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const currentScrollY = target.scrollTop;
+      
+      if (currentScrollY < 50) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY.current + 10) {
+        setIsVisible(false); // scrolling down
+      } else if (currentScrollY < lastScrollY.current - 10) {
+        setIsVisible(true); // scrolling up
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    const container = document.getElementById('main-scroll-container');
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    return () => {
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, []);
 
   const handleLogout = async () => {
     setIsOpen(false);
@@ -65,7 +95,7 @@ export default function MobileHeader() {
   return (
     <>
       {/* Top Bar for Mobile */}
-      <header className="md:hidden sticky top-0 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-lg">
+      <header className={`md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-lg transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <Link href="/feed" className="flex items-center gap-2 pl-2">
           <Image src="/icon.png" alt="Rhockstar Connect" width={32} height={32} priority className="object-contain" />
           <span className="font-extrabold text-xl tracking-tight text-white">Rhockstar <span className="text-brand">Connect</span></span>

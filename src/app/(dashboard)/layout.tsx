@@ -23,7 +23,7 @@ export default function DashboardLayout({
       <Sidebar />
 
       {/* Main Content Area (Independently Scrollable) */}
-      <main className="flex-1 h-full overflow-y-auto w-full max-w-4xl mx-auto p-4 md:p-8 relative z-10 custom-scrollbar">
+      <main id="main-scroll-container" className="flex-1 h-full overflow-y-auto w-full max-w-4xl mx-auto p-4 pt-20 md:p-8 relative z-10 custom-scrollbar">
         <ProtectedRoute>
           {children}
         </ProtectedRoute>

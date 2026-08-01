@@ -3,9 +3,39 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Heart, Briefcase, MessageSquare, User } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 
 export default function MobileNav() {
   const pathname = usePathname();
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const currentScrollY = target.scrollTop;
+      
+      if (currentScrollY < 50) {
+        setIsVisible(true);
+      } else if (currentScrollY > lastScrollY.current + 10) {
+        setIsVisible(false); // scrolling down
+      } else if (currentScrollY < lastScrollY.current - 10) {
+        setIsVisible(true); // scrolling up
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    const container = document.getElementById('main-scroll-container');
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    return () => {
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, []);
 
   const navItems = [
     { name: "Feed", href: "/feed", icon: Home },
@@ -16,7 +46,7 @@ export default function MobileNav() {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 z-50 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+    <nav className={`md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 z-50 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-transform duration-300 ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}>
       <div className="flex items-center justify-around px-2 py-3">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
