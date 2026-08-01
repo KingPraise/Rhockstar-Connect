@@ -6,6 +6,7 @@ import { getAIResponse, AIPersona, AIMessage } from "@/lib/services/ai";
 
 export default function AIAssistantWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
   const [persona, setPersona] = useState<AIPersona>('career');
   const [messages, setMessages] = useState<AIMessage[]>([
     {
@@ -64,15 +65,26 @@ export default function AIAssistantWidget() {
     }]);
   };
 
+  if (isDismissed) return null;
+
   return (
     <>
       {/* Floating Action Button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className={`fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg hover:shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:scale-110 transition-all ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}
-      >
-        <Sparkles className="w-6 h-6 animate-pulse" />
-      </button>
+      <div className={`fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 transition-all ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
+        <button
+          onClick={() => setIsDismissed(true)}
+          className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 hover:text-white rounded-full p-1 border border-white/10 shadow-md z-10"
+          aria-label="Dismiss AI Assistant"
+        >
+          <X className="w-3 h-3" />
+        </button>
+        <button
+          onClick={() => setIsOpen(true)}
+          className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-[0_4px_14px_0_rgb(0,118,255,39%)] hover:shadow-[0_6px_20px_rgba(168,85,247,0.5)] hover:scale-110 transition-all"
+        >
+          <Sparkles className="w-6 h-6 animate-pulse" />
+        </button>
+      </div>
 
       {/* Chat Modal */}
       <div className={`fixed bottom-0 md:bottom-8 right-0 md:right-8 w-full md:w-96 h-[85vh] md:h-[600px] bg-slate-900 border border-white/10 md:rounded-2xl shadow-2xl z-50 flex flex-col transition-all duration-300 origin-bottom-right ${isOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}`}>
