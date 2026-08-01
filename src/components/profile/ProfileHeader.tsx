@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock, Settings } from "lucide-react";
+import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock, Settings, Check } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { format } from "date-fns";
 import Link from "next/link";
