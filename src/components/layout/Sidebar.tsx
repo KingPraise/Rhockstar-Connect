@@ -69,7 +69,7 @@ export default function Sidebar() {
         {!isMinimized ? (
           <Link href="/feed" className="flex items-center gap-3 group pl-2 mt-2">
             <Image src="/icon.png" alt="Rhockstar Connect" width={40} height={40} className="object-contain group-hover:opacity-80 transition-opacity" />
-            <span className="font-extrabold text-2xl tracking-tight text-white hidden xl:block">Rhockstar <span className="text-brand">Connect</span></span>
+            <span className="font-extrabold text-xl tracking-tight text-white whitespace-nowrap">Rhockstar <span className="text-brand">Connect</span></span>
           </Link>
         ) : (
           <Link href="/feed" className="flex justify-center group">

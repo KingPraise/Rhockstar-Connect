@@ -232,11 +232,40 @@ export const updateAdminSettings = async (settingsData: Partial<AdminSettingsDat
 // 5. SUPER ADMIN PROFILE
 export const updateAdminProfile = async (
   userId: string,
-  data: { fullName?: string; avatar?: string; bio?: string; headline?: string }
+  data: { fullName?: string; avatar?: string; bio?: string; headline?: string; username?: string }
 ) => {
   try {
     const userRef = doc(db, 'users', userId);
     await updateDoc(userRef, data);
+
+    // If avatar, name, or username changed, update all their posts
+    if (data.avatar !== undefined || data.fullName !== undefined || data.username !== undefined) {
+      const postsQuery = query(collection(db, 'posts'), where('userId', '==', userId));
+      const snapshot = await getDocs(postsQuery);
+      
+      if (!snapshot.empty) {
+        const { writeBatch } = await import('firebase/firestore');
+        const batch = writeBatch(db);
+        let count = 0;
+        
+        snapshot.docs.forEach(postDoc => {
+          const postData = postDoc.data();
+          if (postData.user) {
+            batch.update(postDoc.ref, {
+              'user.name': data.fullName !== undefined ? data.fullName : postData.user.name,
+              'user.handle': data.username !== undefined ? data.username : postData.user.handle,
+              'user.avatar': data.avatar !== undefined ? data.avatar : postData.user.avatar,
+            });
+            count++;
+          }
+        });
+        
+        if (count > 0) {
+          await batch.commit();
+        }
+      }
+    }
+
     return { success: true };
   } catch (error: unknown) {
     return { success: false, error: (error as Error).message };

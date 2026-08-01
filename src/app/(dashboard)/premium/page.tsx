@@ -73,6 +73,8 @@ export default function PremiumPage() {
               "Advanced Search Filters & Global Smart Search",
               "See who viewed your profile",
               "Enhanced Media Lightbox Viewer",
+              "Message Editing & Deletion",
+              "Chat Media Uploads",
               "Unlimited messaging",
               "Priority support"
             ].map((feature, i) => (
@@ -119,7 +121,8 @@ export default function PremiumPage() {
               "Maximum visibility in feed & matching",
               "Access to exclusive communities",
               "Advanced profile customization",
-              "Incognito browsing mode"
+              "Incognito browsing mode",
+              "Hide Online Status & Read Receipts"
             ].map((feature, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-brand-purple/20 flex items-center justify-center shrink-0">

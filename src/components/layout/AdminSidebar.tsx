@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Users, Shield, TrendingUp, AlertTriangle, Star, Settings, LogOut, UserCheck, Menu, X, Gift } from "lucide-react";
+import { Users, Shield, TrendingUp, AlertTriangle, Star, Settings, LogOut, UserCheck, Menu, X, Gift, Home } from "lucide-react";
 import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logoutUser } from "@/lib/auth";
@@ -28,6 +28,7 @@ export default function AdminSidebar() {
     { icon: AlertTriangle, label: "Reports", href: "/admin/reports" },
     { icon: Settings, label: "Settings", href: "/admin/settings" },
     { icon: UserCheck, label: "Admin Profile", href: "/admin/profile" },
+    { icon: Home, label: "User Feed", href: "/feed" },
   ];
 
   return (

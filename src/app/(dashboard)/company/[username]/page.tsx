@@ -24,12 +24,10 @@ export default function CompanyPage() {
       if (res.success && res.user && res.user.accountType === 'employer') {
         setCompany(res.user);
         
-        // Fetch jobs posted by this company (mock for now)
-        const jobsRes = await getJobs();
-        if (jobsRes.success) {
-          // In a real scenario, we would filter by jobsRes.jobs.filter(j => j.companyId === res.user.uid)
-          // For now, we'll just show a couple of mock jobs
-          setJobs(jobsRes.jobs?.slice(0, 3) || []);
+        // Fetch real jobs posted by this company
+        const jobsRes = await getJobs({ companyId: res.user.uid });
+        if (jobsRes.success && jobsRes.jobs) {
+          setJobs(jobsRes.jobs);
         }
       }
       setLoading(false);
