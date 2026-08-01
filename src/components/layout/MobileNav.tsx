@@ -14,16 +14,18 @@ export default function MobileNav() {
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLElement;
       const currentScrollY = target.scrollTop;
+      const delta = currentScrollY - lastScrollY.current;
       
       if (currentScrollY < 50) {
         setIsVisible(true);
-      } else if (currentScrollY > lastScrollY.current + 10) {
+        lastScrollY.current = currentScrollY;
+      } else if (delta > 15) {
         setIsVisible(false); // scrolling down
-      } else if (currentScrollY < lastScrollY.current - 10) {
+        lastScrollY.current = currentScrollY;
+      } else if (delta < -15) {
         setIsVisible(true); // scrolling up
+        lastScrollY.current = currentScrollY;
       }
-      
-      lastScrollY.current = currentScrollY;
     };
 
     const container = document.getElementById('main-scroll-container');

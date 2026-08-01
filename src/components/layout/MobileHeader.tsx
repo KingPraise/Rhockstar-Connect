@@ -41,16 +41,18 @@ export default function MobileHeader() {
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLElement;
       const currentScrollY = target.scrollTop;
+      const delta = currentScrollY - lastScrollY.current;
       
       if (currentScrollY < 50) {
         setIsVisible(true);
-      } else if (currentScrollY > lastScrollY.current + 10) {
+        lastScrollY.current = currentScrollY;
+      } else if (delta > 15) {
         setIsVisible(false); // scrolling down
-      } else if (currentScrollY < lastScrollY.current - 10) {
+        lastScrollY.current = currentScrollY;
+      } else if (delta < -15) {
         setIsVisible(true); // scrolling up
+        lastScrollY.current = currentScrollY;
       }
-      
-      lastScrollY.current = currentScrollY;
     };
 
     const container = document.getElementById('main-scroll-container');
@@ -151,7 +153,7 @@ export default function MobileHeader() {
 
       {/* Slide-out Mobile Menu Drawer */}
       {isOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex justify-end bg-black/70 backdrop-blur-sm animate-fade-in">
+        <div className="md:hidden fixed inset-0 z-[60] flex justify-end bg-black/70 backdrop-blur-sm animate-fade-in">
           {/* Backdrop Click */}
           <div className="absolute inset-0" onClick={() => setIsOpen(false)} />
 
