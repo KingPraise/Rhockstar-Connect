@@ -31,7 +31,7 @@ export default function MobileHeader() {
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
   
-  const { profile, logout } = useAuthStore();
+  const { profile, logout, unreadNotifications } = useAuthStore();
   const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
@@ -128,10 +128,13 @@ export default function MobileHeader() {
         <div className="flex items-center gap-2">
           <Link
             href="/notifications"
-            className="p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-white/5 active:scale-95 transition-all"
+            className="relative p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-white/5 active:scale-95 transition-all"
             aria-label="Notifications"
           >
             <Bell className="w-5 h-5" />
+            {unreadNotifications > 0 && (
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-slate-900 animate-pulse"></span>
+            )}
           </Link>
 
           <button

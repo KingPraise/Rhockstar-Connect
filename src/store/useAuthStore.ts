@@ -56,6 +56,7 @@ interface AuthState {
   setUser: (user: FirebaseUser | null) => void;
   setProfile: (profile: UserProfile | null) => void;
   setLoading: (isLoading: boolean) => void;
+  setUnreadNotifications: (count: number) => void;
   logout: () => void;
 }
 
@@ -63,8 +64,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   profile: null,
   isLoading: true,
+  unreadNotifications: 0,
   setUser: (user) => set({ user }),
   setProfile: (profile) => set({ profile }),
   setLoading: (isLoading) => set({ isLoading }),
-  logout: () => set({ user: null, profile: null, isLoading: false })
+  setUnreadNotifications: (count) => set({ unreadNotifications: count }),
+  logout: () => set({ user: null, profile: null, isLoading: false, unreadNotifications: 0 })
 }));

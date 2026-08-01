@@ -17,8 +17,17 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (user && mounted) {
-      import('@/lib/services/notifications').then(({ requestNotificationPermission }) => {
+      import('@/lib/services/notifications').then(({ requestNotificationPermission, subscribeToNotifications }) => {
         requestNotificationPermission(user.uid);
+        
+        // Keep unread count globally synced
+        const unsubscribe = subscribeToNotifications(user.uid, (notifications) => {
+          const unreadCount = notifications.filter(n => !n.read).length;
+          useAuthStore.getState().setUnreadNotifications(unreadCount);
+        });
+        
+        // We won't strictly unsubscribe here since ProtectedRoute wraps the whole app
+        // and we want notifications running as long as the user is logged in.
       }).catch(console.error);
     }
   }, [user, mounted]);
