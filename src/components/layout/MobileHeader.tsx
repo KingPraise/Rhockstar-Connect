@@ -245,21 +245,20 @@ export default function MobileHeader() {
                 </div>
               </div>
 
-            </nav>
-
-            {/* Drawer Footer / Logout */}
-            <div className="p-4 pb-8 border-t border-white/10 bg-slate-950/60 flex flex-col gap-3">
               {profile?.role === 'admin' && (
-                <Link
-                  href="/admin"
-                  onClick={() => setIsOpen(false)}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 hover:bg-amber-500 hover:text-slate-950 text-amber-300 font-bold transition-all border border-amber-500/30"
-                >
-                  <Shield className="w-5 h-5" />
-                  <span>Super Admin Portal</span>
-                </Link>
+                <div className="mt-4 pb-4">
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsOpen(false)}
+                    className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-amber-500/10 hover:bg-amber-500 hover:text-slate-950 text-amber-300 font-bold transition-all border border-amber-500/30 shadow-lg"
+                  >
+                    <Shield className="w-5 h-5" />
+                    <span>Super Admin Portal</span>
+                  </Link>
+                </div>
               )}
-            </div>
+
+            </nav>
           </div>
         </div>
       )}
