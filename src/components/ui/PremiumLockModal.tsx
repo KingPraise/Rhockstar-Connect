@@ -15,8 +15,8 @@ interface PremiumLockModalProps {
 export default function PremiumLockModal({
   isOpen,
   onClose,
-  title = "Unlock Premium Feature",
-  description = "This feature is reserved for Rhockstar Connect Premium members.",
+  title = "Unlock Pro & Elite Features",
+  description = "This feature is reserved for Rhockstar Connect Pro or Elite members.",
   featureList = [
     "Unlimited Direct Messaging & Connections",
     "See Who Liked Your Profile & Top Matches",

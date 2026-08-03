@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Loader2, Users, UserPlus, Check, X, Search, Lock, Filter, Inbox, Send, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
+import toast from "react-hot-toast";
 
 type TabId = 'discover' | 'my-connections' | 'invitations' | 'sent-requests';
 
@@ -27,6 +28,16 @@ export default function NetworkPage() {
   const [actionLoading, setActionLoading] = useState<string[]>([]);
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('discover');
+
+  const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
+
+  const handlePremiumFilterClick = () => {
+    if (isPremium) {
+      toast.success("This premium filter will be available soon!", { icon: "✨", style: { background: '#334155', color: '#fff' } });
+    } else {
+      setPremiumLockOpen(true);
+    }
+  };
 
   const fetchData = async () => {
     if (!profile?.uid) return;
@@ -229,7 +240,7 @@ export default function NetworkPage() {
           ].map((filterLabel, idx) => (
             <button
               key={idx}
-              onClick={() => setPremiumLockOpen(true)}
+              onClick={handlePremiumFilterClick}
               className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500/10 transition-all flex items-center gap-1.5 shrink-0 group"
             >
               <Lock className="w-3 h-3 text-amber-400 group-hover:scale-110 transition-transform" />

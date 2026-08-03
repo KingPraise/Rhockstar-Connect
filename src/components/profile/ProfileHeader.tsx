@@ -18,6 +18,7 @@ import { useState } from "react";
 import { Crown } from "lucide-react";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import { useLightboxStore } from "@/store/useLightboxStore";
+import toast from "react-hot-toast";
 
 export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile = true, onConnectClick, connectionStatus, actionLoading }: ProfileHeaderProps) {
   const { profile: loggedInProfile } = useAuthStore();
@@ -28,7 +29,16 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
   if (!profile) return null; // Or a skeleton loader
 
   const isFree = !profile.subscriptionTier || profile.subscriptionTier === 'free';
+  const isPremium = profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite';
   const locationString = typeof profile.location === 'string' ? profile.location : (profile.location?.city ? `${profile.location.city}, ${profile.location.country}` : "Earth");
+
+  const handleBoostClick = () => {
+    if (isPremium) {
+      toast.success("Profile boost activated! You are now prioritized in search.", { icon: "🚀", style: { background: '#334155', color: '#fff' } });
+    } else {
+      setPremiumLockOpen(true);
+    }
+  };
 
   return (
     <div className="neo-card p-0 overflow-hidden flex flex-col mb-6 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl group">
@@ -77,7 +87,7 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
           {isOwnProfile ? (
             <>
               <button 
-                onClick={() => setPremiumLockOpen(true)}
+                onClick={handleBoostClick}
                 className="py-2 px-5 rounded-xl bg-gradient-to-r from-brand/10 to-brand-purple/10 hover:from-brand/20 hover:to-brand-purple/20 text-white font-medium text-sm flex items-center gap-2 transition-all border border-brand/20 shadow-[0_0_15px_rgba(56,189,248,0.1)] hover:shadow-[0_0_20px_rgba(56,189,248,0.2)]"
               >
                 {isFree ? <Lock className="w-4 h-4 text-amber-400" /> : <Crown className="w-4 h-4 text-amber-400" />}
