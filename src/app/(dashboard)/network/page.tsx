@@ -143,10 +143,10 @@ export default function NetworkPage() {
     u.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Group users based on connection status
-  const pendingReceived = connections.filter(c => c.toUserId === profile.uid && c.status === 'pending');
-  const pendingSent = connections.filter(c => c.fromUserId === profile.uid && c.status === 'pending');
-  const accepted = connections.filter(c => c.status === 'accepted');
+  // Group users based on connection status (safely resolving against available users)
+  const myConnectionsCount = users.filter(u => getStatusForUser(u.uid) === 'connected').length;
+  const invitationsCount = users.filter(u => getStatusForUser(u.uid) === 'received').length;
+  const sentRequestsCount = users.filter(u => getStatusForUser(u.uid) === 'sent').length;
 
   // Filter for currently active tab
   const getTabUsers = () => {
@@ -168,9 +168,9 @@ export default function NetworkPage() {
 
   const tabs = [
     { id: 'discover', label: 'People You May Know', icon: UserPlus, count: null },
-    { id: 'my-connections', label: 'My Connections', icon: Users, count: accepted.length },
-    { id: 'invitations', label: 'Invitations', icon: Inbox, count: pendingReceived.length },
-    { id: 'sent-requests', label: 'Sent Requests', icon: Send, count: pendingSent.length },
+    { id: 'my-connections', label: 'My Connections', icon: Users, count: myConnectionsCount },
+    { id: 'invitations', label: 'Invitations', icon: Inbox, count: invitationsCount },
+    { id: 'sent-requests', label: 'Sent Requests', icon: Send, count: sentRequestsCount },
   ];
 
   return (
