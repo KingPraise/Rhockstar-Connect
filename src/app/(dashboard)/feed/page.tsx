@@ -53,7 +53,7 @@ export default function FeedPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="w-full">
+      <div className="w-full max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold text-white mb-2 tracking-tight">Your Feed</h1>

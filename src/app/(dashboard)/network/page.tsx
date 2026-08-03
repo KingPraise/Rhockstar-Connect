@@ -96,7 +96,7 @@ export default function NetworkPage() {
 
   if (!profile || loading) {
     return (
-      <div className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-8 flex gap-8">
+      <div className="flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 flex gap-8">
         {/* Skeleton Sidebar */}
         <div className="hidden lg:block w-64 shrink-0 space-y-4">
           <Skeleton className="h-12 w-full rounded-2xl" />
@@ -109,7 +109,7 @@ export default function NetworkPage() {
             <Skeleton className="h-10 w-48 mb-2" />
             <Skeleton className="h-6 w-full max-w-md" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <div key={i} className="neo-card p-5 rounded-2xl flex items-center gap-4 bg-slate-900/40">
                 <Skeleton className="w-14 h-14 rounded-full shrink-0" />
@@ -163,7 +163,7 @@ export default function NetworkPage() {
   ];
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-8 flex flex-col lg:flex-row gap-8">
+    <div className="flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 flex flex-col lg:flex-row gap-8">
       
       {/* SIDEBAR (Desktop) & SCROLLABLE BAR (Mobile) */}
       <div className="w-full lg:w-72 shrink-0">
@@ -250,7 +250,7 @@ export default function NetworkPage() {
         </div>
 
         {/* USERS GRID */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {displayedUsers.length > 0 ? displayedUsers.map(user => {
             const status = getStatusForUser(user.uid);
             

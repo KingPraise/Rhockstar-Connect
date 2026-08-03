@@ -110,7 +110,7 @@ export default function JobsPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-8 space-y-8">
+      <div className="flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 space-y-8">
         
         {/* HEADER & SEARCH */}
         <div className="neo-card p-6 rounded-3xl flex flex-col gap-6 bg-slate-900/60 backdrop-blur-xl border border-white/5">
@@ -190,8 +190,8 @@ export default function JobsPage() {
         ) : (
           <>
             {loading && jobs.length === 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {[1, 2, 3, 4].map(i => (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map(i => (
                   <div key={i} className="neo-card p-6 rounded-3xl bg-slate-900/60 flex flex-col">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-4">
@@ -220,7 +220,7 @@ export default function JobsPage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {displayedJobs.length > 0 ? (
                   <>
                     {displayedJobs.map((job, index) => {
