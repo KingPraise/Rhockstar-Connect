@@ -36,7 +36,11 @@ export default function NotificationsPage() {
     }
 
     if (notification.link) {
-      router.push(notification.link);
+      if (notification.link === "/") {
+        router.push("/feed");
+      } else {
+        router.push(notification.link);
+      }
       return;
     }
 

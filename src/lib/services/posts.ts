@@ -231,7 +231,7 @@ export const toggleLike = async (postId: string, userId: string) => {
               type: "like",
               title,
               message: messageBody,
-              link: `/`,
+              link: `/feed#post-${postData.id}`,
               senderId: userId,
               senderName: likerName,
               senderAvatar: userRes.success && userRes.user ? userRes.user.avatar : ''
@@ -315,7 +315,7 @@ export const addComment = async (postId: string, user: UserProfile, content: str
               type: "comment",
               title,
               message: messageBody,
-              link: `/`,
+              link: `/feed#post-${postData.id}`,
               senderId: user.uid,
               senderName: user.fullName,
               senderAvatar: user.avatar || ''

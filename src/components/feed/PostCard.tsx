@@ -192,8 +192,24 @@ export default function PostCard({ post }: PostCardProps) {
     timeAgo = formatDistanceToNow(createdAt.toDate(), { addSuffix: true });
   }
 
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === `#post-${post.id}`) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`post-${post.id}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-brand', 'ring-offset-4', 'ring-offset-[#020617]');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-brand', 'ring-offset-4', 'ring-offset-[#020617]');
+          }, 4000);
+        }
+      }, 500); // Wait a bit for rendering
+      return () => clearTimeout(timer);
+    }
+  }, [post.id]);
+
   return (
-    <div className="neo-card p-6 mb-6">
+    <div id={`post-${post.id}`} className="neo-card p-6 mb-6 transition-all duration-700">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <Link href={`/profile?uid=${post.userId}`} className="flex items-center gap-4 group">

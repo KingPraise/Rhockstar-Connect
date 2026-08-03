@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function Home() {
+  const { profile } = useAuthStore();
+
   return (
     <div className="min-h-screen relative bg-[#020617] text-white overflow-hidden">
       {/* Neomorphic Glows */}
@@ -18,11 +23,17 @@ export default function Home() {
             <Link href="#home" className="hover:text-white transition-colors">Home</Link>
             <Link href="#features" className="hover:text-white transition-colors">Features</Link>
             <Link href="#about" className="hover:text-white transition-colors">About</Link>
-            <Link href="/login" className="hover:text-brand transition-colors">Login</Link>
+            {!profile && <Link href="/login" className="hover:text-brand transition-colors">Login</Link>}
           </nav>
           <div className="flex gap-4">
-            <Link href="/login" className="neo-button-secondary md:hidden px-5 py-2">Login</Link>
-            <Link href="/register" className="neo-button-primary px-6 py-2 shadow-none hover:shadow-brand/20">Join Now</Link>
+            {profile ? (
+              <Link href="/feed" className="neo-button-primary px-6 py-2 shadow-none hover:shadow-brand/20">Go to Dashboard</Link>
+            ) : (
+              <>
+                <Link href="/login" className="neo-button-secondary md:hidden px-5 py-2">Login</Link>
+                <Link href="/register" className="neo-button-primary px-6 py-2 shadow-none hover:shadow-brand/20">Join Now</Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -46,12 +57,20 @@ export default function Home() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Link href="/register" className="neo-button-primary py-4 px-8 text-lg w-full sm:w-auto">
-                Get Started
-              </Link>
-              <Link href="/login" className="neo-button-secondary py-4 px-8 text-lg w-full sm:w-auto text-center">
-                Login
-              </Link>
+              {profile ? (
+                <Link href="/feed" className="neo-button-primary py-4 px-8 text-lg w-full sm:w-auto text-center">
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link href="/register" className="neo-button-primary py-4 px-8 text-lg w-full sm:w-auto">
+                    Get Started
+                  </Link>
+                  <Link href="/login" className="neo-button-secondary py-4 px-8 text-lg w-full sm:w-auto text-center">
+                    Login
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -157,9 +176,15 @@ export default function Home() {
               Join Rhockstar Connect today and connect with professionals, opportunities and communities.
             </p>
             <div className="relative z-10">
-              <Link href="/register" className="neo-button-primary py-4 px-10 text-lg shadow-[0_0_40px_rgba(56,189,248,0.4)]">
-                Create Your Account
-              </Link>
+              {profile ? (
+                <Link href="/feed" className="neo-button-primary py-4 px-10 text-lg shadow-[0_0_40px_rgba(56,189,248,0.4)]">
+                  Go to Dashboard
+                </Link>
+              ) : (
+                <Link href="/register" className="neo-button-primary py-4 px-10 text-lg shadow-[0_0_40px_rgba(56,189,248,0.4)]">
+                  Create Your Account
+                </Link>
+              )}
             </div>
           </div>
         </section>
@@ -174,8 +199,13 @@ export default function Home() {
           
           <nav className="flex gap-8 font-medium text-slate-300 mb-12">
             <Link href="#home" className="hover:text-brand transition-colors">Home</Link>
-            <Link href="/register" className="hover:text-brand transition-colors">Register</Link>
-            <Link href="/login" className="hover:text-brand transition-colors">Login</Link>
+            {!profile && (
+              <>
+                <Link href="/register" className="hover:text-brand transition-colors">Register</Link>
+                <Link href="/login" className="hover:text-brand transition-colors">Login</Link>
+              </>
+            )}
+            {profile && <Link href="/feed" className="hover:text-brand transition-colors">Dashboard</Link>}
             <Link href="/terms" className="hover:text-brand transition-colors">Terms of Service</Link>
           </nav>
           

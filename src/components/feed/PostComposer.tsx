@@ -125,8 +125,12 @@ export default function PostComposer() {
         )}
 
         <div className="flex gap-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex-shrink-0 flex items-center justify-center font-bold text-white shadow-inner">
-            {profile.avatar || profile.fullName.substring(0, 2).toUpperCase()}
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex-shrink-0 flex items-center justify-center font-bold text-white shadow-inner overflow-hidden border border-brand/20 relative">
+            {profile.avatar ? (
+              <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              profile.fullName.substring(0, 2).toUpperCase()
+            )}
           </div>
           <div className="flex-1 flex flex-col gap-3">
             <textarea

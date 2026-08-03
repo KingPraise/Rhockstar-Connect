@@ -6,10 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { User, Mail, Lock, UserPlus, Loader2, AtSign, Gift, Eye, EyeOff, Calendar } from "lucide-react";
 import { registerUser } from "@/lib/auth";
 import Image from "next/image";
+import { useAuthStore } from "@/store/useAuthStore";
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { profile } = useAuthStore();
 
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
@@ -29,11 +31,15 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (profile) {
+      router.push("/feed");
+      return;
+    }
     const ref = searchParams.get("ref") || searchParams.get("code") || searchParams.get("referral");
     if (ref) {
       setReferralCode(ref);
     }
-  }, [searchParams]);
+  }, [searchParams, profile, router]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
