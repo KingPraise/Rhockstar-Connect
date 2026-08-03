@@ -33,6 +33,7 @@ export interface UserBasic {
   subscriptionTier?: string;
   subscriptionStatus?: string;
   lastLogin?: any;
+  role?: string;
 }
 
 export const getAllUsers = async (excludeAdmins = true): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> => {
@@ -67,7 +68,8 @@ export const getAllUsers = async (excludeAdmins = true): Promise<{ success: bool
           datingVoiceIntro: data.datingVoiceIntro,
           subscriptionTier: data.subscriptionTier,
           subscriptionStatus: data.subscriptionStatus,
-          lastLogin: data.lastLogin
+          lastLogin: data.lastLogin,
+          role: data.role,
         });
       }
     });

@@ -61,7 +61,7 @@ export default function NetworkPage() {
       if (!profile?.uid) return;
       setLoading(true);
       const [usersRes, connRes] = await Promise.all([
-        getAllUsers(),
+        getAllUsers(false), // Fetch all to allow seeing pending requests from admins
         getUserConnections(profile.uid)
       ]);
       if (usersRes.success && usersRes.users) {
@@ -159,8 +159,8 @@ export default function NetworkPage() {
         return searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'sent');
       case 'discover':
       default:
-        // Exclude connected or pending if we just want "discover" (or maybe we show all non-connected)
-        return searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'none');
+        // Exclude connected or pending if we just want "discover", and hide admins
+        return searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'none' && u.role !== 'admin');
     }
   };
 
