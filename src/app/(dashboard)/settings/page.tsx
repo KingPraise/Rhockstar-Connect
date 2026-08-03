@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { logoutUser } from "@/lib/auth";
 
 export default function SettingsPage() {
-  const { user, profile, logout } = useAuthStore();
+  const { user, profile, logout, aiWidgetVisible, setAiWidgetVisible } = useAuthStore();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
 
@@ -135,9 +135,9 @@ export default function SettingsPage() {
                     <input 
                       type="checkbox" 
                       className="sr-only peer" 
-                      checked={useAuthStore(state => state.aiWidgetVisible)}
+                      checked={aiWidgetVisible}
                       onChange={(e) => {
-                        useAuthStore.getState().setAiWidgetVisible(e.target.checked);
+                        setAiWidgetVisible(e.target.checked);
                         if (e.target.checked) {
                           localStorage.removeItem('aiWidgetHidden');
                         } else {
