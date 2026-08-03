@@ -67,9 +67,8 @@ export default function Sidebar() {
       {/* Header / Logo */}
       <div className={`p-6 flex items-center ${isMinimized ? "justify-center" : "justify-between"}`}>
         {!isMinimized ? (
-          <Link href="/feed" className="flex items-center gap-3 group pl-2 mt-2">
-            <Image src="/icon.png" alt="Rhockstar Connect" width={40} height={40} className="object-contain group-hover:opacity-80 transition-opacity" />
-            <span className="font-extrabold text-xl tracking-tight text-white whitespace-nowrap">Rhockstar <span className="text-brand">Connect</span></span>
+          <Link href="/feed" className="flex items-center justify-center group pl-2 mt-2 w-full">
+            <Image src="/icon.png" alt="Rhockstar Connect" width={48} height={48} className="object-contain group-hover:opacity-80 transition-opacity" />
           </Link>
         ) : (
           <Link href="/feed" className="flex justify-center group">

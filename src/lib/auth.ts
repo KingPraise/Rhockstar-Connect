@@ -12,6 +12,16 @@ import { auth, db } from "./firebase";
 
 import { recordReferral } from "./services/referrals";
 
+const RESERVED_USERNAMES = [
+  'admin', 'administrator', 'support', 'help', 'team', 'official', 'verified', 'verify', 
+  'security', 'system', 'moderator', 'mod', 'staff', 'founder', 'ceo', 'owner', 'developer', 
+  'dev', 'news', 'updates', 'blog', 'careers', 'jobs', 'ads', 'advertise', 'business', 
+  'press', 'media', 'privacy', 'legal', 'terms', 'community', 'events', 'feedback', 
+  'report', 'appeal', 'notifications', 'api', 'bot', 'ai', 'assistant', 'store', 'market', 
+  'payments', 'wallet', 'rhockstar', 'rhockstarconnect', 'rhockstarnation', 
+  'rhockstar_support', 'rhockstar_help', 'rhockstar_official', 'connectsupport', 'connectadmin'
+];
+
 export const registerUser = async (
   email: string, 
   password: string, 
@@ -21,6 +31,11 @@ export const registerUser = async (
   accountType: 'standard' | 'employer' = 'standard'
 ) => {
   try {
+    const cleanUsername = username.toLowerCase().replace('@', '');
+    if (RESERVED_USERNAMES.includes(cleanUsername)) {
+      return { user: null, error: "This username is reserved and cannot be used." };
+    }
+
     // 1. Create user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
