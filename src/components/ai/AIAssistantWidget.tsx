@@ -3,10 +3,14 @@
 import { useState, useRef, useEffect } from "react";
 import { Sparkles, X, Send, Bot, Heart, Briefcase, ChevronDown } from "lucide-react";
 import { getAIResponse, AIPersona, AIMessage } from "@/lib/services/ai";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function AIAssistantWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
+  
+  // Use global store for visibility instead of local state
+  const { aiWidgetVisible, setAiWidgetVisible } = useAuthStore();
+  
   const [persona, setPersona] = useState<AIPersona>('career');
   const [messages, setMessages] = useState<AIMessage[]>([
     {
@@ -18,8 +22,18 @@ export default function AIAssistantWidget() {
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [opacity, setOpacity] = useState(1);
+  const opacityTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize visibility from local storage on mount
+  useEffect(() => {
+    const isHidden = localStorage.getItem('aiWidgetHidden');
+    if (isHidden === 'true') {
+      setAiWidgetVisible(false);
+    }
+  }, [setAiWidgetVisible]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -43,6 +57,8 @@ export default function AIAssistantWidget() {
     e.preventDefault();
     if (!input.trim()) return;
 
+    resetOpacityTimer();
+
     const userMsg: AIMessage = {
       id: Date.now().toString(),
       role: 'user',
@@ -65,12 +81,41 @@ export default function AIAssistantWidget() {
     }]);
   };
 
-  const [position, setPosition] = useState({ bottom: 80, right: 16 }); // Default position
+  const [position, setPosition] = useState({ bottom: 80, right: 16 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, startRight: 0, startBottom: 0, hasMoved: false });
 
+  // Load position from local storage
+  useEffect(() => {
+    const savedPos = localStorage.getItem('aiWidgetPosition');
+    if (savedPos) {
+      try {
+        const parsed = JSON.parse(savedPos);
+        setPosition(parsed);
+      } catch (e) {}
+    }
+  }, []);
+
+  const resetOpacityTimer = () => {
+    setOpacity(1);
+    if (opacityTimerRef.current) clearTimeout(opacityTimerRef.current);
+    opacityTimerRef.current = setTimeout(() => {
+      if (!isOpen && !isDragging) {
+        setOpacity(0.6);
+      }
+    }, 3000);
+  };
+
+  useEffect(() => {
+    resetOpacityTimer();
+    return () => {
+      if (opacityTimerRef.current) clearTimeout(opacityTimerRef.current);
+    };
+  }, [isOpen, isDragging, position]); // Reset when position changes too
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+      resetOpacityTimer();
       if (!isDragging) return;
       
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -83,14 +128,36 @@ export default function AIAssistantWidget() {
         dragRef.current.hasMoved = true;
       }
       
+      const newRight = dragRef.current.startRight + diffX;
+      const newBottom = dragRef.current.startBottom + diffY;
+
       setPosition({
-        right: dragRef.current.startRight + diffX,
-        bottom: dragRef.current.startBottom + diffY,
+        right: newRight,
+        bottom: newBottom,
       });
     };
 
-    const handleMouseUp = () => {
-      setIsDragging(false);
+    const handleMouseUp = (e: MouseEvent | TouchEvent) => {
+      if (isDragging) {
+        setIsDragging(false);
+        if (dragRef.current.hasMoved) {
+          // Edge Snapping
+          setPosition(prev => {
+            const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
+            const isLeftHalf = clientX < window.innerWidth / 2;
+            
+            // Safe bounds
+            const safeBottom = Math.max(16, Math.min(window.innerHeight - 80, prev.bottom));
+            
+            const newPos = {
+              right: isLeftHalf ? window.innerWidth - 72 : 16, // 72 = 56px width + 16px padding
+              bottom: safeBottom
+            };
+            localStorage.setItem('aiWidgetPosition', JSON.stringify(newPos));
+            return newPos;
+          });
+        }
+      }
     };
 
     if (isDragging) {
@@ -104,11 +171,13 @@ export default function AIAssistantWidget() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('touchmove', handleMouseMove);
+      window.removeEventListener('touchmove', handleMouseUp); // Fix typo in original cleanup
       window.removeEventListener('touchend', handleMouseUp);
     };
   }, [isDragging]);
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    resetOpacityTimer();
     if (isOpen) return;
     setIsDragging(true);
     dragRef.current.hasMoved = false;
@@ -123,32 +192,45 @@ export default function AIAssistantWidget() {
   };
 
   const handleButtonClick = () => {
+    resetOpacityTimer();
     if (!dragRef.current.hasMoved) {
       setIsOpen(true);
     }
   };
 
-  if (isDismissed) return null;
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setAiWidgetVisible(false);
+    localStorage.setItem('aiWidgetHidden', 'true');
+  };
+
+  if (!aiWidgetVisible) return null;
 
   return (
     <>
       {/* Floating Action Button */}
       <div 
-        className={`fixed z-50 transition-transform ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'} ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-        style={{ bottom: `${position.bottom}px`, right: `${position.right}px`, touchAction: 'none' }}
+        className={`fixed z-50 transition-all duration-300 ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100'} ${isDragging ? 'cursor-grabbing duration-0' : 'cursor-grab'}`}
+        style={{ 
+          bottom: `${position.bottom}px`, 
+          right: `${position.right}px`, 
+          touchAction: 'none',
+          opacity: isOpen ? 0 : opacity
+        }}
         onMouseDown={handleDragStart}
         onTouchStart={handleDragStart}
+        onMouseEnter={resetOpacityTimer}
       >
         <button
-          onClick={(e) => { e.stopPropagation(); setIsDismissed(true); }}
-          className="absolute -top-2 -right-2 bg-slate-800 text-slate-300 hover:text-white rounded-full p-1 border border-white/10 shadow-md z-10"
+          onClick={handleDismiss}
+          className={`absolute -top-2 -right-2 bg-slate-800 text-slate-300 hover:text-white rounded-full p-1 border border-white/10 shadow-md z-10 transition-opacity ${opacity < 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           aria-label="Dismiss AI Assistant"
         >
           <X className="w-3 h-3" />
         </button>
         <button
           onClick={handleButtonClick}
-          className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-[0_4px_14px_0_rgb(0,118,255,39%)] hover:shadow-[0_6px_20px_rgba(168,85,247,0.5)] hover:scale-110 transition-all pointer-events-none"
+          className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-[0_4px_14px_0_rgb(0,118,255,39%)] hover:shadow-[0_6px_20px_rgba(168,85,247,0.5)] hover:scale-110 transition-transform pointer-events-none"
         >
           <Sparkles className="w-6 h-6 animate-pulse" />
         </button>

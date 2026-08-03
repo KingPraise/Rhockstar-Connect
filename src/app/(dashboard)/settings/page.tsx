@@ -4,7 +4,7 @@ import { useState } from "react";
 import { 
   Settings as SettingsIcon, User, Lock, Bell, 
   Shield, Eye, Smartphone, Globe, CreditCard,
-  LogOut
+  LogOut, Sparkles
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -120,6 +120,35 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </form>
+
+              <div className="pt-8 border-t border-white/10 space-y-6">
+                <h3 className="text-xl font-bold text-white">Preferences</h3>
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                  <div>
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-brand" />
+                      AI Assistant Widget
+                    </h4>
+                    <p className="text-sm text-slate-400">Show the floating AI assistant on your dashboard.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={useAuthStore(state => state.aiWidgetVisible)}
+                      onChange={(e) => {
+                        useAuthStore.getState().setAiWidgetVisible(e.target.checked);
+                        if (e.target.checked) {
+                          localStorage.removeItem('aiWidgetHidden');
+                        } else {
+                          localStorage.setItem('aiWidgetHidden', 'true');
+                        }
+                      }}
+                    />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+              </div>
             </div>
           )}
 
