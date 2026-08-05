@@ -4,7 +4,7 @@ import { useState } from "react";
 import { 
   Settings as SettingsIcon, User, Lock, Bell, 
   Shield, Eye, Smartphone, Globe, CreditCard,
-  LogOut, Sparkles
+  LogOut, Sparkles, Briefcase
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -148,7 +148,57 @@ export default function SettingsPage() {
                     <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
                   </label>
                 </div>
-              </div>
+                </div>
+
+              {/* Employer Status */}
+              {(profile?.role === 'employer' || profile?.role === 'admin') && (
+                <div className="pt-8 border-t border-white/10 space-y-4">
+                  <h3 className="text-xl font-bold text-white">Employer Account</h3>
+                  <div className="bg-gradient-to-r from-emerald-900/40 to-slate-800 p-6 rounded-2xl border border-emerald-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-bold text-white mb-1">You are an Employer!</h4>
+                      <p className="text-sm text-slate-400">You have access to the Employer Dashboard to post jobs and manage applications.</p>
+                    </div>
+                    <a 
+                      href="/employer"
+                      className="whitespace-nowrap px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex items-center gap-2"
+                    >
+                      <Briefcase className="w-5 h-5" />
+                      Go to Dashboard
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Employer Upgrade */}
+              {profile?.role !== 'employer' && profile?.role !== 'admin' && (
+                <div className="pt-8 border-t border-white/10 space-y-4">
+                  <h3 className="text-xl font-bold text-white">Employer Account</h3>
+                  <div className="bg-gradient-to-r from-blue-900/40 to-slate-800 p-6 rounded-2xl border border-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-bold text-white mb-1">Looking to hire talent?</h4>
+                      <p className="text-sm text-slate-400">Upgrade your account to Employer status to post jobs and manage applicants.</p>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        if (!profile?.uid) return;
+                        const { becomeEmployer } = await import('@/lib/services/users');
+                        const res = await becomeEmployer(profile.uid);
+                        if (res.success) {
+                          useAuthStore.getState().setProfile({ ...profile, role: 'employer' } as any);
+                          toast.success("Successfully upgraded to Employer!");
+                        } else {
+                          toast.error("Failed to upgrade account");
+                        }
+                      }}
+                      className="whitespace-nowrap px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors"
+                    >
+                      Become an Employer
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             </div>
           )}
 

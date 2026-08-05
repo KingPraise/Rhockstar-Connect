@@ -68,11 +68,11 @@ export default function Sidebar() {
       <div className={`p-6 flex items-center ${isMinimized ? "justify-center" : "justify-between"}`}>
         {!isMinimized ? (
           <Link href="/feed" className="flex items-center justify-center group pl-2 mt-2 w-full">
-            <Image src="/icon.png" alt="Rhockstar Connect" width={48} height={48} className="object-contain group-hover:opacity-80 transition-opacity" />
+            <Image src="/icon.png" alt="Rhockstar Connect" width={140} height={140} className="object-contain group-hover:opacity-80 transition-opacity" />
           </Link>
         ) : (
           <Link href="/feed" className="flex justify-center group">
-            <Image src="/icon.png" alt="RC" width={40} height={40} className="group-hover:opacity-80 transition-opacity" />
+            <Image src="/icon.png" alt="RC" width={56} height={56} className="group-hover:opacity-80 transition-opacity" />
           </Link>
         )}
         

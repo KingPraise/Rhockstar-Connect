@@ -273,6 +273,7 @@ export interface Comment {
   content: string;
   createdAt: string;
   replyToId?: string;
+  isHidden?: boolean;
 }
 
 // Add a comment to a post
@@ -430,5 +431,29 @@ export const deletePost = async (postId: string) => {
   } catch (error: unknown) {
     console.error("Error deleting post:", error);
     return { success: false, error: (error as Error).message };
+  }
+};
+
+// Toggle comment visibility
+export const toggleCommentVisibility = async (postId: string, commentId: string, isHidden: boolean) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postSnap = await getDoc(postRef);
+
+    if (postSnap.exists()) {
+      const currentComments = postSnap.data().comments || [];
+      const updatedComments = currentComments.map((c: any) => {
+        if (c.id === commentId) {
+          return { ...c, isHidden };
+        }
+        return c;
+      });
+
+      await updateDoc(postRef, { comments: updatedComments });
+      return { success: true };
+    }
+    return { success: false, error: 'Post not found' };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 };

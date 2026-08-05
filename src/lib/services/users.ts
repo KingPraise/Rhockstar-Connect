@@ -32,8 +32,9 @@ export interface UserBasic {
   datingVoiceIntro?: string;
   subscriptionTier?: string;
   subscriptionStatus?: string;
+  connections: number;
   lastLogin?: any;
-  role?: string;
+  role?: 'user' | 'admin' | 'employer';
 }
 
 export const getAllUsers = async (excludeAdmins = true): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> => {
@@ -68,6 +69,7 @@ export const getAllUsers = async (excludeAdmins = true): Promise<{ success: bool
           datingVoiceIntro: data.datingVoiceIntro,
           subscriptionTier: data.subscriptionTier,
           subscriptionStatus: data.subscriptionStatus,
+          connections: data.connections || 0,
           lastLogin: data.lastLogin,
           role: data.role,
         });
@@ -237,4 +239,8 @@ export const updateUserProfile = async (
     console.error("Error updating user profile:", error);
     return { success: false, error: (error as Error).message };
   }
+};
+
+export const becomeEmployer = async (uid: string) => {
+  return updateUserProfile(uid, { role: 'employer' });
 };

@@ -210,7 +210,7 @@ export default function AIAssistantWidget() {
     <>
       {/* Floating Action Button */}
       <div 
-        className={`fixed z-50 transition-all duration-300 ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100'} ${isDragging ? 'cursor-grabbing duration-0' : 'cursor-grab'}`}
+        className={`fixed z-50 ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100'} ${isDragging ? 'cursor-grabbing' : 'transition-all duration-300 cursor-grab'}`}
         style={{ 
           bottom: `${position.bottom}px`, 
           right: `${position.right}px`, 
@@ -230,7 +230,7 @@ export default function AIAssistantWidget() {
         </button>
         <button
           onClick={handleButtonClick}
-          className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-[0_4px_14px_0_rgb(0,118,255,39%)] hover:shadow-[0_6px_20px_rgba(168,85,247,0.5)] hover:scale-110 transition-transform pointer-events-none"
+          className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-[0_4px_14px_0_rgb(0,118,255,39%)] hover:shadow-[0_6px_20px_rgba(168,85,247,0.5)] hover:scale-110 transition-transform"
         >
           <Sparkles className="w-6 h-6 animate-pulse" />
         </button>

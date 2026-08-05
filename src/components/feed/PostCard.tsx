@@ -1,10 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2, FileText, Check } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2, FileText, Check, Eye, EyeOff } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, updatePost, updateComment, Post } from "@/lib/services/posts";
+import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, updatePost, updateComment, toggleCommentVisibility, Post } from "@/lib/services/posts";
 import { getUserById } from "@/lib/services/users";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
@@ -155,6 +155,16 @@ export default function PostCard({ post }: PostCardProps) {
       await deletePost(post.id);
       setIsDeleting(false);
       setShowMenu(false);
+    }
+  };
+
+  const handleToggleCommentVisibility = async (commentId: string, currentIsHidden: boolean) => {
+    if (!profile) return;
+    const res = await toggleCommentVisibility(post.id, commentId, !currentIsHidden);
+    if (res.success) {
+      toast.success(currentIsHidden ? "Comment unhidden" : "Comment hidden");
+    } else {
+      toast.error(res.error || "Failed to update comment");
     }
   };
 
@@ -438,7 +448,11 @@ export default function PostCard({ post }: PostCardProps) {
                             </div>
                           </div>
                         ) : (
-                          <p className="text-sm text-slate-300">{comment.content}</p>
+                          <p className={`text-sm ${comment.isHidden ? 'text-slate-500 italic' : 'text-slate-300'}`}>
+                            {comment.isHidden && (post.userId !== profile?.uid && profile?.role !== 'admin') 
+                              ? "This comment has been hidden." 
+                              : comment.content}
+                          </p>
                         )}
                         <div className="mt-2 pt-1 border-t border-white/5 flex items-center justify-between">
                           <button
@@ -466,6 +480,16 @@ export default function PostCard({ post }: PostCardProps) {
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
+                          )}
+                          {(post.userId === profile?.uid || profile?.role === 'admin') && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCommentVisibility(comment.id, !!comment.isHidden)}
+                              className={`text-xs font-semibold flex items-center gap-1 transition-colors ${comment.isHidden ? 'text-amber-500 hover:text-amber-400' : 'text-slate-500 hover:text-white'}`}
+                              title={comment.isHidden ? "Unhide comment" : "Hide comment"}
+                            >
+                              {comment.isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                            </button>
                           )}
                         </div>
                       </div>
@@ -509,26 +533,42 @@ export default function PostCard({ post }: PostCardProps) {
                                     </div>
                                   </div>
                                 ) : (
-                                  <p className="text-xs text-slate-300">{reply.content}</p>
+                                  <p className={`text-xs ${reply.isHidden ? 'text-slate-500 italic' : 'text-slate-300'}`}>
+                                    {reply.isHidden && (post.userId !== profile?.uid && profile?.role !== 'admin')
+                                      ? "This reply has been hidden."
+                                      : reply.content}
+                                  </p>
                                 )}
-                                {profile?.uid === reply.userId && (
-                                  <div className="mt-1 pt-1 border-t border-white/5 flex justify-end gap-2">
+                                <div className="mt-1 pt-1 border-t border-white/5 flex justify-end gap-2">
+                                  {profile?.uid === reply.userId && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => { setEditingCommentId(reply.id); setEditCommentText(reply.content); }}
+                                        className="text-[10px] font-semibold text-slate-500 hover:text-white transition-colors flex items-center gap-1"
+                                      >
+                                        <Edit2 className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteComment(reply.id)}
+                                        className="text-[10px] font-semibold text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </>
+                                  )}
+                                  {(post.userId === profile?.uid || profile?.role === 'admin') && (
                                     <button
                                       type="button"
-                                      onClick={() => { setEditingCommentId(reply.id); setEditCommentText(reply.content); }}
-                                      className="text-[10px] font-semibold text-slate-500 hover:text-white transition-colors flex items-center gap-1"
+                                      onClick={() => handleToggleCommentVisibility(reply.id, !!reply.isHidden)}
+                                      className={`text-[10px] font-semibold flex items-center gap-1 transition-colors ${reply.isHidden ? 'text-amber-500 hover:text-amber-400' : 'text-slate-500 hover:text-white'}`}
+                                      title={reply.isHidden ? "Unhide reply" : "Hide reply"}
                                     >
-                                      <Edit2 className="w-3 h-3" />
+                                      {reply.isHidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
                                     </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteComment(reply.id)}
-                                      className="text-[10px] font-semibold text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                )}
+                                  )}
+                                </div>
                               </div>
                             </div>
                           );

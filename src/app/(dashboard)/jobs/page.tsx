@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { getJobs, JobListing, JobFilters } from "@/lib/services/jobs";
+import { getJobs, JobListing, JobFilters, applyForJob } from "@/lib/services/jobs";
 import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2, Filter } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
@@ -23,6 +23,8 @@ export default function JobsPage() {
   const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [isApplying, setIsApplying] = useState<string | null>(null);
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
+  const [applyModalJob, setApplyModalJob] = useState<JobListing | null>(null);
+  const [coverLetter, setCoverLetter] = useState("");
 
   const [limitCount, setLimitCount] = useState(10);
   const [hasMore, setHasMore] = useState(true);
@@ -78,7 +80,7 @@ export default function JobsPage() {
     await new Promise(resolve => setTimeout(resolve, 800));
   };
 
-  const handleApply = async (jobId: string, isFeatured?: boolean) => {
+  const handleApply = async (job: JobListing, isFeatured?: boolean) => {
     const isFree = !profile?.subscriptionTier || profile.subscriptionTier === 'free';
     
     if (isFree && (appliedJobIds.size >= 2 || isFeatured)) {
@@ -86,14 +88,27 @@ export default function JobsPage() {
       return;
     }
 
-    setIsApplying(jobId);
-    // Simulate application process
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setAppliedJobIds(prev => {
-      const newSet = new Set(prev);
-      newSet.add(jobId);
-      return newSet;
-    });
+    setApplyModalJob(job);
+  };
+
+  const submitApplication = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !applyModalJob) return;
+
+    setIsApplying(applyModalJob.id);
+    const res = await applyForJob(applyModalJob.id, profile.uid, { coverLetter });
+    
+    if (res.success) {
+      setAppliedJobIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(applyModalJob.id);
+        return newSet;
+      });
+      setApplyModalJob(null);
+      setCoverLetter("");
+    } else {
+      // Could show error toast here
+    }
     setIsApplying(null);
   };
 
@@ -273,7 +288,7 @@ export default function JobsPage() {
                         </button>
                       ) : (
                         <button 
-                          onClick={() => handleApply(job.id)}
+                          onClick={() => handleApply(job)}
                           disabled={isApplying === job.id}
                           className="flex-1 py-3 rounded-xl bg-brand/10 text-brand font-bold hover:bg-brand hover:text-white transition-all flex items-center justify-center gap-2 border border-brand/20 hover:border-transparent disabled:opacity-50"
                         >
@@ -319,6 +334,53 @@ export default function JobsPage() {
           title="Unlock Unlimited Job Applications"
           description="Free tier members are limited to 2 job applications per session. Upgrade to Pro or Elite for unlimited job applications and priority routing!"
         />
+
+        {/* Apply Modal */}
+        {applyModalJob && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-[#1C1C1E] rounded-2xl max-w-lg w-full border border-gray-800 shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-gray-800 flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl font-bold text-white mb-1">Apply for {applyModalJob.title}</h2>
+                  <p className="text-gray-400 text-sm">at {applyModalJob.company}</p>
+                </div>
+                <button onClick={() => setApplyModalJob(null)} className="text-gray-500 hover:text-white">
+                  ×
+                </button>
+              </div>
+              <form onSubmit={submitApplication} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Cover Letter (Optional)</label>
+                  <textarea
+                    value={coverLetter}
+                    onChange={(e) => setCoverLetter(e.target.value)}
+                    placeholder="Tell the employer why you're a great fit..."
+                    rows={4}
+                    className="w-full px-4 py-3 bg-[#2C2C2E] border border-gray-700 rounded-xl text-white focus:outline-none focus:border-brand resize-none"
+                  ></textarea>
+                </div>
+                <div className="bg-gray-800/50 p-4 rounded-xl flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-brand shrink-0 mt-0.5" />
+                  <p className="text-sm text-gray-300">
+                    Your Rhockstar Connect profile and uploaded resume will be automatically attached to this application.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button type="button" onClick={() => setApplyModalJob(null)} className="px-5 py-2 text-gray-400 hover:text-white font-medium transition-colors">
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isApplying === applyModalJob.id}
+                    className="px-6 py-2 bg-brand text-white font-bold rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isApplying === applyModalJob.id ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Application"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </PullToRefresh>
   );
