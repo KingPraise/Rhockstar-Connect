@@ -13,6 +13,7 @@ import { useLightboxStore } from "@/store/useLightboxStore";
 import toast from "react-hot-toast";
 
 import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 
 interface PostCardProps {
   post: Post;
@@ -231,7 +232,10 @@ export default function PostCard({ post }: PostCardProps) {
             )}
           </div>
           <div>
-            <h4 className="font-bold text-white group-hover:text-brand transition-colors">{post.user.name}</h4>
+            <h4 className="font-bold text-white group-hover:text-brand transition-colors flex items-center gap-1.5">
+              <span>{post.user.name}</span>
+              <VerifiedBadge tier={(post.user as any)?.subscriptionTier} />
+            </h4>
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <span>@{post.user.handle}</span>
               <span>•</span>

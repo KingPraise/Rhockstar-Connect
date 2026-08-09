@@ -5,8 +5,11 @@ import { usePathname } from "next/navigation";
 import { Home, Heart, Briefcase, MessageSquare, User } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
+import { useAuthStore } from "@/store/useAuthStore";
+
 export default function MobileNav() {
   const pathname = usePathname();
+  const { unreadMessages } = useAuthStore();
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
 
@@ -70,7 +73,14 @@ export default function MobileNav() {
                   isDating ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,1)]" : "bg-brand shadow-[0_0_10px_rgba(56,189,248,1)]"
                 }`} />
               )}
-              <item.icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-110' : ''} ${isDating && isActive ? 'fill-rose-500/20' : ''}`} />
+              <div className="relative">
+                <item.icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-110' : ''} ${isDating && isActive ? 'fill-rose-500/20' : ''}`} />
+                {item.href === '/messages' && unreadMessages > 0 && (
+                  <span className="absolute -top-1 -right-2 min-w-[16px] h-[16px] flex items-center justify-center bg-brand text-[9px] font-bold text-white rounded-full px-1 border border-slate-900 shadow-md">
+                    {unreadMessages > 99 ? '99+' : unreadMessages}
+                  </span>
+                )}
+              </div>
               <span className="text-[10px] font-bold">{item.name}</span>
             </Link>
           );

@@ -12,8 +12,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { formatDistanceToNow } from "date-fns";
 
+import { useSearchParams } from "next/navigation";
+
 export default function MessagesPage() {
   const { profile } = useAuthStore();
+  const searchParams = useSearchParams();
+  const targetUserParam = searchParams.get('user') || searchParams.get('uid');
   
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
@@ -155,6 +159,17 @@ export default function MessagesPage() {
 
     return () => unsubscribe();
   }, [profile?.uid]);
+
+  useEffect(() => {
+    if (!targetUserParam || !profile?.uid) return;
+    const initChatWithUser = async () => {
+      const res = await getOrCreateChat(profile.uid, targetUserParam);
+      if (res.success && res.chat) {
+        setActiveChat(res.chat);
+      }
+    };
+    initChatWithUser();
+  }, [targetUserParam, profile?.uid]);
 
   useEffect(() => {
     if (!activeChat || !profile?.uid) return;

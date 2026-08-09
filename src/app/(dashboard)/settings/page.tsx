@@ -11,19 +11,33 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { logoutUser } from "@/lib/auth";
 
+import LogoutConfirmModal from "@/components/auth/LogoutConfirmModal";
+import { AlertTriangle, Trash2, X } from "lucide-react";
+
 export default function SettingsPage() {
   const { user, profile, logout, aiWidgetVisible, setAiWidgetVisible } = useAuthStore();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleLogout = async () => {
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE MY ACCOUNT" || !profile?.uid) return;
+    setIsDeleting(true);
     try {
+      const { deleteDoc, doc } = await import("firebase/firestore");
+      const { db } = await import("@/lib/firebase");
+      await deleteDoc(doc(db, "users", profile.uid));
       await logoutUser();
       logout();
-      router.push('/login');
+      toast.success("Your account has been deleted");
+      router.push("/register");
     } catch (error) {
-      toast.error("Failed to log out");
+      toast.error("Failed to delete account");
     }
+    setIsDeleting(false);
   };
 
   const tabs = [
@@ -151,7 +165,7 @@ export default function SettingsPage() {
                 </div>
 
               {/* Employer Status */}
-              {(profile?.role === 'employer' || profile?.role === 'admin') && (
+              {(profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (
                 <div className="pt-8 border-t border-white/10 space-y-4">
                   <h3 className="text-xl font-bold text-white">Employer Account</h3>
                   <div className="bg-gradient-to-r from-emerald-900/40 to-slate-800 p-6 rounded-2xl border border-emerald-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -171,7 +185,7 @@ export default function SettingsPage() {
               )}
 
               {/* Employer Upgrade */}
-              {profile?.role !== 'employer' && profile?.role !== 'admin' && (
+              {profile?.accountType !== 'employer' && profile?.role !== 'admin' && (profile as any)?.role !== 'employer' && (
                 <div className="pt-8 border-t border-white/10 space-y-4">
                   <h3 className="text-xl font-bold text-white">Employer Account</h3>
                   <div className="bg-gradient-to-r from-blue-900/40 to-slate-800 p-6 rounded-2xl border border-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -198,7 +212,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
-            </div>
             </div>
           )}
 
@@ -257,17 +270,77 @@ export default function SettingsPage() {
                   
                   <div className="flex flex-col sm:flex-row gap-4">
                     <button 
-                      onClick={handleLogout}
+                      onClick={() => setShowLogoutModal(true)}
                       className="bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-800 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
                       <LogOut className="w-5 h-5" />
                       Logout Account
                     </button>
                     
-                    <button className="bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors">
+                    <button 
+                      onClick={() => setShowDeleteModal(true)}
+                      className="bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-5 h-5" />
                       Delete Account
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Logout Modal */}
+          <LogoutConfirmModal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} />
+
+          {/* Delete Account Modal */}
+          {showDeleteModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+              <div className="neo-card bg-slate-900 border border-rose-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center mx-auto">
+                  <AlertTriangle className="w-7 h-7" />
+                </div>
+
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-extrabold text-white">Delete Account Permanent</h2>
+                  <p className="text-sm text-slate-400">This action cannot be undone. All your posts, connection data, and settings will be removed permanently.</p>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-slate-300">
+                    To confirm, please type <span className="text-rose-500 font-mono select-all">&quot;DELETE MY ACCOUNT&quot;</span> below:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="DELETE MY ACCOUNT"
+                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-rose-500 font-mono"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 py-3 px-5 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 font-bold text-sm transition-colors border border-white/5"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmText !== "DELETE MY ACCOUNT" || isDeleting}
+                    className="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-800 text-white font-bold text-sm shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {isDeleting ? "Deleting..." : "Permanently Delete"}
+                  </button>
                 </div>
               </div>
             </div>

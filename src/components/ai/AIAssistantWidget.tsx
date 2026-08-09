@@ -124,7 +124,7 @@ export default function AIAssistantWidget() {
       const diffX = dragRef.current.startX - clientX;
       const diffY = dragRef.current.startY - clientY;
       
-      if (Math.abs(diffX) > 5 || Math.abs(diffY) > 5) {
+      if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) {
         dragRef.current.hasMoved = true;
       }
       
@@ -171,7 +171,6 @@ export default function AIAssistantWidget() {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('touchmove', handleMouseMove);
-      window.removeEventListener('touchmove', handleMouseUp); // Fix typo in original cleanup
       window.removeEventListener('touchend', handleMouseUp);
     };
   }, [isDragging]);
@@ -191,7 +190,8 @@ export default function AIAssistantWidget() {
     dragRef.current.startBottom = position.bottom;
   };
 
-  const handleButtonClick = () => {
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     resetOpacityTimer();
     if (!dragRef.current.hasMoved) {
       setIsOpen(true);

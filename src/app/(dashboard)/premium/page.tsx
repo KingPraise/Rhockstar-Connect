@@ -3,49 +3,49 @@
 import { Check, Crown, Star, Shield, Zap, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { updateUserProfile } from "@/lib/services/users";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
+import CurrencySelector from "@/components/ui/CurrencySelector";
+import { useCurrencyStore } from "@/store/useCurrencyStore";
+
 export default function PremiumPage() {
   const { profile, setProfile } = useAuthStore();
-  const router = useRouter();
-  const [processingTier, setProcessingTier] = useState<string | null>(null);
+  const { formatPrice } = useCurrencyStore();
+  const [processingTier, setProcessingTier] = useState<'pro' | 'elite' | null>(null);
 
   const handleSubscribe = async (tier: 'pro' | 'elite') => {
-    if (!profile) return;
+    if (!profile?.uid) return;
     setProcessingTier(tier);
-
     try {
-      // Mock payment delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
+      const { updateUserProfile } = await import('@/lib/services/users');
       const res = await updateUserProfile(profile.uid, {
         subscriptionTier: tier,
-        subscriptionStatus: "active"
+        subscriptionStatus: 'active'
       });
-
       if (res.success) {
-        setProfile({ ...profile, subscriptionTier: tier } as any);
-        toast.success(`Successfully upgraded to ${tier.toUpperCase()}!`);
-        router.push('/feed');
+        setProfile({ ...profile, subscriptionTier: tier, subscriptionStatus: 'active' } as any);
+        toast.success(`Successfully upgraded to ${tier.toUpperCase()} plan!`);
       } else {
-        toast.error("Failed to process subscription.");
+        toast.error("Failed to upgrade plan.");
       }
     } catch (error) {
-      console.error("Subscription error:", error);
-      toast.error("Failed to process subscription.");
-    } finally {
-      setProcessingTier(null);
+      toast.error("An error occurred during upgrade.");
     }
+    setProcessingTier(null);
   };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-10 pb-20">
+    <div className="max-w-5xl mx-auto space-y-12 py-8 px-4">
       
       {/* HEADER */}
-      <div className="text-center max-w-2xl mx-auto space-y-4 pt-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400/20 to-amber-600/20 border border-amber-500/20 shadow-[0_0_30px_rgba(245,158,11,0.3)] mb-4">
-          <Crown className="w-8 h-8 text-amber-500" />
+      <div className="text-center space-y-4 max-w-2xl mx-auto relative">
+        <div className="flex justify-center mb-2">
+          <CurrencySelector />
+        </div>
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+          <Crown className="w-4 h-4" />
+          Rhockstar Connect Membership
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Upgrade to <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">Premium</span></h1>
         <p className="text-lg text-slate-400">Unlock the full power of Rhockstar Connect. Get verified, increase your visibility, and build meaningful relationships faster.</p>
@@ -63,7 +63,7 @@ export default function PremiumPage() {
           <p className="text-slate-400 text-sm mb-6 h-10">Essential tools to stand out and connect.</p>
           
           <div className="mb-8">
-            <span className="text-4xl font-extrabold text-white">₦2,000</span>
+            <span className="text-4xl font-extrabold text-white">{formatPrice(2)}</span>
             <span className="text-slate-500 font-medium"> / month</span>
           </div>
           
@@ -110,7 +110,7 @@ export default function PremiumPage() {
           <p className="text-brand-purple/80 text-sm mb-6 h-10">Ultimate visibility for serious networking & dating.</p>
           
           <div className="mb-8">
-            <span className="text-4xl font-extrabold text-white">₦5,000</span>
+            <span className="text-4xl font-extrabold text-white">{formatPrice(5)}</span>
             <span className="text-slate-400 font-medium"> / month</span>
           </div>
           

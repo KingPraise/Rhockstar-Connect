@@ -79,11 +79,11 @@ export default function Home() {
             <div className="relative rounded-3xl overflow-hidden neo-card border border-white/10 shadow-[0_0_50px_rgba(56,189,248,0.2)] animate-float">
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-10" />
               <Image 
-                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1000&q=80" 
-                alt="Professionals connecting" 
+                src="/images/landing_networking.jpg" 
+                alt="Rhockstar Connect Digital Network" 
                 width={1000}
-                height={800}
-                className="w-full h-auto object-cover opacity-80"
+                height={600}
+                className="w-full h-auto object-cover opacity-90"
               />
               
               <div className="absolute bottom-6 left-6 right-6 z-20 space-y-3">
@@ -117,28 +117,72 @@ export default function Home() {
           
         {/* FEATURES */}
         <section id="features" className="mt-40">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">Why Choose Rhockstar Connect?</h2>
+          <div className="text-center mb-16 space-y-4">
+            <h2 className="text-4xl font-bold">Why Choose Rhockstar Connect?</h2>
+            <p className="text-slate-400 max-w-xl mx-auto text-sm">Everything you need to network, grow your career, and build lasting connections.</p>
             <div className="h-1 w-20 bg-gradient-to-r from-brand to-brand-purple mx-auto rounded-full" />
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
-              { icon: "🌐", title: "Networking", desc: "Meet professionals, entrepreneurs and like-minded people." },
-              { icon: "💼", title: "Job Board", desc: "Find internships, remote work and full-time career opportunities." },
-              { icon: "💬", title: "Messaging", desc: "Chat securely with your connections anytime." },
-              { icon: "👤", title: "Professional Profile", desc: "Showcase your skills, achievements and experience." },
-              { icon: "📢", title: "Community Feed", desc: "Share updates, ideas and engage with the community." },
-              { icon: "🔒", title: "Secure Platform", desc: "Your information is protected with modern security practices." },
+              { 
+                icon: "🌐", 
+                title: "Professional Networking", 
+                desc: "Meet professionals, entrepreneurs and like-minded individuals in a vibrant ecosystem.",
+                image: "/images/landing_networking.jpg"
+              },
+              { 
+                icon: "💼", 
+                title: "Curated Job Board", 
+                desc: "Find verified remote jobs, internships, and high-paying full-time career opportunities.",
+                image: "/images/landing_job_board.jpg"
+              },
+              { 
+                icon: "💬", 
+                title: "Real-Time Messaging", 
+                desc: "Chat securely with your connections, share documents, voice notes, and media instantly.",
+                image: "/images/landing_messaging.jpg"
+              },
+              { 
+                icon: "👤", 
+                title: "Professional Profile", 
+                desc: "Showcase your skills, achievements, portfolio, and verified badges to stand out.",
+                image: "/images/landing_networking.jpg"
+              },
+              { 
+                icon: "📢", 
+                title: "Community Feed", 
+                desc: "Share updates, exchange industry insights, and engage with professional discussions.",
+                image: "/images/landing_messaging.jpg"
+              },
+              { 
+                icon: "🔒", 
+                title: "Secure & Encrypted", 
+                desc: "Your data and privacy are protected with modern encryption and security standards.",
+                image: "/images/landing_job_board.jpg"
+              },
             ].map((feature, i) => (
-              <div key={i} className="neo-card p-8 group hover:border-brand/30 transition-all">
-                <div className="w-14 h-14 rounded-2xl neo-card bg-slate-800/50 flex items-center justify-center text-2xl mb-6 shadow-inner group-hover:scale-110 transition-transform">
-                  {feature.icon}
+              <div key={i} className="neo-card overflow-hidden group hover:border-brand/30 transition-all flex flex-col">
+                <div className="h-44 w-full relative overflow-hidden bg-slate-800">
+                  <Image 
+                    src={feature.image} 
+                    alt={feature.title} 
+                    fill 
+                    className="object-cover group-hover:scale-105 transition-transform duration-500 opacity-80 group-hover:opacity-100" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+                  <div className="absolute top-4 left-4 w-10 h-10 rounded-xl neo-card bg-slate-900/80 backdrop-blur-md flex items-center justify-center text-xl shadow-lg">
+                    {feature.icon}
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-slate-400 leading-relaxed text-sm">
-                  {feature.desc}
-                </p>
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold mb-2 text-white group-hover:text-brand transition-colors">{feature.title}</h3>
+                    <p className="text-slate-400 leading-relaxed text-sm">
+                      {feature.desc}
+                    </p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

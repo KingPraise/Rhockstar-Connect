@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuthStore } from "@/lib/store/authStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { getJobs, JobListing, createJob } from "@/lib/services/jobs";
 import { Plus, Briefcase, Users, Activity, Eye, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -44,6 +44,7 @@ export default function EmployerDashboardPage() {
     
     const res = await createJob({
       title,
+      company: profile.fullName || "Company",
       location,
       type,
       salary,
@@ -64,7 +65,7 @@ export default function EmployerDashboardPage() {
     setSubmitting(false);
   };
 
-  if (!profile || (profile.role !== 'employer' && profile.role !== 'admin')) {
+  if (!profile || (profile.accountType !== 'employer' && profile.role !== 'admin' && (profile as any).role !== 'employer')) {
     return (
       <div className="max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[50vh]">
         <Briefcase className="h-16 w-16 text-gray-400 mb-4" />

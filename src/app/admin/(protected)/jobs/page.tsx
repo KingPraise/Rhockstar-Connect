@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { getJobs, JobListing, createJob } from "@/lib/services/jobs";
 import { Plus, Briefcase, Trash2 } from "lucide-react";
-import { useAuthStore } from "@/lib/store/authStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "react-hot-toast";
 
 export default function AdminJobsPage() {
@@ -43,6 +43,7 @@ export default function AdminJobsPage() {
     // Admin posts job on behalf of another company
     const res = await createJob({
       title,
+      company: company || "Rhockstar Connect",
       location,
       type,
       salary,

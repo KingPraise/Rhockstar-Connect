@@ -25,15 +25,16 @@ export interface ConnectionRequest {
 
 export const sendConnectionRequest = async (fromUserId: string, toUserId: string) => {
   try {
-    // Check if already sent
     const connRef = collection(db, 'connections');
-    const q = query(connRef, 
-      where('fromUserId', '==', fromUserId),
-      where('toUserId', '==', toUserId)
-    );
-    const existing = await getDocs(q);
-    if (!existing.empty) {
-      return { success: false, error: "Request already exists" };
+    
+    // Check both directions
+    const q1 = query(connRef, where('fromUserId', '==', fromUserId), where('toUserId', '==', toUserId));
+    const q2 = query(connRef, where('fromUserId', '==', toUserId), where('toUserId', '==', fromUserId));
+    
+    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+    
+    if (!snap1.empty || !snap2.empty) {
+      return { success: false, error: "Request or connection already exists" };
     }
 
     const data = {

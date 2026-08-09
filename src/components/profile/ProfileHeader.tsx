@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock, Settings, Check, Loader2, UserPlus } from "lucide-react";
+import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock, Settings, Check, Loader2, UserPlus, MessageSquare } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -113,13 +113,22 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
           ) : (
             <>
               {connectionStatus === 'accepted' ? (
-                <button 
-                  disabled
-                  className="py-2.5 px-6 rounded-xl bg-slate-800 text-brand font-bold text-sm flex items-center gap-2 border border-brand/20 shadow-[inset_0_0_15px_rgba(56,189,248,0.1)]"
-                >
-                  <Users className="w-4 h-4" />
-                  Connected
-                </button>
+                <div className="flex items-center gap-3">
+                  <Link 
+                    href={`/messages?user=${profile.uid}`}
+                    className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:scale-105"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Message
+                  </Link>
+                  <button 
+                    disabled
+                    className="py-2.5 px-6 rounded-xl bg-slate-800 text-brand font-bold text-sm flex items-center gap-2 border border-brand/20 shadow-[inset_0_0_15px_rgba(56,189,248,0.1)]"
+                  >
+                    <Users className="w-4 h-4" />
+                    Connected
+                  </button>
+                </div>
               ) : connectionStatus === 'pending' ? (
                 <button 
                   disabled

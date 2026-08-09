@@ -26,7 +26,7 @@ import { useSearchStore } from "@/store/useSearchStore";
 import { logoutUser } from "@/lib/auth";
 
 export default function Sidebar() {
-  const { profile, logout, unreadNotifications } = useAuthStore();
+  const { profile, logout, unreadNotifications, unreadMessages } = useAuthStore();
   const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
@@ -43,7 +43,7 @@ export default function Sidebar() {
     { name: "Feed", href: "/feed", icon: Home },
     { name: "Network", href: "/network", icon: Users },
     { name: "Jobs", href: "/jobs", icon: Briefcase },
-    { name: "Messages", href: "/messages", icon: MessageSquare },
+    { name: "Messages", href: "/messages", icon: MessageSquare, badge: unreadMessages > 0 ? unreadMessages.toString() : undefined },
     { name: "Dating", href: "/dating", icon: Heart },
     { name: "Notifications", href: "/notifications", icon: Bell, badge: unreadNotifications > 0 ? unreadNotifications.toString() : undefined },
   ].filter(item => !(item.name === "Dating" && profile?.accountType === 'employer'));

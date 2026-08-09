@@ -26,16 +26,24 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { logoutUser } from "@/lib/auth";
 
+import LogoutConfirmModal from "@/components/auth/LogoutConfirmModal";
+
 export default function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const lastScrollY = useRef(0);
   
-  const { profile, logout, unreadNotifications } = useAuthStore();
+  const { profile, logout, unreadNotifications, unreadMessages } = useAuthStore();
   const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
+
+  const handleLogoutClick = () => {
+    setIsOpen(false);
+    setShowLogoutModal(true);
+  };
 
   useEffect(() => {
     const handleScroll = (e: Event) => {
@@ -116,6 +124,19 @@ export default function MobileHeader() {
         </Link>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/messages"
+            className="relative p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-white/5 active:scale-95 transition-all"
+            aria-label="Messages"
+          >
+            <MessageSquare className="w-5 h-5" />
+            {unreadMessages > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-brand text-[10px] font-bold text-white rounded-full px-1 border-2 border-slate-900 animate-in zoom-in">
+                {unreadMessages > 99 ? '99+' : unreadMessages}
+              </span>
+            )}
+          </Link>
+
           <Link
             href="/notifications"
             className="relative p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-white/5 active:scale-95 transition-all"
@@ -291,6 +312,13 @@ export default function MobileHeader() {
                       </Link>
                     );
                   })}
+                  <button
+                    onClick={handleLogoutClick}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-transparent transition-all mt-2"
+                  >
+                    <LogOut className="w-5 h-5" />
+                    <span>Logout</span>
+                  </button>
                 </div>
               </div>
 
@@ -311,6 +339,9 @@ export default function MobileHeader() {
           </div>
         </div>
       )}
+
+      {/* Logout Confirmation Modal for Mobile */}
+      <LogoutConfirmModal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} />
     </>
   );
 }

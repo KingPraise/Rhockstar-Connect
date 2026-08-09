@@ -4,17 +4,22 @@ import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { getFeedPosts, Post } from "@/lib/services/posts";
-import { Search as SearchIcon, Users, FileText, Loader2, ArrowRight } from "lucide-react";
+import { getUserConnections, sendConnectionRequest, ConnectionRequest } from "@/lib/services/connections";
+import { Search as SearchIcon, Users, FileText, Loader2, ArrowRight, UserPlus, Check, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import PostCard from "@/components/feed/PostCard";
 import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import toast from "react-hot-toast";
 
 export default function SearchPage() {
   const { profile } = useAuthStore();
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState<UserBasic[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [connections, setConnections] = useState<ConnectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string[]>([]);
   
   const [filteredUsers, setFilteredUsers] = useState<UserBasic[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
@@ -33,10 +38,43 @@ export default function SearchPage() {
       if (postsRes.success && postsRes.posts) {
         setPosts(postsRes.posts);
       }
+
+      if (profile?.uid) {
+        const connRes = await getUserConnections(profile.uid);
+        if (connRes.success && connRes.connections) {
+          setConnections(connRes.connections);
+        }
+      }
       setLoading(false);
     };
     fetchData();
-  }, []);
+  }, [profile?.uid]);
+
+  const handleConnect = async (toUserId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!profile?.uid) return;
+    setActionLoading(prev => [...prev, toUserId]);
+    const res = await sendConnectionRequest(profile.uid, toUserId);
+    if (res.success) {
+      toast.success("Connection request sent!");
+      const connRes = await getUserConnections(profile.uid);
+      if (connRes.success && connRes.connections) {
+        setConnections(connRes.connections);
+      }
+    } else {
+      toast.error(res.error || "Failed to send request");
+    }
+    setActionLoading(prev => prev.filter(id => id !== toUserId));
+  };
+
+  const getStatusForUser = (userId: string) => {
+    const userConns = connections.filter(c => c.fromUserId === userId || c.toUserId === userId);
+    if (userConns.length === 0) return 'none';
+    if (userConns.some(c => c.status === 'accepted')) return 'connected';
+    if (userConns.some(c => c.status === 'pending')) return 'pending';
+    return 'none';
+  };
 
   useEffect(() => {
     if (!query.trim()) {
@@ -113,22 +151,65 @@ export default function SearchPage() {
                   People
                 </h2>
                 <div className="grid gap-4">
-                  {filteredUsers.map(user => (
-                    <Link 
-                      key={user.uid} 
-                      href={`/profile?uid=${user.uid}`}
-                      className="neo-card bg-slate-900/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4 hover:border-brand/30 hover:bg-slate-800/60 transition-all group"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-white shadow-lg shrink-0">
-                        {user.avatar}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-white group-hover:text-brand transition-colors truncate">{user.fullName}</h3>
-                        <p className="text-sm text-slate-400 truncate">@{user.username}</p>
-                      </div>
-                      <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-white transition-colors" />
-                    </Link>
-                  ))}
+                  {filteredUsers.map(user => {
+                    const status = getStatusForUser(user.uid);
+                    const isOwn = profile?.uid === user.uid;
+                    const isLoading = actionLoading.includes(user.uid);
+
+                    return (
+                      <Link 
+                        key={user.uid} 
+                        href={`/profile?uid=${user.uid}`}
+                        className="neo-card bg-slate-900/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4 hover:border-brand/30 hover:bg-slate-800/60 transition-all group"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-white shadow-lg shrink-0 overflow-hidden">
+                          {user.avatar?.startsWith('http') || user.avatar?.startsWith('/') ? (
+                            <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+                          ) : (
+                            user.avatar || user.fullName.substring(0, 2).toUpperCase()
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-white group-hover:text-brand transition-colors truncate flex items-center gap-1.5">
+                            <span>{user.fullName}</span>
+                            <VerifiedBadge tier={user.subscriptionTier} />
+                          </h3>
+                          <p className="text-sm text-slate-400 truncate">@{user.username}</p>
+                        </div>
+                        
+                        {!isOwn && (
+                          <div className="shrink-0" onClick={e => e.stopPropagation()}>
+                            {status === 'connected' ? (
+                              <Link
+                                href={`/messages?user=${user.uid}`}
+                                className="px-3 py-1.5 rounded-xl bg-brand/10 hover:bg-brand/20 text-brand font-bold text-xs flex items-center gap-1 border border-brand/20 transition-all"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5" />
+                                Message
+                              </Link>
+                            ) : status === 'pending' ? (
+                              <button
+                                disabled
+                                className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs flex items-center gap-1 border border-white/10"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                Pending
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => handleConnect(user.uid, e)}
+                                disabled={isLoading}
+                                className="px-3 rounded-xl py-1.5 bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-xs flex items-center gap-1 shadow-md hover:scale-105 transition-all disabled:opacity-50"
+                              >
+                                {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                                Connect
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             )}

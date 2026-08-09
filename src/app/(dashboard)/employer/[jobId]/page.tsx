@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuthStore } from "@/lib/store/authStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import { getApplicationsForJob, JobApplication } from "@/lib/services/jobs";
 import { ArrowLeft, User, FileText, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
@@ -31,7 +31,7 @@ export default function EmployerJobApplicantsPage() {
     setLoading(false);
   };
 
-  if (!profile || (profile.role !== 'employer' && profile.role !== 'admin')) {
+  if (!profile || (profile.accountType !== 'employer' && profile.role !== 'admin' && (profile as any).role !== 'employer')) {
     return (
       <div className="max-w-[1600px] mx-auto p-8 text-center text-gray-500">
         Unauthorized access
