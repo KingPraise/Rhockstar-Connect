@@ -10,6 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://rhockstarconnect.netlify.app'),
   title: "Rhockstar Connect | Professional Networking & Meaningful Relationships",
   description: "Join Rhockstar Connect to build professional networks, find job opportunities, and create meaningful personal relationships in a premium ecosystem.",
   keywords: "networking, jobs, career, dating, relationship, professionals, community",
@@ -23,9 +24,10 @@ export const metadata: Metadata = {
     siteName: "Rhockstar Connect",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "https://rhockstarconnect.netlify.app/og-image.jpg",
         width: 1792,
         height: 1024,
+        alt: "Rhockstar Connect Preview",
       },
     ],
     locale: "en_US",
