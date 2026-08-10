@@ -1,9 +1,12 @@
 "use client";
 
-import { BookOpen, GraduationCap, FileText, Target, PlayCircle, ExternalLink } from "lucide-react";
+import { BookOpen, GraduationCap, FileText, Target, PlayCircle, ExternalLink, Sparkles, Crown } from "lucide-react";
 import Link from "next/link";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function CareerHubPage() {
+  const { profile } = useAuthStore();
+  const isPro = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
   const categories = [
     {
       title: "CV Writing",
@@ -93,15 +96,32 @@ export default function CareerHubPage() {
         ))}
       </div>
 
-      {/* Pro Upsell */}
-      <div className="mt-12 bg-gradient-to-r from-brand/10 to-brand-purple/10 border border-brand/20 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      {/* Pro / AI Assistant Banner */}
+      <div className={`mt-12 p-8 rounded-3xl border flex flex-col md:flex-row items-center justify-between gap-6 ${
+        isPro 
+          ? 'bg-gradient-to-r from-emerald-500/10 via-brand/10 to-brand-purple/10 border-emerald-500/30' 
+          : 'bg-gradient-to-r from-brand/10 to-brand-purple/10 border-brand/20'
+      }`}>
         <div>
-          <h3 className="text-xl font-bold text-white mb-2">Want personalized career advice?</h3>
-          <p className="text-slate-400">Upgrade to Pro to unlock AI Resume Reviews and Interview Prep tailored just for you.</p>
+          <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+            <span>{isPro ? "AI Resume & Interview Assistant Unlocked" : "Want personalized career advice?"}</span>
+            {isPro ? <Crown className="w-5 h-5 text-emerald-400" /> : <Sparkles className="w-5 h-5 text-brand" />}
+          </h3>
+          <p className="text-slate-400 text-sm">
+            {isPro 
+              ? "As a Premium member, ask our AI Assistant anytime for personalized CV reviews, interview simulation, and salary tips." 
+              : "Upgrade to Pro to unlock AI Resume Reviews and Interview Prep tailored just for you."}
+          </p>
         </div>
-        <Link href="/premium" className="shrink-0 px-8 py-3 bg-brand text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(56,189,248,0.3)]">
-          Upgrade to Pro
-        </Link>
+        {isPro ? (
+          <div className="shrink-0 px-6 py-3 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-extrabold rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+            <Sparkles className="w-4 h-4" /> AI Active
+          </div>
+        ) : (
+          <Link href="/premium" className="shrink-0 px-8 py-3 bg-brand text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(56,189,248,0.3)]">
+            Upgrade to Pro
+          </Link>
+        )}
       </div>
     </div>
   );

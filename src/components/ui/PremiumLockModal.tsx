@@ -3,6 +3,7 @@
 import { Crown, Lock, Sparkles, CheckCircle2, ArrowRight, Gift, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface PremiumLockModalProps {
   isOpen: boolean;
@@ -25,8 +26,15 @@ export default function PremiumLockModal({
   ]
 }: PremiumLockModalProps) {
   const router = useRouter();
+  const { profile } = useAuthStore();
 
   if (!isOpen) return null;
+
+  const buttonText = profile?.subscriptionTier === 'pro'
+    ? 'Upgrade to Elite ($5/mo)'
+    : profile?.subscriptionTier === 'elite'
+    ? 'Manage Membership'
+    : 'Upgrade to Premium ($2/mo)';
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -73,7 +81,7 @@ export default function PremiumLockModal({
             }}
             className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black text-sm shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
           >
-            <span>Upgrade to Premium</span>
+            <span>{buttonText}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
 
