@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Loader2, Users, UserPlus, Check, X, Search, Lock, Filter, Inbox, Send, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
+import UserAvatar from "@/components/ui/UserAvatar";
 import toast from "react-hot-toast";
 
 type TabId = 'discover' | 'my-connections' | 'invitations' | 'sent-requests';
@@ -271,9 +272,12 @@ export default function NetworkPage() {
             return (
               <div key={user.uid} className="neo-card p-5 rounded-2xl bg-slate-900/60 border border-white/5 flex flex-col group hover:-translate-y-1 transition-all duration-300">
                 <Link href={`/profile?uid=${user.uid}`} className="flex items-start gap-4 w-full group/profile mb-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg shrink-0 ring-2 ring-transparent group-hover/profile:ring-brand/50 transition-all">
-                    <span className="text-xl font-bold text-white">{user.avatar}</span>
-                  </div>
+                  <UserAvatar 
+                    src={user.avatar} 
+                    name={user.fullName} 
+                    className="w-16 h-16 ring-2 ring-transparent group-hover/profile:ring-brand/50 transition-all" 
+                    textClassName="text-xl font-bold" 
+                  />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-bold text-white truncate group-hover/profile:text-brand transition-colors">{user.fullName}</h3>
                     <p className="text-sm text-slate-400 truncate group-hover/profile:text-white transition-colors">@{user.username}</p>

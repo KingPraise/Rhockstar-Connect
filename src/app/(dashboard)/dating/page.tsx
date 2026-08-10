@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import { useLightboxStore } from "@/store/useLightboxStore";
 import { Skeleton } from "@/components/ui/Skeleton";
+import UserAvatar from "@/components/ui/UserAvatar";
 import toast from "react-hot-toast";
 
 export default function DatingPage() {
@@ -249,13 +250,7 @@ export default function DatingPage() {
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.3)] overflow-hidden">
-                          {currentProspect.avatar?.startsWith('http') || currentProspect.avatar?.startsWith('/') ? (
-                            <img src={currentProspect.avatar} alt={currentProspect.fullName} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-5xl font-extrabold text-white">{currentProspect.avatar}</span>
-                          )}
-                        </div>
+                        <UserAvatar src={currentProspect.avatar} name={currentProspect.fullName} className="w-32 h-32" textClassName="text-5xl font-extrabold" />
                       </div>
                     )}
                     
@@ -395,7 +390,7 @@ export default function DatingPage() {
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                    <span className="text-4xl font-extrabold text-white opacity-50">{prospect.avatar}</span>
+                    <UserAvatar src={prospect.avatar} name={prospect.fullName} className="w-24 h-24 opacity-80" textClassName="text-4xl font-extrabold" />
                   </div>
                 )}
                 

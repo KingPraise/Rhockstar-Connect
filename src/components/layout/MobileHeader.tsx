@@ -27,6 +27,7 @@ import { useSearchStore } from "@/store/useSearchStore";
 import { logoutUser } from "@/lib/auth";
 
 import LogoutConfirmModal from "@/components/auth/LogoutConfirmModal";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export default function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
@@ -186,13 +187,7 @@ export default function MobileHeader() {
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 border border-white/10 hover:border-brand/30 transition-all"
               >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-white text-lg shadow-md shrink-0">
-                  {profile?.avatar ? (
-                    <img src={profile.avatar} alt="" className="w-full h-full object-cover rounded-xl" />
-                  ) : (
-                    profile?.fullName?.charAt(0) || 'U'
-                  )}
-                </div>
+                <UserAvatar src={profile?.avatar} name={profile?.fullName} className="w-12 h-12 rounded-xl" textClassName="text-lg font-bold" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="text-base font-bold text-white truncate">{profile?.fullName || 'User'}</p>

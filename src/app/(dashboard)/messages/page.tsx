@@ -10,6 +10,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { formatDistanceToNow } from "date-fns";
 
 import { useSearchParams } from "next/navigation";
@@ -334,9 +335,7 @@ export default function MessagesPage() {
                     onClick={() => startNewChat(u.uid)}
                     className="w-full p-3 flex items-center gap-3 hover:bg-white/5 rounded-xl transition-all text-left group"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shrink-0 shadow-lg group-hover:scale-105 transition-transform">
-                      <span className="text-sm font-bold text-white">{u.avatar}</span>
-                    </div>
+                    <UserAvatar src={u.avatar} name={u.fullName} className="w-10 h-10 group-hover:scale-105 transition-transform" textClassName="text-sm font-bold" />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm text-slate-200 truncate group-hover:text-white transition-colors">{u.fullName}</h3>
                     </div>
@@ -366,9 +365,7 @@ export default function MessagesPage() {
                   {otherUser ? (
                     <>
                       <div className="relative">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-lg transition-transform ${isActive ? 'bg-gradient-to-br from-brand to-brand-purple scale-105' : 'bg-slate-800'}`}>
-                          <span className={`text-lg font-bold ${isActive ? 'text-white' : 'text-slate-300'}`}>{otherUser.avatar}</span>
-                        </div>
+                        <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className={`w-12 h-12 transition-transform ${isActive ? 'scale-105 ring-2 ring-brand' : ''}`} textClassName="text-lg font-bold" />
                         {getUserStatus(otherUser.lastLogin).isOnline && (
                           <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
                         )}
@@ -424,9 +421,7 @@ export default function MessagesPage() {
               return otherUser ? (
                 <>
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center shadow-lg">
-                      <span className="text-lg font-bold text-white">{otherUser.avatar}</span>
-                    </div>
+                    <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className="w-12 h-12" textClassName="text-lg font-bold" />
                     {getUserStatus(otherUser.lastLogin).isOnline && (
                       <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
                     )}

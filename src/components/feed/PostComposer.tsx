@@ -1,5 +1,6 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
+
+import UserAvatar from "@/components/ui/UserAvatar";
 
 import { useState, useRef } from "react";
 import Link from "next/link";
@@ -125,13 +126,7 @@ export default function PostComposer() {
         )}
 
         <div className="flex gap-4">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex-shrink-0 flex items-center justify-center font-bold text-white shadow-inner overflow-hidden border border-brand/20 relative">
-            {profile.avatar ? (
-              <img src={profile.avatar} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              profile.fullName.substring(0, 2).toUpperCase()
-            )}
-          </div>
+          <UserAvatar src={profile.avatar} name={profile.fullName} className="w-12 h-12 border border-brand/20 shadow-inner shrink-0" textClassName="text-base font-bold" />
           <div className="flex-1 flex flex-col gap-3">
             <textarea
               className="neo-input w-full min-h-[100px] resize-none bg-slate-900/40 text-lg placeholder:text-slate-500"

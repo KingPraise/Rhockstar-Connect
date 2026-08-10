@@ -10,6 +10,7 @@ import Link from "next/link";
 import PostCard from "@/components/feed/PostCard";
 import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import UserAvatar from "@/components/ui/UserAvatar";
 import toast from "react-hot-toast";
 
 export default function SearchPage() {
@@ -162,13 +163,7 @@ export default function SearchPage() {
                         href={`/profile?uid=${user.uid}`}
                         className="neo-card bg-slate-900/40 border border-white/5 rounded-2xl p-4 flex items-center gap-4 hover:border-brand/30 hover:bg-slate-800/60 transition-all group"
                       >
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-white shadow-lg shrink-0 overflow-hidden">
-                          {user.avatar?.startsWith('http') || user.avatar?.startsWith('/') ? (
-                            <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
-                          ) : (
-                            user.avatar || user.fullName.substring(0, 2).toUpperCase()
-                          )}
-                        </div>
+                        <UserAvatar src={user.avatar} name={user.fullName} className="w-12 h-12" textClassName="text-base font-bold" />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-bold text-white group-hover:text-brand transition-colors truncate flex items-center gap-1.5">
                             <span>{user.fullName}</span>
