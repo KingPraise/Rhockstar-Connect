@@ -40,7 +40,6 @@ export default function FeedPage() {
     const unsubscribe = subscribeToFeed(limitCount, (newPosts) => {
       setPosts(newPosts);
       setLoading(false);
-      // If we got fewer posts than the limit, we've reached the end
       if (newPosts.length < limitCount) {
         setHasMore(false);
       } else {
@@ -50,6 +49,25 @@ export default function FeedPage() {
 
     return () => unsubscribe();
   }, [limitCount]);
+
+  useEffect(() => {
+    if (loading || posts.length === 0) return;
+
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash;
+      const searchParams = new URLSearchParams(window.location.search);
+      const targetId = searchParams.get("postId") || (hash.startsWith("#post-") ? hash.replace("#post-", "") : null);
+
+      if (targetId) {
+        setTimeout(() => {
+          const el = document.getElementById(`post-${targetId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 400);
+      }
+    }
+  }, [loading, posts]);
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>

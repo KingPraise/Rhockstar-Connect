@@ -221,7 +221,9 @@ export default function SearchPage() {
                 </h2>
                 <div className="space-y-4">
                   {filteredPosts.map(post => (
-                    <PostCard key={post.id} post={post} />
+                    <Link key={post.id} href={`/feed?postId=${post.id}#post-${post.id}`} className="block hover:opacity-95 transition-opacity">
+                      <PostCard post={post} />
+                    </Link>
                   ))}
                 </div>
               </div>

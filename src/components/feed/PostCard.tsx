@@ -205,18 +205,24 @@ export default function PostCard({ post }: PostCardProps) {
   }
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hash === `#post-${post.id}`) {
-      const timer = setTimeout(() => {
-        const el = document.getElementById(`post-${post.id}`);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          el.classList.add('ring-2', 'ring-brand', 'ring-offset-4', 'ring-offset-[#020617]');
-          setTimeout(() => {
-            el.classList.remove('ring-2', 'ring-brand', 'ring-offset-4', 'ring-offset-[#020617]');
-          }, 4000);
-        }
-      }, 500); // Wait a bit for rendering
-      return () => clearTimeout(timer);
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash;
+      const searchParams = new URLSearchParams(window.location.search);
+      const targetId = searchParams.get("postId") || (hash.startsWith("#post-") ? hash.replace("#post-", "") : null);
+
+      if (targetId === post.id) {
+        const timer = setTimeout(() => {
+          const el = document.getElementById(`post-${post.id}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('ring-2', 'ring-brand', 'shadow-[0_0_35px_rgba(56,189,248,0.6)]', 'scale-[1.01]');
+            setTimeout(() => {
+              el.classList.remove('ring-2', 'ring-brand', 'shadow-[0_0_35px_rgba(56,189,248,0.6)]', 'scale-[1.01]');
+            }, 4000);
+          }
+        }, 300);
+        return () => clearTimeout(timer);
+      }
     }
   }, [post.id]);
 
