@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getApplicationsForJob, JobApplication } from "@/lib/services/jobs";
-import { ArrowLeft, User, FileText, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, User, FileText, CheckCircle, XCircle, Briefcase, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useParams } from "next/navigation";
@@ -33,8 +33,13 @@ export default function EmployerJobApplicantsPage() {
 
   if (!profile || (profile.accountType !== 'employer' && profile.role !== 'admin' && (profile as any).role !== 'employer')) {
     return (
-      <div className="max-w-[1600px] mx-auto p-8 text-center text-gray-500">
-        Unauthorized access
+      <div className="max-w-4xl mx-auto p-12 text-center neo-card bg-slate-900/60 border border-white/5 rounded-3xl mt-8">
+        <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">Employer Access Required</h2>
+        <p className="text-slate-400 text-sm mb-6">You need an Employer account to view candidate applications for this job listing.</p>
+        <Link href="/settings" className="px-6 py-2.5 bg-brand text-white font-bold rounded-xl hover:scale-105 transition-transform inline-block">
+          Upgrade in Settings
+        </Link>
       </div>
     );
   }
@@ -45,29 +50,32 @@ export default function EmployerJobApplicantsPage() {
       <div className="flex items-center gap-4 mb-8">
         <Link 
           href="/employer" 
-          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+          className="p-2.5 bg-slate-800/80 hover:bg-slate-700 text-white rounded-2xl border border-white/5 transition-all shadow-md"
         >
-          <ArrowLeft className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+          <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Applicants</h1>
-          <p className="text-gray-600 dark:text-gray-400">Review candidates for this job posting.</p>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">Candidates & Applicants</h1>
+          <p className="text-slate-400 text-sm">Review resume submissions and candidate profiles for this job posting.</p>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+      <div className="neo-card bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
         {loading ? (
-          <div className="p-12 text-center text-gray-500">Loading applicants...</div>
+          <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
+            <span>Loading applicant profiles...</span>
+          </div>
         ) : applications.length === 0 ? (
-          <div className="p-16 text-center">
-            <User className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No applicants yet</h3>
-            <p className="text-gray-500 dark:text-gray-400">When candidates apply, they will appear here.</p>
+          <div className="p-16 text-center space-y-4">
+            <User className="h-12 w-12 text-slate-600 mx-auto" />
+            <h3 className="text-lg font-bold text-white">No applicants yet</h3>
+            <p className="text-slate-400 text-sm max-w-sm mx-auto">When candidates apply for this position, their details and resumes will appear here.</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          <div className="divide-y divide-white/5">
             {applications.map(app => (
-              <div key={app.id} className="p-6 flex flex-col md:flex-row md:items-start justify-between gap-6 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+              <div key={app.id} className="p-6 flex flex-col md:flex-row md:items-start justify-between gap-6 hover:bg-slate-800/60 transition-all group">
                 <div className="flex gap-4">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700 flex-shrink-0">
                     {app.applicantAvatar ? (
