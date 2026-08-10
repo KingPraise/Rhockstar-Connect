@@ -141,7 +141,7 @@ export default function JobsPage() {
         if (activeFilter === 'Remote') {
           return job.type?.toLowerCase() === 'remote' || (typeof job.location === 'string' && job.location.toLowerCase().includes('remote'));
         }
-        return job.type?.toLowerCase() === activeFilter.toLowerCase();
+        return job.type?.toLowerCase() === activeFilter?.toLowerCase();
       });
     }
     
