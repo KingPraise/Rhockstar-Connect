@@ -4,7 +4,7 @@ import { useState } from "react";
 import { 
   Settings as SettingsIcon, User, Lock, Bell, 
   Shield, Eye, Smartphone, Globe, CreditCard,
-  LogOut, Sparkles, Briefcase, Crown
+  LogOut, Sparkles, Briefcase, Crown, Play
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -200,6 +200,25 @@ export default function SettingsPage() {
                       <option value="amber">Amber Gold</option>
                     </select>
                   </div>
+                </div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-slate-800/50 border border-white/5 rounded-xl mt-4">
+                  <div>
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <Play className="w-4 h-4 text-brand" />
+                      Platform Tour
+                    </h4>
+                    <p className="text-sm text-slate-400">Replay the introductory walkthrough tour of Rhockstar Connect.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      localStorage.removeItem('rhockstar_onboarding_completed');
+                      window.dispatchEvent(new Event('replay-tour'));
+                      toast.success("Tour restarted!");
+                    }}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
+                  >
+                    Replay Tour
+                  </button>
                 </div>
               </div>
 

@@ -6,6 +6,7 @@ import AIAssistantWidget from "@/components/ai/AIAssistantWidget";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import GlobalSearchModal from "@/components/ui/GlobalSearchModal";
 import PresenceHeartbeat from "@/components/layout/PresenceHeartbeat";
+import OnboardingTour from "@/components/onboarding/OnboardingTour";
 
 export default function DashboardLayout({
   children,
@@ -42,6 +43,9 @@ export default function DashboardLayout({
 
       {/* Global Search Modal */}
       <GlobalSearchModal />
+      
+      {/* Onboarding Tour */}
+      <OnboardingTour />
     </div>
   );
 }

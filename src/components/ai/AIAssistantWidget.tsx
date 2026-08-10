@@ -210,6 +210,7 @@ export default function AIAssistantWidget() {
     <>
       {/* Floating Action Button */}
       <div 
+        id="tour-ai-widget"
         className={`fixed z-50 ${isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100'} ${isDragging ? 'cursor-grabbing' : 'transition-all duration-300 cursor-grab'}`}
         style={{ 
           bottom: `${position.bottom}px`, 

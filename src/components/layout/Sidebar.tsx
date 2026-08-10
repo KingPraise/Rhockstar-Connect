@@ -132,6 +132,7 @@ export default function Sidebar() {
           return (
             <Link
               key={item.name}
+              id={`tour-${item.name.toLowerCase()}-nav`}
               href={item.href}
               prefetch={true}
               className={`flex items-center ${isMinimized ? "justify-center px-0" : "gap-4 px-5"} py-3 rounded-xl font-semibold transition-all group relative ${
