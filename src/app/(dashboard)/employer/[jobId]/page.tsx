@@ -98,6 +98,24 @@ export default function EmployerJobApplicantsPage() {
     }
   };
 
+  const handleMobileStatusChange = async (appId: string, targetStatus: ColumnStatus) => {
+    const appToUpdate = applications.find(a => a.id === appId);
+    if (!appToUpdate || appToUpdate.status === targetStatus) return;
+
+    const originalApplications = [...applications];
+    setApplications(prev => prev.map(app => 
+      app.id === appId ? { ...app, status: targetStatus } : app
+    ));
+
+    const res = await updateApplicationStatus(appId, targetStatus);
+    if (!res.success) {
+      toast.error("Failed to update status");
+      setApplications(originalApplications);
+    } else {
+      toast.success("Candidate status updated!");
+    }
+  };
+
   const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
   const isElite = profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
 
@@ -201,7 +219,18 @@ export default function EmployerJobApplicantsPage() {
                               <p className="text-brand text-xs font-medium line-clamp-1">{app.applicantTitle || "Professional"}</p>
                             </div>
                           </div>
-                          <GripVertical className="w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="relative">
+                            <select
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 md:hidden"
+                              value={app.status}
+                              onChange={(e) => handleMobileStatusChange(app.id, e.target.value as ColumnStatus)}
+                            >
+                              {KANBAN_COLUMNS.map(c => (
+                                <option key={c.id} value={c.id}>{c.label}</option>
+                              ))}
+                            </select>
+                            <GripVertical className="w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/5">
@@ -218,7 +247,7 @@ export default function EmployerJobApplicantsPage() {
                             </a>
                           )}
                           <Link 
-                            href={`/profile/${app.applicantId}`}
+                            href={`/profile?uid=${app.applicantId}`}
                             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-brand/10 hover:bg-brand/20 text-brand rounded-xl text-xs font-medium transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
