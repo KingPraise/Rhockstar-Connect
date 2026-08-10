@@ -1,15 +1,20 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
 
 export async function GET() {
   try {
-    const querySnapshot = await getDocs(collection(db, 'connections'));
+    const querySnapshot = await adminDb.collection('connections').get();
     let count = 0;
+    
+    // Create a batch to delete all documents efficiently
+    const batch = adminDb.batch();
+    
     for (const d of querySnapshot.docs) {
-      await deleteDoc(doc(db, 'connections', d.id));
+      batch.delete(d.ref);
       count++;
     }
+    
+    await batch.commit();
     return NextResponse.json({ success: true, count });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message });

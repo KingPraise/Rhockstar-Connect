@@ -9,6 +9,7 @@ import { getUserById } from "@/lib/services/users";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useLightboxStore } from "@/store/useLightboxStore";
 import toast from "react-hot-toast";
 
@@ -204,11 +205,12 @@ export default function PostCard({ post }: PostCardProps) {
     timeAgo = formatDistanceToNow(createdAt.toDate(), { addSuffix: true });
   }
 
+  const searchParams = useSearchParams();
+  
   useEffect(() => {
     if (typeof window !== "undefined") {
       const hash = window.location.hash;
-      const searchParams = new URLSearchParams(window.location.search);
-      const targetId = searchParams.get("postId") || (hash.startsWith("#post-") ? hash.replace("#post-", "") : null);
+      const targetId = searchParams?.get("postId") || (hash.startsWith("#post-") ? hash.replace("#post-", "") : null);
 
       if (targetId === post.id) {
         const timer = setTimeout(() => {
@@ -224,7 +226,7 @@ export default function PostCard({ post }: PostCardProps) {
         return () => clearTimeout(timer);
       }
     }
-  }, [post.id]);
+  }, [post.id, searchParams]);
 
   return (
     <div id={`post-${post.id}`} className="neo-card p-6 mb-6 transition-all duration-700">

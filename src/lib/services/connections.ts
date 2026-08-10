@@ -61,7 +61,7 @@ export const sendConnectionRequest = async (fromUserId: string, toUserId: string
       type: "connection",
       title: "New Connection Request",
       message: `${senderName} sent you a connection request.`,
-      link: "/network",
+      link: "/network?tab=invitations",
       senderId: fromUserId,
       senderName,
       senderAvatar
@@ -96,7 +96,7 @@ export const updateConnectionStatus = async (connectionId: string, status: 'acce
           type: "connection",
           title: "Connection Accepted",
           message: `${acceptorName} accepted your connection request!`,
-          link: "/network",
+          link: "/network?tab=my-connections",
           senderId: connData.toUserId,
           senderName: acceptorName,
           senderAvatar: acceptorAvatar

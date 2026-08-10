@@ -95,34 +95,6 @@ export default function DatingHubPage() {
           </div>
         ))}
       </div>
-
-      {/* Pro / Dating AI Banner */}
-      <div className={`mt-12 p-8 rounded-3xl border flex flex-col md:flex-row items-center justify-between gap-6 ${
-        isPro 
-          ? 'bg-gradient-to-r from-emerald-500/10 via-rose-500/10 to-brand-purple/10 border-emerald-500/30' 
-          : 'bg-gradient-to-r from-rose-500/10 to-purple-500/10 border-rose-500/20'
-      }`}>
-        <div>
-          <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-            <span>{isPro ? "AI Match & Profile Optimization Unlocked" : "Want to boost your dating profile?"}</span>
-            {isPro ? <Crown className="w-5 h-5 text-emerald-400" /> : <Sparkles className="w-5 h-5 text-rose-400" />}
-          </h3>
-          <p className="text-slate-400 text-sm">
-            {isPro 
-              ? "Your Premium membership includes unlimited AI Match Recommendations and profile optimization tips." 
-              : "Upgrade to Premium for AI Match Recommendations and Profile Optimization."}
-          </p>
-        </div>
-        {isPro ? (
-          <Link href="/dating" className="shrink-0 px-6 py-3 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-extrabold rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:scale-105 transition-transform">
-            <Heart className="w-4 h-4 fill-emerald-400" /> Explore Matches
-          </Link>
-        ) : (
-          <Link href="/premium" className="shrink-0 px-8 py-3 bg-rose-500 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(244,63,94,0.3)]">
-            Upgrade to Premium
-          </Link>
-        )}
-      </div>
     </div>
   );
 }

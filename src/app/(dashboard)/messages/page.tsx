@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
 
 import { useSearchParams } from "next/navigation";
 
@@ -353,13 +354,15 @@ export default function MessagesPage() {
               const otherUser = users[otherUserId];
               const isTyping = chat.typingStatus?.[otherUserId];
               const isActive = activeChat?.id === chat.id;
+              const unreadCount = chat.unreadCount?.[profile?.uid || ''] || 0;
+              const isUnread = unreadCount > 0;
 
               return (
                 <button
                   key={chat.id}
                   onClick={() => setActiveChat(chat)}
                   className={`w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-all text-left border-b border-white/5 last:border-0 relative ${
-                    isActive ? 'bg-white/5 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : ''
+                    isActive ? 'bg-white/10 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : isUnread ? 'bg-brand/10' : ''
                   }`}
                 >
                   {otherUser ? (
@@ -372,7 +375,7 @@ export default function MessagesPage() {
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
                         <div className="flex justify-between items-baseline mb-0.5">
-                          <h3 className={`font-semibold truncate ${isActive ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
+                          <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
                           <span className="text-[10px] text-slate-500 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
                         </div>
                         <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : 'text-slate-400'}`}>
@@ -419,20 +422,20 @@ export default function MessagesPage() {
               const otherUser = users[otherUserId];
               
               return otherUser ? (
-                <>
+                <Link href={`/profile?uid=${otherUserId}`} className="flex items-center gap-4 group cursor-pointer">
                   <div className="relative">
-                    <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className="w-12 h-12" textClassName="text-lg font-bold" />
+                    <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className="w-12 h-12 group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow" textClassName="text-lg font-bold" />
                     {getUserStatus(otherUser.lastLogin).isOnline && (
                       <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
                     )}
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white leading-tight">{otherUser.fullName}</h2>
+                    <h2 className="text-lg font-bold text-white leading-tight group-hover:text-brand transition-colors">{otherUser.fullName}</h2>
                     <p className={`text-xs font-medium ${getUserStatus(otherUser.lastLogin).isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
                       {getUserStatus(otherUser.lastLogin).text}
                     </p>
                   </div>
-                </>
+                </Link>
               ) : (
                 <div className="animate-pulse flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-white/10" />

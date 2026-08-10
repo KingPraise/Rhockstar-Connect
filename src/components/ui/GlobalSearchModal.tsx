@@ -166,7 +166,7 @@ export default function GlobalSearchModal() {
             title: p.content.substring(0, 70) + (p.content.length > 70 ? '...' : ''),
             subtitle: `Posted by ${p.user.name}`,
             avatar: p.user.avatar,
-            link: `/feed#post-${p.id}`,
+            link: `/feed?postId=${p.id}`,
             data: p
           });
         }

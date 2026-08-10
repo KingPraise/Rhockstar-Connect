@@ -114,13 +114,22 @@ export default function EmployerDashboardPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Employer Dashboard</h1>
           <p className="text-gray-600 dark:text-gray-400">Manage your job postings and applicants.</p>
         </div>
-        <button 
-          onClick={() => setShowPostModal(true)}
-          className="flex items-center gap-2 bg-[#6B8AFD] text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-600 transition-colors"
-        >
-          <Plus className="h-5 w-5" />
-          Post New Job
-        </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <Link 
+            href={`/company/${profile?.username}`}
+            className="flex items-center justify-center gap-2 bg-slate-800 text-white px-6 py-2.5 rounded-full font-medium hover:bg-slate-700 transition-colors border border-white/10"
+          >
+            <Building2 className="h-5 w-5" />
+            View Public Profile
+          </Link>
+          <button 
+            onClick={() => setShowPostModal(true)}
+            className="flex items-center justify-center gap-2 bg-[#6B8AFD] text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-600 transition-colors shadow-[0_0_20px_rgba(107,138,253,0.3)] hover:shadow-[0_0_30px_rgba(107,138,253,0.5)]"
+          >
+            <Plus className="h-5 w-5" />
+            Post New Job
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}

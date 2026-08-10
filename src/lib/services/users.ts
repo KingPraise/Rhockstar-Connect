@@ -71,7 +71,7 @@ export const getAllUsers = async (excludeAdmins = true): Promise<{ success: bool
           subscriptionTier: data.subscriptionTier,
           subscriptionStatus: data.subscriptionStatus,
           connections: data.connections || 0,
-          lastLogin: data.lastLogin,
+          lastLogin: data.lastSeen || data.lastLogin,
           role: data.role,
         });
       }

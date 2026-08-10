@@ -121,7 +121,7 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3 justify-end pt-4 pb-2">
+        <div className="flex flex-wrap gap-3 justify-end pt-16 md:pt-4 pb-2">
           {isOwnProfile ? (
             <>
               <button 

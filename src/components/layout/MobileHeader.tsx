@@ -117,13 +117,13 @@ export default function MobileHeader() {
   return (
     <>
       {/* Top Bar for Mobile */}
-      <header className={`md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-lg transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-        <Link href="/feed" className="flex items-center gap-2 pl-2">
-          <Image src="/icon.png" alt="Rhockstar Connect" width={32} height={32} priority className="object-contain" />
-          <span className="font-extrabold text-xl tracking-tight text-white">Rhockstar <span className="text-brand">Connect</span></span>
+      <header className={`md:hidden fixed top-0 left-0 right-0 z-40 bg-slate-900/90 backdrop-blur-xl border-b border-white/10 px-3 py-3 flex items-center justify-between shadow-lg transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+        <Link href="/feed" className="flex items-center gap-2 shrink min-w-0">
+          <Image src="/icon.png" alt="Rhockstar Connect" width={44} height={44} priority className="object-contain shrink-0" />
+          <span className="font-extrabold text-lg sm:text-xl tracking-tight text-white truncate">Rhockstar <span className="text-brand">Connect</span></span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Link
             href="/messages"
             className="relative p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-white/5 active:scale-95 transition-all"

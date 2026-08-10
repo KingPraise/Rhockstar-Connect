@@ -16,11 +16,13 @@ import Link from "next/link";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import UserAvatar from "@/components/ui/UserAvatar";
 import toast from "react-hot-toast";
+import { useSearchParams } from "next/navigation";
 
 type TabId = 'discover' | 'my-connections' | 'invitations' | 'sent-requests';
 
 export default function NetworkPage() {
   const { profile } = useAuthStore();
+  const searchParams = useSearchParams();
   
   const [users, setUsers] = useState<UserBasic[]>([]);
   const [connections, setConnections] = useState<ConnectionRequest[]>([]);
@@ -29,6 +31,13 @@ export default function NetworkPage() {
   const [actionLoading, setActionLoading] = useState<string[]>([]);
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('discover');
+
+  useEffect(() => {
+    const tab = searchParams?.get("tab") as TabId;
+    if (tab && ['discover', 'my-connections', 'invitations', 'sent-requests'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
 
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
 

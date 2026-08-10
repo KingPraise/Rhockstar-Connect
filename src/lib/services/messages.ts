@@ -115,24 +115,31 @@ export const sendMessage = async (
 
     await addDoc(messagesRef, messageData);
     
-    await updateDoc(chatRef, {
-      lastMessage: text,
-      lastMessageTime: serverTimestamp()
-    });
-
-    // Notify recipient
+    // Get chat to find recipient
     const chatSnap = await getDoc(chatRef);
     if (chatSnap.exists()) {
       const participants: string[] = chatSnap.data().participants || [];
       const recipientId = participants.find(p => p !== senderId);
+      
+      const { increment } = await import('firebase/firestore');
+
+      await updateDoc(chatRef, {
+        lastMessage: text,
+        lastMessageTime: serverTimestamp(),
+        ...(recipientId ? { [`unreadCount.${recipientId}`]: increment(1) } : {})
+      });
+
       if (recipientId) {
         // Fetch sender profile to include in notification
         const { user: senderProfile } = await getUserById(senderId);
         const senderName = senderProfile?.fullName || 'Someone';
         const senderAvatar = senderProfile?.avatar || '';
 
-        const title = `New Message from ${senderName}`;
-        const messageBody = type === 'text' ? (text.length > 50 ? `${text.substring(0, 50)}...` : text) : `Sent an ${type}`;
+        const currentUnread = chatSnap.data().unreadCount?.[recipientId] || 0;
+        const newUnread = currentUnread + 1;
+
+        const title = newUnread > 1 ? `${newUnread} New Messages from ${senderName}` : `New Message from ${senderName}`;
+        const messageBody = newUnread > 1 ? `You have ${newUnread} unread messages.` : (type === 'text' ? (text.length > 50 ? `${text.substring(0, 50)}...` : text) : `Sent an ${type}`);
         
         await createNotification({
           userId: recipientId,
@@ -179,6 +186,11 @@ export const markMessagesAsRead = async (chatId: string, currentUserId: string) 
         updatePromises.push(updateDoc(doc(db, `chats/${chatId}/messages`, docSnap.id), { status: 'read' }));
       }
     });
+
+    // Also clear unreadCount on the chat document
+    updatePromises.push(updateDoc(doc(db, 'chats', chatId), {
+      [`unreadCount.${currentUserId}`]: 0
+    }));
 
     await Promise.all(updatePromises);
   } catch (error) {
