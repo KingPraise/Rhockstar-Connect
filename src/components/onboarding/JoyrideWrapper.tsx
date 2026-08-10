@@ -1,6 +1,7 @@
 "use client";
-import ReactJoyride, { Props as JoyrideProps } from 'react-joyride';
+import { Joyride, Props as JoyrideProps } from 'react-joyride';
 
-export default function JoyrideWrapper(props: JoyrideProps) {
-  return <ReactJoyride {...props} />;
+export default function JoyrideWrapper(props: any) {
+  // @ts-ignore
+  return <Joyride {...props} />;
 }

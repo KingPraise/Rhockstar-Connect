@@ -127,15 +127,22 @@ export default function OnboardingTour() {
           backgroundColor: '#38bdf8',
           borderRadius: '12px',
           padding: '10px 20px',
-          fontWeight: 'bold'
+          fontWeight: 'bold',
         },
         buttonBack: {
           color: '#94a3b8',
-          marginRight: 14
+          marginRight: '10px'
         },
         buttonSkip: {
-          color: '#94a3b8'
+          color: '#64748b',
+          fontSize: '12px'
         }
+      } as any}
+      locale={{
+        last: "Finish Tour",
+        skip: "Skip Tour",
+        next: "Next",
+        back: "Back"
       }}
     />
   );
