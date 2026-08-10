@@ -30,10 +30,11 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
 
   const isFree = !profile.subscriptionTier || profile.subscriptionTier === 'free';
   const isPremium = profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite';
+  const isLoggedInUserPremium = loggedInProfile?.subscriptionTier === 'pro' || loggedInProfile?.subscriptionTier === 'elite' || loggedInProfile?.role === 'admin';
   const locationString = typeof profile.location === 'string' ? profile.location : (profile.location?.city ? `${profile.location.city}, ${profile.location.country}` : "Earth");
 
   const handleBoostClick = () => {
-    if (isPremium) {
+    if (isLoggedInUserPremium) {
       toast.success("Profile boost activated! You are now prioritized in search.", { icon: "🚀", style: { background: '#334155', color: '#fff' } });
     } else {
       setPremiumLockOpen(true);
@@ -228,7 +229,7 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
           <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Posts</span>
         </div>
         <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat relative">
-          {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite' || profile.role === 'admin') ? (
+          {isLoggedInUserPremium ? (
             <>
               <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
                 <Eye className="w-5 h-5 text-brand-purple" />

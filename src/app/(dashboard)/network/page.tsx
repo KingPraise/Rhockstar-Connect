@@ -30,7 +30,7 @@ export default function NetworkPage() {
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('discover');
 
-  const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
+  const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
 
   const handlePremiumFilterClick = () => {
     if (isPremium) {
