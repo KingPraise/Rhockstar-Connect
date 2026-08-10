@@ -4,9 +4,8 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 
-// Dynamically import Joyride so it doesn't break SSR
-// @ts-ignore
-const Joyride = dynamic(() => import('react-joyride') as any, { ssr: false }) as any;
+// Dynamically import the Joyride Wrapper so it doesn't break SSR
+const Joyride = dynamic(() => import('./JoyrideWrapper'), { ssr: false });
 
 export default function OnboardingTour() {
   const [run, setRun] = useState(false);
