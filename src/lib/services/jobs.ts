@@ -1,6 +1,5 @@
 import { db } from "../firebase";
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, serverTimestamp, query, orderBy, limit, where } from "firebase/firestore";
-
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, serverTimestamp, query, orderBy, limit, where, increment } from "firebase/firestore";
 export interface JobListing {
   id: string;
   title: string;
@@ -211,8 +210,14 @@ export const applyForJob = async (jobId: string, applicantId: string, applicatio
       status: 'pending',
       appliedAt: serverTimestamp(),
     };
-    
     await setDoc(newAppRef, app);
+    
+    // Increment the applicantsCount on the job listing
+    const jobRef = doc(db, "jobs", jobId);
+    await updateDoc(jobRef, {
+      applicantsCount: increment(1)
+    });
+
     return { success: true, application: app };
   } catch (error: any) {
     return { success: false, error: error.message };
