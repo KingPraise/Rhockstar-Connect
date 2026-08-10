@@ -303,11 +303,47 @@ export const addComment = async (postId: string, user: UserProfile, content: str
         commentsCount: (postSnap.data().commentsCount || 0) + 1
       });
 
-      // Notify post author if not their own comment
-      if (postData.userId !== user.uid) {
-        (async () => {
-          try {
-            const { createNotification } = await import('./notifications');
+      // Trigger real-time notifications for replies, post author, and mentions
+      (async () => {
+        try {
+          const { createNotification } = await import('./notifications');
+          const notifiedUserIds = new Set<string>();
+
+          // 1. If this is a reply to another comment, notify the comment author
+          if (replyToId) {
+            const parentComment = currentComments.find((c: Comment) => c.id === replyToId);
+            if (parentComment && parentComment.userId !== user.uid) {
+              notifiedUserIds.add(parentComment.userId);
+              const title = "New Reply";
+              const messageBody = `${user.fullName} replied to your comment.`;
+              
+              await createNotification({
+                userId: parentComment.userId,
+                type: "comment",
+                title,
+                message: messageBody,
+                link: `/feed#post-${postData.id}`,
+                senderId: user.uid,
+                senderName: user.fullName,
+                senderAvatar: user.avatar || ''
+              });
+
+              fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: parentComment.userId,
+                  title,
+                  body: messageBody,
+                  url: "/"
+                })
+              }).catch(console.error);
+            }
+          }
+
+          // 2. Notify post author if not their own comment and not already notified as comment author
+          if (postData.userId !== user.uid && !notifiedUserIds.has(postData.userId)) {
+            notifiedUserIds.add(postData.userId);
             const title = "New Comment";
             const messageBody = `${user.fullName} commented on your post.`;
             
@@ -332,11 +368,43 @@ export const addComment = async (postId: string, user: UserProfile, content: str
                 url: "/"
               })
             }).catch(console.error);
-          } catch (e) {
-            console.error(e);
           }
-        })();
-      }
+
+          // 3. Notify @mentioned users in comment text
+          const mentionMatches = content.match(/@([a-zA-Z0-9_]+)/g);
+          if (mentionMatches && mentionMatches.length > 0) {
+            const { getAllUsers } = await import('./users');
+            const usersRes = await getAllUsers();
+            if (usersRes.success && usersRes.users) {
+              const handles = new Set(mentionMatches.map(m => m.substring(1).toLowerCase()));
+              for (const targetUser of usersRes.users) {
+                if (
+                  handles.has(targetUser.username.toLowerCase()) && 
+                  targetUser.uid !== user.uid && 
+                  !notifiedUserIds.has(targetUser.uid)
+                ) {
+                  notifiedUserIds.add(targetUser.uid);
+                  const title = "New Mention";
+                  const messageBody = `${user.fullName} mentioned you in a comment.`;
+
+                  await createNotification({
+                    userId: targetUser.uid,
+                    type: "comment",
+                    title,
+                    message: messageBody,
+                    link: `/feed#post-${postData.id}`,
+                    senderId: user.uid,
+                    senderName: user.fullName,
+                    senderAvatar: user.avatar || ''
+                  });
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error creating comment notification:", e);
+        }
+      })();
 
       return { success: true };
     }
