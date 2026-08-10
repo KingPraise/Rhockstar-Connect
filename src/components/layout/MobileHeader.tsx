@@ -15,7 +15,8 @@ import {
   Heart, 
   Briefcase, 
   Settings, 
-  Sparkles, 
+  Sparkles,
+  TrendingUp, 
   LogOut, 
   FileText,
   Gift,
@@ -104,7 +105,7 @@ export default function MobileHeader() {
 
   const careerLinks = [
     { name: "Jobs", href: "/jobs", icon: Briefcase },
-    { name: "Insights", href: "/insights", icon: Sparkles },
+    { name: "Insights", href: "/insights", icon: TrendingUp },
     { name: "Career Hub", href: "/resources/career", icon: FileText },
   ];
 

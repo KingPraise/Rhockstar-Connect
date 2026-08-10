@@ -147,19 +147,19 @@ export default function Home() {
                 icon: "👤", 
                 title: "Professional Profile", 
                 desc: "Showcase your skills, achievements, portfolio, and verified badges to stand out.",
-                image: "/images/landing_networking.jpg"
+                image: "/images/landing_profile.jpg"
               },
               { 
                 icon: "📢", 
                 title: "Community Feed", 
                 desc: "Share updates, exchange industry insights, and engage with professional discussions.",
-                image: "/images/landing_messaging.jpg"
+                image: "/images/landing_feed.jpg"
               },
               { 
                 icon: "🔒", 
                 title: "Secure & Encrypted", 
                 desc: "Your data and privacy are protected with modern encryption and security standards.",
-                image: "/images/landing_job_board.jpg"
+                image: "/images/landing_security.jpg"
               },
             ].map((feature, i) => (
               <div key={i} className="neo-card overflow-hidden group hover:border-brand/30 transition-all flex flex-col">

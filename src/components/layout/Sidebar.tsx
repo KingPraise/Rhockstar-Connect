@@ -15,6 +15,7 @@ import {
   Heart,
   LogOut,
   Sparkles,
+  TrendingUp,
   ChevronLeft,
   ChevronRight,
   Gift,
@@ -50,7 +51,7 @@ export default function Sidebar() {
 
   const secondaryNavItems = [
     { name: "Search", href: "/search", icon: Search },
-    { name: "Insights", href: "/insights", icon: Sparkles }, // Wait, BarChart2 is not imported. Use Sparkles or Bell
+    { name: "Insights", href: "/insights", icon: TrendingUp },
     { name: "Career Hub", href: "/resources/career", icon: Briefcase },
     { name: "Rewards", href: "/referrals", icon: Gift },
     { name: "Settings", href: "/settings", icon: Settings },
