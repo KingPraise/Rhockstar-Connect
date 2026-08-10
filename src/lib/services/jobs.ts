@@ -222,13 +222,18 @@ export const applyForJob = async (jobId: string, applicantId: string, applicatio
 export const getApplicationsForJob = async (jobId: string): Promise<{ success: boolean; applications?: JobApplication[]; error?: string }> => {
   try {
     const appsRef = collection(db, "job_applications");
-    const q = query(appsRef, where("jobId", "==", jobId), orderBy("appliedAt", "desc"));
+    // Removed orderBy to prevent composite index requirement in Firestore
+    const q = query(appsRef, where("jobId", "==", jobId));
     const snapshot = await getDocs(q);
     
     const applications = snapshot.docs.map(doc => ({
       ...doc.data(),
       id: doc.id
-    } as JobApplication));
+    } as JobApplication)).sort((a, b) => {
+      const timeA = a.appliedAt?.toMillis ? a.appliedAt.toMillis() : 0;
+      const timeB = b.appliedAt?.toMillis ? b.appliedAt.toMillis() : 0;
+      return timeB - timeA;
+    });
     
     return { success: true, applications };
   } catch (error: any) {
