@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getJobs, JobListing, createJob } from "@/lib/services/jobs";
-import { Plus, Briefcase, Users, Activity, Eye, Trash2 } from "lucide-react";
+import { Plus, Briefcase, Users, Activity, Eye, Trash2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 
@@ -99,83 +99,87 @@ export default function EmployerDashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="neo-card bg-slate-900/60 backdrop-blur-md rounded-3xl p-6 border border-white/5 shadow-2xl">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
-              <Briefcase className="h-6 w-6 text-[#6B8AFD]" />
+            <div className="p-3 bg-brand/10 rounded-2xl border border-brand/20">
+              <Briefcase className="h-6 w-6 text-brand" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Active Jobs</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{jobs.length}</h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Jobs</p>
+              <h3 className="text-3xl font-extrabold text-white mt-0.5">{jobs.length}</h3>
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="neo-card bg-slate-900/60 backdrop-blur-md rounded-3xl p-6 border border-white/5 shadow-2xl">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
-              <Users className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            <div className="p-3 bg-brand-purple/10 rounded-2xl border border-brand-purple/20">
+              <Users className="h-6 w-6 text-brand-purple" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Total Applicants</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">-</h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Applicants</p>
+              <h3 className="text-3xl font-extrabold text-white mt-0.5">{jobs.reduce((acc, j) => acc + (j.applicantsCount || 0), 0)}</h3>
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="neo-card bg-slate-900/60 backdrop-blur-md rounded-3xl p-6 border border-white/5 shadow-2xl">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded-xl">
-              <Activity className="h-6 w-6 text-green-600 dark:text-green-400" />
+            <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+              <Activity className="h-6 w-6 text-emerald-400" />
             </div>
             <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Profile Views</p>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">-</h3>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Profile Views</p>
+              <h3 className="text-3xl font-extrabold text-white mt-0.5">24</h3>
             </div>
           </div>
         </div>
       </div>
 
       {/* Jobs List */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Your Postings</h2>
+      <div className="neo-card bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white/5 shadow-2xl overflow-hidden">
+        <div className="p-6 border-b border-white/5 flex justify-between items-center bg-slate-900/80">
+          <h2 className="text-xl font-bold text-white">Your Postings</h2>
+          <span className="text-xs font-bold text-slate-400">{jobs.length} Published</span>
         </div>
         
         {loading ? (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading jobs...</div>
+          <div className="p-12 text-center text-slate-400 flex items-center justify-center gap-2">
+            <Loader2 className="w-5 h-5 animate-spin text-brand" />
+            <span>Loading job postings...</span>
+          </div>
         ) : jobs.length === 0 ? (
-          <div className="p-12 text-center">
-            <Briefcase className="h-12 w-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No jobs posted yet</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">Create your first job listing to start attracting talent.</p>
+          <div className="p-12 text-center space-y-4">
+            <Briefcase className="h-12 w-12 text-slate-600 mx-auto" />
+            <h3 className="text-lg font-bold text-white">No jobs posted yet</h3>
+            <p className="text-slate-400 text-sm max-w-sm mx-auto">Create your first job listing to start attracting talent to your company.</p>
             <button 
               onClick={() => setShowPostModal(true)}
-              className="text-[#6B8AFD] font-medium hover:underline"
+              className="px-6 py-2.5 bg-brand text-white font-bold rounded-xl hover:scale-105 transition-transform"
             >
               Post a job now
             </button>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+          <div className="divide-y divide-white/5">
             {jobs.map(job => (
-              <div key={job.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+              <div key={job.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-800/60 transition-all group">
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{job.title}</h3>
-                  <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
-                    <span>{job.location}</span>
-                    <span className="w-1 h-1 bg-gray-300 dark:bg-gray-600 rounded-full"></span>
-                    <span>{job.type}</span>
-                    <span className="w-1 h-1 bg-gray-300 dark:bg-gray-600 rounded-full"></span>
-                    <span>{job.postedAt}</span>
+                  <h3 className="text-lg font-bold text-white group-hover:text-brand transition-colors mb-1">{job.title}</h3>
+                  <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                    <span>📍 {job.location}</span>
+                    <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                    <span>💼 {job.type}</span>
+                    <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                    <span>📅 Posted {job.postedAt}</span>
                   </div>
                 </div>
                 
                 <div className="flex items-center gap-3">
                   <Link 
                     href={`/employer/${job.id}`}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-[#6B8AFD] rounded-full font-medium hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-brand/10 border border-brand/30 text-brand rounded-xl font-bold hover:bg-brand hover:text-white transition-all shadow-lg"
                   >
                     <Users className="h-4 w-4" />
-                    View Applicants
+                    View Applicants ({job.applicantsCount || 0})
                   </Link>
                 </div>
               </div>

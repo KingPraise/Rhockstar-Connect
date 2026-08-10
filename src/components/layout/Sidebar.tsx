@@ -20,7 +20,8 @@ import {
   ChevronRight,
   Gift,
   Shield,
-  Search
+  Search,
+  Building2
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
@@ -33,6 +34,7 @@ export default function Sidebar() {
   const router = useRouter();
   const [isMinimized, setIsMinimized] = useState(false);
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
+  const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
 
   const handleLogout = async () => {
     await logoutUser();
@@ -44,6 +46,7 @@ export default function Sidebar() {
     { name: "Feed", href: "/feed", icon: Home },
     { name: "Network", href: "/network", icon: Users },
     { name: "Jobs", href: "/jobs", icon: Briefcase },
+    ...(isEmployer ? [{ name: "Employer Portal", href: "/employer", icon: Building2 }] : []),
     { name: "Messages", href: "/messages", icon: MessageSquare, badge: unreadMessages > 0 ? unreadMessages.toString() : undefined },
     { name: "Dating", href: "/dating", icon: Heart },
     { name: "Notifications", href: "/notifications", icon: Bell, badge: unreadNotifications > 0 ? unreadNotifications.toString() : undefined },

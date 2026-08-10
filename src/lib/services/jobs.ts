@@ -12,6 +12,7 @@ export interface JobListing {
   description: string;
   postedAt: any;
   logo: string;
+  applicantsCount?: number;
 }
 
 // Keep mock jobs as a fallback/seed

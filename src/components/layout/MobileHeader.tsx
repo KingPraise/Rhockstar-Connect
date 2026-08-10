@@ -21,7 +21,8 @@ import {
   FileText,
   Gift,
   Shield,
-  Search
+  Search,
+  Building2
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
@@ -41,6 +42,7 @@ export default function MobileHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
+  const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
 
   const handleLogoutClick = () => {
     setIsOpen(false);
@@ -55,25 +57,20 @@ export default function MobileHeader() {
       
       if (currentScrollY < 50) {
         setIsVisible(true);
-        lastScrollY.current = currentScrollY;
       } else if (delta > 15) {
         setIsVisible(false); // scrolling down
-        lastScrollY.current = currentScrollY;
       } else if (delta < -15) {
         setIsVisible(true); // scrolling up
-        lastScrollY.current = currentScrollY;
       }
+      
+      lastScrollY.current = currentScrollY;
     };
 
-    const container = document.getElementById('main-scroll-container');
-    if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
+    const mainContainer = document.getElementById("main-scroll-container");
+    if (mainContainer) {
+      mainContainer.addEventListener("scroll", handleScroll);
+      return () => mainContainer.removeEventListener("scroll", handleScroll);
     }
-    return () => {
-      if (container) {
-        container.removeEventListener('scroll', handleScroll);
-      }
-    };
   }, []);
 
   // Handle body scroll locking when drawer is open
@@ -105,6 +102,7 @@ export default function MobileHeader() {
 
   const careerLinks = [
     { name: "Jobs", href: "/jobs", icon: Briefcase },
+    ...(isEmployer ? [{ name: "Employer Portal", href: "/employer", icon: Building2 }] : []),
     { name: "Insights", href: "/insights", icon: TrendingUp },
     { name: "Career Hub", href: "/resources/career", icon: FileText },
   ];
