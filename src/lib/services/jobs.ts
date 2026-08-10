@@ -1,5 +1,5 @@
 import { db } from "../firebase";
-import { collection, doc, getDoc, getDocs, setDoc, serverTimestamp, query, orderBy, limit, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, serverTimestamp, query, orderBy, limit, where } from "firebase/firestore";
 
 export interface JobListing {
   id: string;
@@ -187,7 +187,7 @@ export interface JobApplication {
   applicantTitle?: string;
   resumeUrl?: string;
   coverLetter?: string;
-  status: 'pending' | 'reviewed' | 'accepted' | 'rejected';
+  status: 'pending' | 'screening' | 'reviewed' | 'interviewing' | 'accepted' | 'hired' | 'rejected';
   appliedAt: any;
 }
 
@@ -248,6 +248,16 @@ export const getUserApplications = async (applicantId: string): Promise<{ succes
     } as JobApplication));
     
     return { success: true, applications };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const updateApplicationStatus = async (applicationId: string, status: JobApplication['status']) => {
+  try {
+    const appRef = doc(db, "job_applications", applicationId);
+    await updateDoc(appRef, { status });
+    return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
