@@ -23,9 +23,9 @@ export const metadata: Metadata = {
     siteName: "Rhockstar Connect",
     images: [
       {
-        url: "/logo-dark.png",
-        width: 800,
-        height: 600,
+        url: "/og-image.jpg",
+        width: 1792,
+        height: 1024,
       },
     ],
     locale: "en_US",
