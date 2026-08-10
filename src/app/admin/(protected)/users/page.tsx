@@ -380,6 +380,24 @@ export default function AdminUsersPage() {
               </div>
 
               <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Joined Date</p>
+                <p className="text-sm font-semibold text-white mt-1">
+                  {selectedUser.createdAt?.seconds 
+                    ? new Date(selectedUser.createdAt.seconds * 1000).toLocaleDateString() 
+                    : 'Unknown'}
+                </p>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Last Online</p>
+                <p className="text-sm font-semibold text-white mt-1">
+                  {(selectedUser as any).lastSeen?.seconds || (selectedUser as any).lastLogin?.seconds
+                    ? new Date(((selectedUser as any).lastSeen?.seconds || (selectedUser as any).lastLogin?.seconds) * 1000).toLocaleDateString()
+                    : 'Unknown'}
+                </p>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Subscription Tier</p>
                 <p className="text-sm font-semibold text-amber-400 uppercase mt-1">
                   {selectedUser.subscriptionTier || 'FREE'}
@@ -391,6 +409,13 @@ export default function AdminUsersPage() {
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Status</p>
                 <p className={`text-sm font-semibold mt-1 ${selectedUser.isBanned ? 'text-red-400' : 'text-emerald-400'}`}>
                   {selectedUser.isBanned ? 'Banned' : 'Active'}
+                </p>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Activity Stats</p>
+                <p className="text-sm font-semibold text-white mt-1">
+                  {(selectedUser as any).stats?.posts || 0} Posts • {(selectedUser as any).stats?.connections || (selectedUser as any).connections || 0} Connections
                 </p>
               </div>
 
