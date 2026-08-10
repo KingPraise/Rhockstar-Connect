@@ -239,7 +239,7 @@ export default function DatingPage() {
         </div>
       ) : viewMode === 'swipe' ? (
         /* SWIPE STACK */
-        <div className="relative w-full max-w-md mx-auto h-[650px] flex items-center justify-center">
+        <div className="relative w-full max-w-md mx-auto h-[580px] sm:h-[650px] flex items-center justify-center">
           <div className="relative w-full h-full">
             {/* NEXT CARD (Background) */}
             {prospects.length > 1 && (

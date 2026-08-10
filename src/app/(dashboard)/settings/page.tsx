@@ -62,7 +62,7 @@ export default function SettingsPage() {
 
       <div className="grid md:grid-cols-4 gap-8">
         {/* Sidebar Nav */}
-        <div className="md:col-span-1 space-y-2">
+        <div className="md:col-span-1 flex md:flex-col overflow-x-auto gap-2 md:gap-0 md:space-y-2 no-scrollbar pb-2 md:pb-0 shrink-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -70,7 +70,7 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 md:w-full ${
                   isActive 
                     ? "bg-brand/10 text-brand border border-brand/20 shadow-[0_0_15px_rgba(56,189,248,0.15)]" 
                     : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
