@@ -27,13 +27,18 @@ export const sendConnectionRequest = async (fromUserId: string, toUserId: string
   try {
     const connRef = collection(db, 'connections');
     
-    // Check both directions
-    const q1 = query(connRef, where('fromUserId', '==', fromUserId), where('toUserId', '==', toUserId));
-    const q2 = query(connRef, where('fromUserId', '==', toUserId), where('toUserId', '==', fromUserId));
+    // Use getUserConnections to avoid requiring a composite index in Firestore
+    const { success, connections } = await getUserConnections(fromUserId);
+    if (!success) {
+      return { success: false, error: "Failed to verify existing connections" };
+    }
     
-    const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-    
-    if (!snap1.empty || !snap2.empty) {
+    const existing = connections?.find(c => 
+      (c.fromUserId === fromUserId && c.toUserId === toUserId) ||
+      (c.fromUserId === toUserId && c.toUserId === fromUserId)
+    );
+
+    if (existing) {
       return { success: false, error: "Request or connection already exists" };
     }
 

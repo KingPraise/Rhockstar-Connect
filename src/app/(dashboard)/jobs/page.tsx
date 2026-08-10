@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { getJobs, JobListing, JobFilters, applyForJob } from "@/lib/services/jobs";
-import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2, Filter } from "lucide-react";
+import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2, Filter, Sparkles } from "lucide-react";
+import { calculateJobMatchScore } from "@/lib/utils/jobMatch";
 import { useAuthStore } from "@/store/useAuthStore";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import ApplicationTracker from "@/components/jobs/ApplicationTracker";
@@ -249,8 +250,12 @@ export default function JobsPage() {
                     
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-white/5 shadow-inner group-hover:scale-105 transition-transform">
-                          <span className="text-2xl font-bold text-white">{job.logo}</span>
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-white/5 shadow-inner group-hover:scale-105 transition-transform overflow-hidden shrink-0">
+                          {job.logo?.startsWith('http') ? (
+                            <img src={job.logo} alt={job.company} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-2xl font-bold text-white">{job.logo?.substring(0, 2).toUpperCase() || 'J'}</span>
+                          )}
                         </div>
                         <div>
                           <h3 className="text-xl font-bold text-white group-hover:text-brand transition-colors">{job.title}</h3>
@@ -260,8 +265,21 @@ export default function JobsPage() {
                         </div>
                       </div>
                       
-                      <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
-                        {job.type}
+                      <div className="flex flex-col gap-2 items-end">
+                        <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
+                          {job.type}
+                        </div>
+                        {(() => {
+                          const matchScore = calculateJobMatchScore(job, profile?.skills);
+                          const matchColor = matchScore >= 80 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 
+                                            matchScore >= 60 ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 
+                                            'text-slate-400 bg-slate-500/10 border-slate-500/20';
+                          return (
+                            <div className={`px-2.5 py-1 rounded-full border text-xs font-bold flex items-center gap-1 ${matchColor}`}>
+                              <Sparkles className="w-3 h-3" /> {matchScore}% Match
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 

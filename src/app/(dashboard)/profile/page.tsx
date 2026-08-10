@@ -11,6 +11,7 @@ import { getUserById, getUserByUsername } from "@/lib/services/users";
 import { sendConnectionRequest } from "@/lib/services/connections";
 import Link from "next/link";
 import { Briefcase } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function ProfilePage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -77,8 +78,13 @@ export default function ProfilePage() {
     }
     if (activeProfile?.uid) {
       setActionLoading(true);
-      await sendConnectionRequest(loggedInProfile.uid, activeProfile.uid);
-      setConnectionStatus('pending');
+      const res = await sendConnectionRequest(loggedInProfile.uid, activeProfile.uid);
+      if (res.success) {
+        setConnectionStatus('pending');
+        toast.success("Connection request sent!");
+      } else {
+        toast.error(res.error || "Failed to send request");
+      }
       setActionLoading(false);
     }
   };

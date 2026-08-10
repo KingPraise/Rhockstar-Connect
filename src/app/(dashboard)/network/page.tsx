@@ -79,15 +79,25 @@ export default function NetworkPage() {
   const handleConnect = async (toUserId: string) => {
     if (!profile?.uid) return;
     setActionLoading(prev => [...prev, toUserId]);
-    await sendConnectionRequest(profile.uid, toUserId);
-    await fetchData();
+    const res = await sendConnectionRequest(profile.uid, toUserId);
+    if (res.success) {
+      toast.success("Connection request sent!");
+      await fetchData();
+    } else {
+      toast.error(res.error || "Failed to send request");
+    }
     setActionLoading(prev => prev.filter(id => id !== toUserId));
   };
 
   const handleRespond = async (connectionId: string, status: 'accepted' | 'rejected') => {
     setActionLoading(prev => [...prev, connectionId]);
-    await updateConnectionStatus(connectionId, status);
-    await fetchData();
+    const res = await updateConnectionStatus(connectionId, status);
+    if (res.success) {
+      toast.success(`Request ${status}!`);
+      await fetchData();
+    } else {
+      toast.error(res.error || "Failed to update request");
+    }
     setActionLoading(prev => prev.filter(id => id !== connectionId));
   };
 
