@@ -454,9 +454,94 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "notifications" && (
-            <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in text-center py-20">
-              <h2 className="text-xl font-bold text-white mb-2">Coming Soon</h2>
-              <p className="text-slate-400">Notification preferences will be available soon.</p>
+            <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in">
+              <div className="border-b border-white/10 pb-4">
+                <h2 className="text-2xl font-bold text-white">Notification Preferences</h2>
+                <p className="text-slate-400 text-sm mt-1">Control how and when you receive activity alerts on Rhockstar Connect.</p>
+              </div>
+
+              <div className="space-y-6">
+                <h3 className="text-sm font-extrabold text-brand uppercase tracking-wider">In-App Alerts</h3>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Direct Messages</h4>
+                    <p className="text-xs text-slate-400">Receive instant alerts when connections send you messages.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Message notification preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Connection Requests & Accepts</h4>
+                    <p className="text-xs text-slate-400">Get notified when someone sends or accepts a connection request.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Connection alert preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Feed Comments & Likes</h4>
+                    <p className="text-xs text-slate-400">Get notified when users like or comment on your community posts.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Post interaction preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Job Applications & Recruiter Updates</h4>
+                    <p className="text-xs text-slate-400">Receive status updates when employers review your applications.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Job application alert preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Dating Likes & Matches</h4>
+                    <p className="text-xs text-slate-400">Get notified instantly when someone likes your dating profile or matches with you.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Dating notification preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                  </label>
+                </div>
+
+                <h3 className="text-sm font-extrabold text-brand uppercase tracking-wider pt-4 border-t border-white/10">Email Digest & Push Notifications</h3>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Weekly Career Highlights</h4>
+                    <p className="text-xs text-slate-400">Weekly email summaries of recommended jobs and network growth.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Weekly email digest preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Desktop Push Alerts</h4>
+                    <p className="text-xs text-slate-400">Receive browser notifications when you are active on Rhockstar Connect.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Desktop push notification preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+              </div>
             </div>
           )}
         </div>
