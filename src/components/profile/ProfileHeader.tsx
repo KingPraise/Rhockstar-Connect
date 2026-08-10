@@ -93,14 +93,14 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
 
       <div className="px-8 pb-8 relative">
         {/* Avatar */}
-        <div className="absolute -top-24 left-8 rounded-full p-2 bg-slate-900 shadow-2xl z-10 transition-transform duration-300 hover:scale-[1.02]">
+        <div className="absolute -top-16 md:-top-24 left-4 md:left-8 rounded-full p-1.5 md:p-2 bg-slate-900 shadow-2xl z-10 transition-transform duration-300 hover:scale-[1.02]">
           <div 
             onClick={() => {
               if (profile.avatar) {
                 openLightbox([profile.avatar]);
               }
             }}
-            className={`w-40 h-40 rounded-full bg-gradient-to-br ${themeClasses.avatar} flex items-center justify-center text-white text-6xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-slate-800 ${profile.avatar ? 'cursor-pointer' : ''}`}
+            className={`w-28 h-28 md:w-40 md:h-40 rounded-full bg-gradient-to-br ${themeClasses.avatar} flex items-center justify-center text-white text-5xl md:text-6xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-slate-800 ${profile.avatar ? 'cursor-pointer' : ''}`}
           >
             {profile.avatar ? (
               // eslint-disable-next-line @next/next/no-img-element

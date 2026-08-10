@@ -163,7 +163,7 @@ export default function SettingsPage() {
                   </label>
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl mt-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-slate-800/50 border border-white/5 rounded-xl mt-4">
                   <div>
                     <h4 className="font-bold text-white flex items-center gap-2">
                       <Crown className="w-4 h-4 text-emerald-400" />
