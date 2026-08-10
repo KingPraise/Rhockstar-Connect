@@ -35,6 +35,7 @@ export interface UserBasic {
   connections: number;
   lastLogin?: any;
   role?: 'user' | 'admin' | 'employer';
+  profileTheme?: string;
 }
 
 export const getAllUsers = async (excludeAdmins = true): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> => {
@@ -140,7 +141,7 @@ const RESERVED_USERNAMES = [
 
 export const updateUserProfile = async (
   userId: string,
-  data: Partial<Omit<UserBasic, 'uid'>> & { bio?: string; headline?: string; location?: any; phone?: string; dob?: string; relationship?: string; isLocked?: boolean }
+  data: Partial<Omit<UserBasic, 'uid'>> & { bio?: string; headline?: string; location?: any; phone?: string; dob?: string; relationship?: string; isLocked?: boolean; profileTheme?: string }
 ) => {
   try {
     if (data.username) {
