@@ -5,10 +5,11 @@ import { useSearchParams } from "next/navigation";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
-import { Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap, Loader2, UserPlus, LogIn } from "lucide-react";
+import { Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap, Loader2, UserPlus, LogIn, Target, CheckCircle2 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getUserById, getUserByUsername } from "@/lib/services/users";
 import { sendConnectionRequest } from "@/lib/services/connections";
+import { calculateProfileProgress } from "@/lib/utils/profileProgress";
 import Link from "next/link";
 import { Briefcase } from "lucide-react";
 import toast from "react-hot-toast";
@@ -70,6 +71,7 @@ export default function ProfilePage() {
 
   const activeProfile = targetUser || loggedInProfile;
   const isOwnProfile = Boolean(!targetUser || (loggedInProfile && targetUser?.uid === loggedInProfile.uid));
+  const progress = calculateProfileProgress(activeProfile);
 
   const handleConnect = async () => {
     if (!loggedInProfile) {
@@ -234,6 +236,59 @@ export default function ProfilePage() {
         {/* Right Column (Sidebar Content) */}
         <div className="flex flex-col gap-8">
           
+          {isOwnProfile && (
+            <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
+              <div className="absolute top-0 left-0 w-1 h-full bg-brand"></div>
+              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Target className="w-5 h-5 text-brand" />
+                Profile Strength
+              </h2>
+              
+              <div className="flex items-center gap-6">
+                <div className="relative w-20 h-20 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-800" />
+                    <circle 
+                      cx="50" cy="50" r="40" 
+                      stroke="currentColor" strokeWidth="8" fill="transparent" 
+                      strokeDasharray={251.2} 
+                      strokeDashoffset={251.2 - (251.2 * progress.percentage) / 100} 
+                      strokeLinecap="round" 
+                      className={`${progress.percentage === 100 ? 'text-emerald-400' : 'text-brand'} transition-all duration-1000 ease-out`} 
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center flex-col">
+                    <span className="text-xl font-black text-white">{progress.percentage}%</span>
+                  </div>
+                </div>
+                
+                <div className="flex-1">
+                  {progress.percentage === 100 ? (
+                    <div>
+                      <p className="text-emerald-400 font-bold text-sm mb-1 flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4" /> All-Star Profile
+                      </p>
+                      <p className="text-slate-400 text-xs">You're fully set up to stand out!</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-white font-bold text-sm mb-1">Next step:</p>
+                      <p className="text-brand text-xs font-medium bg-brand/10 px-2.5 py-1 rounded-md inline-block border border-brand/20 line-clamp-1">
+                        + {progress.missingItems[0]}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {progress.percentage < 100 && (
+                <button onClick={() => setIsEditModalOpen(true)} className="w-full mt-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-sm transition-colors border border-white/5">
+                  Complete Profile
+                </button>
+              )}
+            </div>
+          )}
+
           {activeProfile?.accountType === 'employer' ? (
             <>
               {isOwnProfile && (

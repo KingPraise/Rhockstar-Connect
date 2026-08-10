@@ -162,7 +162,46 @@ export default function SettingsPage() {
                     <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
                   </label>
                 </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl mt-4">
+                  <div>
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-emerald-400" />
+                      Premium Profile Theme
+                    </h4>
+                    <p className="text-sm text-slate-400">Choose a custom color theme for your public profile.</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && (
+                      <span className="text-xs text-amber-500 font-bold px-2 py-1 bg-amber-500/10 rounded-md">PRO+</span>
+                    )}
+                    <select 
+                      className="bg-slate-900 border border-white/10 text-white text-sm rounded-lg focus:ring-brand focus:border-brand block p-2.5 disabled:opacity-50"
+                      disabled={profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite'}
+                      value={(profile as any)?.profileTheme || 'default'}
+                      onChange={async (e) => {
+                        const newTheme = e.target.value;
+                        if (profile?.uid) {
+                          const { updateUserProfile } = await import('@/lib/services/users');
+                          const res = await updateUserProfile(profile.uid, { profileTheme: newTheme });
+                          if (res.success) {
+                            useAuthStore.getState().setProfile({ ...profile, profileTheme: newTheme } as any);
+                            toast.success('Profile theme updated!');
+                          } else {
+                            toast.error('Failed to update theme');
+                          }
+                        }
+                      }}
+                    >
+                      <option value="default">Default (Brand)</option>
+                      <option value="ocean">Ocean Blue</option>
+                      <option value="emerald">Emerald Green</option>
+                      <option value="rose">Rose Pink</option>
+                      <option value="amber">Amber Gold</option>
+                    </select>
+                  </div>
                 </div>
+              </div>
 
               {/* Employer Status */}
               {(profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (

@@ -41,10 +41,47 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
     }
   };
 
+  const getThemeClasses = (theme?: string) => {
+    switch (theme) {
+      case 'ocean':
+        return {
+          cover: 'from-blue-600 via-sky-500 to-blue-600',
+          avatar: 'from-blue-600 to-sky-500',
+          button: 'from-sky-500 to-blue-600'
+        };
+      case 'emerald':
+        return {
+          cover: 'from-emerald-600 via-teal-500 to-emerald-600',
+          avatar: 'from-emerald-600 to-teal-500',
+          button: 'from-teal-500 to-emerald-600'
+        };
+      case 'rose':
+        return {
+          cover: 'from-rose-600 via-pink-500 to-rose-600',
+          avatar: 'from-rose-600 to-pink-500',
+          button: 'from-pink-500 to-rose-600'
+        };
+      case 'amber':
+        return {
+          cover: 'from-amber-600 via-yellow-500 to-amber-600',
+          avatar: 'from-amber-600 to-yellow-500',
+          button: 'from-yellow-500 to-amber-600'
+        };
+      default:
+        return {
+          cover: 'from-brand-purple via-brand to-brand-purple',
+          avatar: 'from-brand-purple to-brand',
+          button: 'from-brand to-brand-purple'
+        };
+    }
+  };
+
+  const themeClasses = getThemeClasses((profile as any).profileTheme);
+
   return (
     <div className="neo-card p-0 overflow-hidden flex flex-col mb-6 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl group">
       {/* Cover Photo */}
-      <div className="h-64 w-full bg-gradient-to-r from-brand-purple via-brand to-brand-purple bg-[length:200%_200%] animate-gradient-x relative">
+      <div className={`h-64 w-full bg-gradient-to-r ${themeClasses.cover} bg-[length:200%_200%] animate-gradient-x relative`}>
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]"></div>
         {isOwnProfile && (
           <button onClick={onEditClick} className="absolute top-4 right-4 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white text-sm py-2 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/10 shadow-lg">
@@ -63,7 +100,7 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
                 openLightbox([profile.avatar]);
               }
             }}
-            className={`w-40 h-40 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center text-white text-6xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-slate-800 ${profile.avatar ? 'cursor-pointer' : ''}`}
+            className={`w-40 h-40 rounded-full bg-gradient-to-br ${themeClasses.avatar} flex items-center justify-center text-white text-6xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-slate-800 ${profile.avatar ? 'cursor-pointer' : ''}`}
           >
             {profile.avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -142,7 +179,7 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
                 <button 
                   onClick={onConnectClick}
                   disabled={actionLoading}
-                  className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                  className={`py-2.5 px-6 rounded-xl bg-gradient-to-r ${themeClasses.button} text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100`}
                 >
                   {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                   Connect
