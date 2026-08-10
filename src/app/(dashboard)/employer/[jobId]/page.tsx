@@ -31,15 +31,23 @@ export default function EmployerJobApplicantsPage() {
     setLoading(false);
   };
 
-  if (!profile || (profile.accountType !== 'employer' && profile.role !== 'admin' && (profile as any).role !== 'employer')) {
+  const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
+  const isElite = profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
+
+  if (!profile || !isEmployer || !isElite) {
     return (
-      <div className="max-w-4xl mx-auto p-12 text-center neo-card bg-slate-900/60 border border-white/5 rounded-3xl mt-8">
-        <Briefcase className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-white mb-2">Employer Access Required</h2>
-        <p className="text-slate-400 text-sm mb-6">You need an Employer account to view candidate applications for this job listing.</p>
-        <Link href="/settings" className="px-6 py-2.5 bg-brand text-white font-bold rounded-xl hover:scale-105 transition-transform inline-block">
-          Upgrade in Settings
-        </Link>
+      <div className="max-w-xl mx-auto p-8 my-12 neo-card bg-slate-900/60 backdrop-blur-md border border-amber-500/30 rounded-3xl text-center shadow-[0_0_50px_rgba(245,158,11,0.15)] space-y-4">
+        <Briefcase className="w-12 h-12 text-amber-400 mx-auto" />
+        <h2 className="text-xl font-bold text-white">Employer Access & Elite Plan Required</h2>
+        <p className="text-slate-300 text-sm">Reviewing candidates and managing applicants requires an Employer account with an active Elite Membership.</p>
+        <div className="flex justify-center gap-3 pt-2">
+          <Link href="/premium" className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold rounded-xl text-xs hover:scale-105 transition-all">
+            Upgrade to Elite ($5/mo)
+          </Link>
+          <Link href="/settings" className="px-5 py-2.5 bg-slate-800 text-white font-bold rounded-xl text-xs border border-white/10 hover:bg-slate-700 transition-all">
+            Settings
+          </Link>
+        </div>
       </div>
     );
   }

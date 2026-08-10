@@ -34,7 +34,7 @@ export default function Sidebar() {
   const router = useRouter();
   const [isMinimized, setIsMinimized] = useState(false);
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
-  const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
+  const isEmployer = (profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (profile?.subscriptionTier === 'elite' || profile?.role === 'admin');
 
   const handleLogout = async () => {
     await logoutUser();

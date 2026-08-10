@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getJobs, JobListing, createJob } from "@/lib/services/jobs";
-import { Plus, Briefcase, Users, Activity, Eye, Trash2, Loader2 } from "lucide-react";
+import { Plus, Briefcase, Users, Activity, Eye, Trash2, Loader2, Crown, Sparkles, Building2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 
@@ -65,17 +65,43 @@ export default function EmployerDashboardPage() {
     setSubmitting(false);
   };
 
-  if (!profile || (profile.accountType !== 'employer' && profile.role !== 'admin' && (profile as any).role !== 'employer')) {
+  const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
+  const isElite = profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
+
+  if (!profile || !isEmployer || !isElite) {
     return (
-      <div className="max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[50vh]">
-        <Briefcase className="h-16 w-16 text-gray-400 mb-4" />
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Employer Access Required</h1>
-        <p className="text-gray-600 dark:text-gray-400 text-center max-w-md mb-6">
-          You need an Employer account to post jobs and manage applicants on Rhockstar Connect.
-        </p>
-        <Link href="/settings" className="bg-[#6B8AFD] text-white px-6 py-2 rounded-full font-medium hover:bg-blue-600 transition-colors">
-          Upgrade in Settings
-        </Link>
+      <div className="max-w-2xl mx-auto p-8 my-12 neo-card bg-slate-900/60 backdrop-blur-md border border-amber-500/30 rounded-3xl text-center shadow-[0_0_50px_rgba(245,158,11,0.15)] space-y-6">
+        <div className="w-16 h-16 rounded-3xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto shadow-inner">
+          <Crown className="h-8 w-8" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">Employer Access & Elite Plan Required</h1>
+          <p className="text-slate-300 text-base leading-relaxed max-w-md mx-auto">
+            Posting job listings and recruiting top talent on Rhockstar Connect requires an <span className="text-amber-400 font-bold">Employer Account</span> with an active <span className="text-amber-400 font-bold">Elite Membership</span> ($5/mo).
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          {!isElite && (
+            <Link 
+              href="/premium" 
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-extrabold rounded-2xl shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 fill-slate-950" />
+              Upgrade to Elite ($5/mo)
+            </Link>
+          )}
+
+          {!isEmployer && (
+            <Link 
+              href="/settings" 
+              className="w-full sm:w-auto px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-2xl border border-white/10 transition-all flex items-center justify-center gap-2"
+            >
+              <Building2 className="w-4 h-4 text-brand" />
+              Switch Account to Employer
+            </Link>
+          )}
+        </div>
       </div>
     );
   }

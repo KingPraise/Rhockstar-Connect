@@ -42,7 +42,7 @@ export default function MobileHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
-  const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
+  const isEmployer = (profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (profile?.subscriptionTier === 'elite' || profile?.role === 'admin');
 
   const handleLogoutClick = () => {
     setIsOpen(false);
