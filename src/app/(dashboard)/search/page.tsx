@@ -88,7 +88,10 @@ export default function SearchPage() {
 
     const u = users.filter(user => 
       user.fullName.toLowerCase().includes(lowerQuery) || 
-      user.username.toLowerCase().includes(lowerQuery)
+      user.username.toLowerCase().includes(lowerQuery) ||
+      user.headline?.toLowerCase().includes(lowerQuery) ||
+      user.industry?.toLowerCase().includes(lowerQuery) ||
+      user.bio?.toLowerCase().includes(lowerQuery)
     );
 
     const p = posts.filter(post => 
