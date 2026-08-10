@@ -13,7 +13,8 @@ import {
   X, 
   CheckCircle2, 
   Calendar,
-  Gift
+  Gift,
+  Eye
 } from "lucide-react";
 import Image from "next/image";
 import { 
@@ -270,6 +271,13 @@ export default function AdminUsersPage() {
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          onClick={() => setSelectedUser(user)}
+                          title="Inspect User Details"
+                          className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => setGrantModalUser(user)}
                           title="Grant Subscription"
                           className="p-2 text-amber-400 hover:bg-amber-500/10 rounded-xl transition-colors"
@@ -310,6 +318,127 @@ export default function AdminUsersPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* SUPER ADMIN USER INSPECTOR MODAL */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-xl bg-slate-900 border border-rose-500/30 p-6 rounded-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setSelectedUser(null)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white bg-slate-800/80 p-2 rounded-full border border-white/5 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Profile Header */}
+            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-white/5">
+              <div className="w-16 h-16 rounded-full overflow-hidden bg-rose-500/20 relative border-2 border-rose-500/30 flex-shrink-0">
+                {selectedUser.avatar ? (
+                  <Image src={selectedUser.avatar} alt={selectedUser.fullName} fill className="object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center font-bold text-rose-500 text-xl">
+                    {selectedUser.fullName.charAt(0)}
+                  </div>
+                )}
+              </div>
+              <div>
+                <h3 className="text-2xl font-extrabold text-white flex items-center gap-2">
+                  {selectedUser.fullName}
+                  {selectedUser.role === "admin" && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                      ADMIN
+                    </span>
+                  )}
+                </h3>
+                <p className="text-sm text-slate-400">@{selectedUser.username}</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <a
+                    href={`/profile?uid=${selectedUser.uid}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white rounded-xl text-xs font-bold transition-all"
+                  >
+                    View Public Profile ↗
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* User Grid Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Email Address</p>
+                <p className="text-sm font-semibold text-white truncate mt-1">{selectedUser.email}</p>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Type</p>
+                <p className="text-sm font-semibold text-white capitalize mt-1">{(selectedUser as any).accountType || 'Job Seeker'}</p>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Subscription Tier</p>
+                <p className="text-sm font-semibold text-amber-400 uppercase mt-1">
+                  {selectedUser.subscriptionTier || 'FREE'}
+                  {selectedUser.subscriptionStatus === 'active' && ' (ACTIVE)'}
+                </p>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Status</p>
+                <p className={`text-sm font-semibold mt-1 ${selectedUser.isBanned ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {selectedUser.isBanned ? 'Banned' : 'Active'}
+                </p>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">User ID (UID)</p>
+                <p className="text-xs font-mono text-slate-400 truncate mt-1">{selectedUser.uid}</p>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Referrals</p>
+                <p className="text-sm font-semibold text-white mt-1">{selectedUser.referralCount || 0} Members Invited</p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-4 border-t border-white/5 flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  const u = selectedUser;
+                  setSelectedUser(null);
+                  setGrantModalUser(u);
+                }}
+                className="flex-1 py-2.5 px-4 bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500 hover:text-black rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+              >
+                <Gift className="w-4 h-4" />
+                Grant Perks
+              </button>
+
+              <button
+                onClick={() => handleRoleToggle(selectedUser)}
+                className="flex-1 py-2.5 px-4 bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500 hover:text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                {selectedUser.role === "admin" ? "Demote Admin" : "Make Admin"}
+              </button>
+
+              <button
+                onClick={() => handleBanToggle(selectedUser)}
+                className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all ${
+                  selectedUser.isBanned
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500 hover:text-black"
+                    : "bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500 hover:text-black"
+                }`}
+              >
+                {selectedUser.isBanned ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                {selectedUser.isBanned ? "Unban Account" : "Ban Account"}
+              </button>
+            </div>
           </div>
         </div>
       )}
