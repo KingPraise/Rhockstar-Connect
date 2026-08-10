@@ -112,6 +112,20 @@ export default function DatingPage() {
     }
   };
 
+  const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
+
+  const handleSeeWhoLikedYouClick = () => {
+    if (isPremium) {
+      setViewMode('grid');
+      toast.success("Premium Dating Unlocked! Viewing all matching profiles.", {
+        icon: "👑",
+        style: { background: '#1e293b', color: '#fff' }
+      });
+    } else {
+      openLock("See Who Liked Your Profile", "Upgrade to Premium or Elite to see who already liked your profile and match with them instantly!");
+    }
+  };
+
   const currentProspect = prospects.length > 0 ? prospects[0] : null;
 
   if (loading || !profile) {
@@ -177,34 +191,42 @@ export default function DatingPage() {
         </div>
       </div>
 
-      {/* WHO LIKED YOU - PREMIUM LOCKED BANNER */}
+      {/* WHO LIKED YOU - BANNER */}
       <div 
-        onClick={() => openLock("See Who Liked Your Profile", "Upgrade to Premium or Elite to see who already liked your profile and match with them instantly!")}
-        className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-brand-purple/10 border border-amber-500/30 backdrop-blur-md flex items-center justify-between cursor-pointer hover:border-amber-500/60 transition-all group"
+        onClick={handleSeeWhoLikedYouClick}
+        className={`mb-8 p-4 rounded-2xl bg-gradient-to-r ${
+          isPremium 
+            ? 'from-emerald-500/10 via-brand/10 to-brand-purple/10 border-emerald-500/30 hover:border-emerald-500/60' 
+            : 'from-amber-500/10 via-rose-500/10 to-brand-purple/10 border-amber-500/30 hover:border-amber-500/60'
+        } border backdrop-blur-md flex items-center justify-between cursor-pointer transition-all group`}
       >
         <div className="flex items-center gap-3">
           <div className="relative flex -space-x-3">
-            <div className="w-10 h-10 rounded-full bg-slate-800 border-2 border-amber-500/50 flex items-center justify-center font-extrabold text-amber-400 text-xs blur-[2px]">
-              ?
+            <div className={`w-10 h-10 rounded-full bg-slate-800 border-2 ${isPremium ? 'border-emerald-400' : 'border-amber-500/50'} flex items-center justify-center font-extrabold ${isPremium ? 'text-emerald-400' : 'text-amber-400 text-xs blur-[2px]'}`}>
+              {isPremium ? '✨' : '?'}
             </div>
-            <div className="w-10 h-10 rounded-full bg-slate-800 border-2 border-rose-500/50 flex items-center justify-center font-extrabold text-rose-400 text-xs blur-[2px]">
-              ?
+            <div className={`w-10 h-10 rounded-full bg-slate-800 border-2 ${isPremium ? 'border-brand' : 'border-rose-500/50'} flex items-center justify-center font-extrabold ${isPremium ? 'text-brand' : 'text-rose-400 text-xs blur-[2px]'}`}>
+              {isPremium ? '💖' : '?'}
             </div>
-            <div className="w-10 h-10 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-400 font-bold">
-              <Lock className="w-4 h-4" />
+            <div className={`w-10 h-10 rounded-full ${isPremium ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400' : 'bg-amber-500/20 border-2 border-amber-400 text-amber-400'} flex items-center justify-center font-bold`}>
+              {isPremium ? <Sparkles className="w-4 h-4 text-emerald-400" /> : <Lock className="w-4 h-4" />}
             </div>
           </div>
           <div>
             <h3 className="font-extrabold text-white text-sm flex items-center gap-1.5">
               <span>See Who Liked You</span>
-              <Crown className="w-3.5 h-3.5 text-amber-400" />
+              <Crown className={`w-3.5 h-3.5 ${isPremium ? 'text-emerald-400' : 'text-amber-400'}`} />
             </h3>
-            <p className="text-xs text-slate-400">2 people already liked your dating profile today</p>
+            <p className="text-xs text-slate-400">
+              {isPremium 
+                ? "You have full Premium & Elite Dating Access unlocked!" 
+                : "2 people already liked your dating profile today"}
+            </p>
           </div>
         </div>
 
-        <button className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs group-hover:scale-105 transition-transform flex items-center gap-1">
-          <Eye className="w-3.5 h-3.5" /> Unlock Now
+        <button className={`px-3.5 py-1.5 rounded-xl ${isPremium ? 'bg-emerald-500 text-slate-950 font-black' : 'bg-amber-500 text-slate-950 font-black'} text-xs group-hover:scale-105 transition-transform flex items-center gap-1`}>
+          <Eye className="w-3.5 h-3.5" /> {isPremium ? "View Matches" : "Unlock Now"}
         </button>
       </div>
 
