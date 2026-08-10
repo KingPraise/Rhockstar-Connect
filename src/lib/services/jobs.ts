@@ -234,3 +234,20 @@ export const getApplicationsForJob = async (jobId: string): Promise<{ success: b
     return { success: false, error: error.message };
   }
 };
+
+export const getUserApplications = async (applicantId: string): Promise<{ success: boolean; applications?: JobApplication[]; error?: string }> => {
+  try {
+    const appsRef = collection(db, "job_applications");
+    const q = query(appsRef, where("applicantId", "==", applicantId));
+    const snapshot = await getDocs(q);
+    
+    const applications = snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id
+    } as JobApplication));
+    
+    return { success: true, applications };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
