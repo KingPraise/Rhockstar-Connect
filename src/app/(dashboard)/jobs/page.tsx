@@ -122,7 +122,31 @@ export default function JobsPage() {
     return jobs.filter(job => job.title.includes('Senior') || job.title.includes('Lead'));
   }, [jobs]);
 
-  const displayedJobs = activeTab === 'recommended' ? recommendedJobsList : jobs;
+  const displayedJobs = useMemo(() => {
+    let list = activeTab === 'recommended' ? recommendedJobsList : jobs;
+    
+    // Apply search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(job => 
+        job.title.toLowerCase().includes(q) || 
+        job.company.toLowerCase().includes(q) ||
+        (job.location && typeof job.location === 'string' && job.location.toLowerCase().includes(q))
+      );
+    }
+    
+    // Apply active filter (All, Remote, Full-time, etc.)
+    if (activeFilter !== 'All') {
+      list = list.filter(job => {
+        if (activeFilter === 'Remote') {
+          return job.type?.toLowerCase() === 'remote' || (typeof job.location === 'string' && job.location.toLowerCase().includes('remote'));
+        }
+        return job.type?.toLowerCase() === activeFilter.toLowerCase();
+      });
+    }
+    
+    return list;
+  }, [jobs, activeTab, recommendedJobsList, searchQuery, activeFilter]);
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
