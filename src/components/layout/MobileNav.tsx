@@ -60,6 +60,7 @@ export default function MobileNav() {
           return (
             <Link 
               key={item.name}
+              id={`tour-mobile-${item.name.toLowerCase()}-nav`}
               href={item.href}
               prefetch={true}
               className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 relative ${
