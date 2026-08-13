@@ -31,6 +31,56 @@ export default function MessagesPage() {
   const [activeMenuChatId, setActiveMenuChatId] = useState<string | null>(null);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
+  // iOS WhatsApp style touch swipe state
+  const [swipedChatId, setSwipedChatId] = useState<string | null>(null);
+  const [swipingChatId, setSwipingChatId] = useState<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  const touchStartXRef = useRef<number>(0);
+  const touchStartYRef = useRef<number>(0);
+  const isHorizontalSwipeRef = useRef<boolean | null>(null);
+
+  const handleTouchStart = (chatId: string, e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+    isHorizontalSwipeRef.current = null;
+    setSwipingChatId(chatId);
+  };
+
+  const handleTouchMove = (chatId: string, e: React.TouchEvent) => {
+    const diffX = e.touches[0].clientX - touchStartXRef.current;
+    const diffY = e.touches[0].clientY - touchStartYRef.current;
+
+    if (isHorizontalSwipeRef.current === null) {
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 8) {
+        isHorizontalSwipeRef.current = true;
+      } else if (Math.abs(diffY) > 8) {
+        isHorizontalSwipeRef.current = false;
+      }
+    }
+
+    if (isHorizontalSwipeRef.current) {
+      if (diffX < 0) { // dragging left
+        const currentOffset = swipedChatId === chatId ? -140 + diffX : diffX;
+        setSwipeOffset(Math.max(currentOffset, -160));
+      } else if (swipedChatId === chatId && diffX > 0) { // dragging right to close
+        const currentOffset = -140 + diffX;
+        setSwipeOffset(Math.min(currentOffset, 0));
+      }
+    }
+  };
+
+  const handleTouchEnd = (chatId: string) => {
+    if (isHorizontalSwipeRef.current) {
+      if (swipeOffset < -50) {
+        setSwipedChatId(chatId);
+      } else {
+        setSwipedChatId(null);
+      }
+    }
+    setSwipingChatId(null);
+    setSwipeOffset(0);
+  };
+
   const handleMarkAsRead = async (chatId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!profile?.uid) return;
@@ -459,95 +509,146 @@ export default function MessagesPage() {
                 const isArchived = chat.archivedFor?.includes(profile.uid);
 
                 return (
-                  <div
-                    key={chat.id}
-                    onClick={() => setActiveChat(chat)}
-                    className={`w-full p-4 flex items-center justify-between gap-3 hover:bg-white/5 transition-all text-left border-b border-white/5 last:border-0 relative cursor-pointer group ${
-                      isActive ? 'bg-white/10 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : isUnread ? 'bg-brand/10' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="relative shrink-0">
-                        <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className={`w-12 h-12 transition-transform ${isActive ? 'scale-105 ring-2 ring-brand' : ''}`} textClassName="text-lg font-bold" />
-                        {getUserStatus(otherUser.lastLogin).isOnline && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex justify-between items-baseline mb-0.5">
-                          <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
-                          <span className="text-[10px] text-slate-500 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
-                        </div>
-                        <div className="flex items-center justify-between gap-1">
-                          <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : 'text-slate-400'}`}>
-                            {isTyping ? 'Typing...' : chat.lastMessage || 'Start a conversation'}
-                          </p>
-                          {isUnread && (
-                            <span className="w-2.5 h-2.5 rounded-full bg-brand shrink-0" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Options Dropdown Trigger */}
-                    <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <div key={chat.id} className="relative overflow-hidden border-b border-white/5 last:border-0 group/swipe select-none">
+                    {/* SWIPE ACTIONS (Underneath layer) */}
+                    <div className="absolute right-0 top-0 bottom-0 flex items-center h-full z-0">
                       <button
                         onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveMenuChatId(activeMenuChatId === chat.id ? null : chat.id);
+                          setSwipedChatId(null);
+                          handleToggleArchive(chat.id, !!isArchived, e);
                         }}
-                        className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-                        title="Chat Options"
+                        className="h-full px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold flex flex-col items-center justify-center gap-1 transition-colors text-xs shrink-0"
                       >
-                        <MoreHorizontal className="w-4 h-4" />
+                        {isArchived ? (
+                          <>
+                            <ArchiveRestore className="w-5 h-5 text-slate-950" />
+                            <span className="text-[10px]">Unarchive</span>
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="w-5 h-5 text-slate-950" />
+                            <span className="text-[10px]">Archive</span>
+                          </>
+                        )}
                       </button>
+                      <button
+                        onClick={(e) => {
+                          setSwipedChatId(null);
+                          handleDeleteChat(chat.id, e);
+                        }}
+                        className="h-full px-4 bg-rose-600 hover:bg-rose-500 text-white font-extrabold flex flex-col items-center justify-center gap-1 transition-colors text-xs shrink-0"
+                      >
+                        <Trash2 className="w-5 h-5 text-white" />
+                        <span className="text-[10px]">Delete</span>
+                      </button>
+                    </div>
 
-                      {activeMenuChatId === chat.id && (
-                        <div className="absolute right-0 top-8 w-44 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-1 animate-in fade-in zoom-in-95 duration-150">
-                          {isUnread ? (
-                            <button
-                              onClick={(e) => handleMarkAsRead(chat.id, e)}
-                              className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
-                            >
-                              <CheckCheck className="w-3.5 h-3.5 text-brand" />
-                              Mark as Read
-                            </button>
-                          ) : (
-                            <button
-                              onClick={(e) => handleMarkAsUnread(chat.id, e)}
-                              className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
-                            >
-                              <Mail className="w-3.5 h-3.5 text-brand" />
-                              Mark as Unread
-                            </button>
+                    {/* SWIPEABLE CARD (Top layer) */}
+                    <div
+                      onTouchStart={(e) => handleTouchStart(chat.id, e)}
+                      onTouchMove={(e) => handleTouchMove(chat.id, e)}
+                      onTouchEnd={() => handleTouchEnd(chat.id)}
+                      onClick={() => {
+                        if (swipedChatId === chat.id) {
+                          setSwipedChatId(null);
+                        } else {
+                          setActiveChat(chat);
+                        }
+                      }}
+                      style={{
+                        transform: `translateX(${
+                          swipingChatId === chat.id 
+                            ? `${swipeOffset}px` 
+                            : (swipedChatId === chat.id ? '-140px' : '0px')
+                        })`
+                      }}
+                      className={`w-full p-4 flex items-center justify-between gap-3 bg-slate-900/90 hover:bg-slate-800/80 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${
+                        isActive ? 'bg-white/10 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : isUnread ? 'bg-brand/10' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="relative shrink-0">
+                          <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className={`w-12 h-12 transition-transform ${isActive ? 'scale-105 ring-2 ring-brand' : ''}`} textClassName="text-lg font-bold" />
+                          {getUserStatus(otherUser.lastLogin).isOnline && (
+                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
                           )}
-
-                          <button
-                            onClick={(e) => handleToggleArchive(chat.id, !!isArchived, e)}
-                            className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
-                          >
-                            {isArchived ? (
-                              <>
-                                <ArchiveRestore className="w-3.5 h-3.5 text-amber-400" />
-                                Unarchive Chat
-                              </>
-                            ) : (
-                              <>
-                                <Archive className="w-3.5 h-3.5 text-amber-400" />
-                                Archive Chat
-                              </>
-                            )}
-                          </button>
-
-                          <button
-                            onClick={(e) => handleDeleteChat(chat.id, e)}
-                            className="w-full px-3 py-2 text-xs text-left text-red-400 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-2"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete Chat
-                          </button>
                         </div>
-                      )}
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <div className="flex justify-between items-baseline mb-0.5">
+                            <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
+                            <span className="text-[10px] text-slate-500 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-1">
+                            <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : 'text-slate-400'}`}>
+                              {isTyping ? 'Typing...' : chat.lastMessage || 'Start a conversation'}
+                            </p>
+                            {isUnread && (
+                              <span className="w-2.5 h-2.5 rounded-full bg-brand shrink-0" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Options Dropdown Trigger */}
+                      <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuChatId(activeMenuChatId === chat.id ? null : chat.id);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                          title="Chat Options"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+
+                        {activeMenuChatId === chat.id && (
+                          <div className="absolute right-0 top-8 w-44 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-1 animate-in fade-in zoom-in-95 duration-150">
+                            {isUnread ? (
+                              <button
+                                onClick={(e) => handleMarkAsRead(chat.id, e)}
+                                className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                              >
+                                <CheckCheck className="w-3.5 h-3.5 text-brand" />
+                                Mark as Read
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => handleMarkAsUnread(chat.id, e)}
+                                className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                              >
+                                <Mail className="w-3.5 h-3.5 text-brand" />
+                                Mark as Unread
+                              </button>
+                            )}
+
+                            <button
+                              onClick={(e) => handleToggleArchive(chat.id, !!isArchived, e)}
+                              className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                            >
+                              {isArchived ? (
+                                <>
+                                  <ArchiveRestore className="w-3.5 h-3.5 text-amber-400" />
+                                  Unarchive Chat
+                                </>
+                              ) : (
+                                <>
+                                  <Archive className="w-3.5 h-3.5 text-amber-400" />
+                                  Archive Chat
+                                </>
+                              )}
+                            </button>
+
+                            <button
+                              onClick={(e) => handleDeleteChat(chat.id, e)}
+                              className="w-full px-3 py-2 text-xs text-left text-red-400 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-2"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete Chat
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
