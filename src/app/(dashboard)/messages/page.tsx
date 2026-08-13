@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead, editMessage, deleteMessage } from "@/lib/services/messages";
+import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead, editMessage, deleteMessage, toggleArchiveChat, deleteChatForUser, markChatAsUnread } from "@/lib/services/messages";
 import { getAllUsers, UserBasic, getUserById } from "@/lib/services/users";
-import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, Trash2, MoreHorizontal } from "lucide-react";
+import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User } from "lucide-react";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import toast from "react-hot-toast";
@@ -27,9 +27,45 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState("");
   const [users, setUsers] = useState<Record<string, UserBasic>>({});
   const [friends, setFriends] = useState<string[]>([]);
-  
-  const [showNewChat, setShowNewChat] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [chatTab, setChatTab] = useState<'inbox' | 'archived'>('inbox');
+  const [activeMenuChatId, setActiveMenuChatId] = useState<string | null>(null);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+
+  const handleMarkAsRead = async (chatId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!profile?.uid) return;
+    await markMessagesAsRead(chatId, profile.uid);
+    setActiveMenuChatId(null);
+    toast.success("Marked as read");
+  };
+
+  const handleMarkAsUnread = async (chatId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!profile?.uid) return;
+    await markChatAsUnread(chatId, profile.uid);
+    setActiveMenuChatId(null);
+    toast.success("Marked as unread");
+  };
+
+  const handleToggleArchive = async (chatId: string, isCurrentlyArchived: boolean, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!profile?.uid) return;
+    await toggleArchiveChat(chatId, profile.uid, isCurrentlyArchived);
+    setActiveMenuChatId(null);
+    if (activeChat?.id === chatId) setActiveChat(null);
+    toast.success(isCurrentlyArchived ? "Unarchived chat" : "Archived chat");
+  };
+
+  const handleDeleteChat = async (chatId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!profile?.uid) return;
+    if (window.confirm("Are you sure you want to delete this conversation? It will be removed from your inbox.")) {
+      await deleteChatForUser(chatId, profile.uid);
+      setActiveMenuChatId(null);
+      if (activeChat?.id === chatId) setActiveChat(null);
+      toast.success("Conversation deleted");
+    }
+  };
   
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
@@ -314,17 +350,46 @@ export default function MessagesPage() {
       
       {/* SIDEBAR: CHAT LIST */}
       <div className={`${activeChat ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl`}>
-        {/* Sidebar Header */}
-        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-slate-900/80 backdrop-blur-md">
-          <h2 className="text-xl font-bold text-white">Messages</h2>
-          <button 
-            onClick={() => setShowNewChat(true)}
-            className="p-2 rounded-xl bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex items-center gap-1.5 text-xs font-bold"
-            title="Start New Chat"
-          >
-            <MessageSquarePlus className="w-5 h-5" />
-            <span className="hidden sm:inline">New Chat</span>
-          </button>
+        {/* Sidebar Header & Tabs */}
+        <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-slate-900/80 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Messages</h2>
+            <button 
+              onClick={() => setShowNewChat(true)}
+              className="p-2 rounded-xl bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex items-center gap-1.5 text-xs font-bold"
+              title="Start New Chat"
+            >
+              <MessageSquarePlus className="w-4.5 h-4.5" />
+              <span className="hidden sm:inline">New Chat</span>
+            </button>
+          </div>
+
+          {/* Inbox / Archived Tab Switcher */}
+          <div className="flex bg-slate-800/60 p-1 rounded-xl border border-white/5 gap-1">
+            <button
+              onClick={() => { setChatTab('inbox'); setShowNewChat(false); }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                chatTab === 'inbox' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Inbox className="w-3.5 h-3.5" />
+              Inbox
+            </button>
+            <button
+              onClick={() => { setChatTab('archived'); setShowNewChat(false); }}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 relative ${
+                chatTab === 'archived' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Archive className="w-3.5 h-3.5" />
+              Archived
+              {chats.filter(c => profile?.uid && c.archivedFor?.includes(profile.uid) && !c.deletedFor?.includes(profile.uid)).length > 0 && (
+                <span className="px-1.5 py-0.2 text-[10px] bg-brand text-slate-950 font-extrabold rounded-full ml-1">
+                  {chats.filter(c => profile?.uid && c.archivedFor?.includes(profile.uid) && !c.deletedFor?.includes(profile.uid)).length}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -370,54 +435,132 @@ export default function MessagesPage() {
               )}
             </div>
           ) : (
-            chats.length > 0 ? chats.map((chat) => {
-              const otherUserId = chat.participants.find(p => p !== profile?.uid) || chat.participants[0];
-              const otherUser = users[otherUserId] || {
-                uid: otherUserId,
-                fullName: "Member",
-                username: "user",
-                avatar: "",
-                lastLogin: null
-              };
-              const isTyping = chat.typingStatus?.[otherUserId];
-              const isActive = activeChat?.id === chat.id;
-              const unreadCount = chat.unreadCount?.[profile?.uid || ''] || 0;
-              const isUnread = unreadCount > 0;
+            (() => {
+              const filteredChats = chats.filter(c => {
+                if (!profile?.uid) return false;
+                if (c.deletedFor?.includes(profile.uid)) return false;
+                const isArchived = c.archivedFor?.includes(profile.uid);
+                return chatTab === 'archived' ? isArchived : !isArchived;
+              });
 
-              return (
-                <button
-                  key={chat.id}
-                  onClick={() => setActiveChat(chat)}
-                  className={`w-full p-4 flex items-center gap-4 hover:bg-white/5 transition-all text-left border-b border-white/5 last:border-0 relative ${
-                    isActive ? 'bg-white/10 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : isUnread ? 'bg-brand/10' : ''
-                  }`}
-                >
-                  <div className="relative">
-                    <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className={`w-12 h-12 transition-transform ${isActive ? 'scale-105 ring-2 ring-brand' : ''}`} textClassName="text-lg font-bold" />
-                    {getUserStatus(otherUser.lastLogin).isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <div className="flex justify-between items-baseline mb-0.5">
-                      <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
-                      <span className="text-[10px] text-slate-500 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
+              return filteredChats.length > 0 ? filteredChats.map((chat) => {
+                const otherUserId = chat.participants.find(p => p !== profile?.uid) || chat.participants[0];
+                const otherUser = users[otherUserId] || {
+                  uid: otherUserId,
+                  fullName: "Member",
+                  username: "user",
+                  avatar: "",
+                  lastLogin: null
+                };
+                const isTyping = chat.typingStatus?.[otherUserId];
+                const isActive = activeChat?.id === chat.id;
+                const unreadCount = chat.unreadCount?.[profile?.uid || ''] || 0;
+                const isUnread = unreadCount > 0;
+                const isArchived = chat.archivedFor?.includes(profile.uid);
+
+                return (
+                  <div
+                    key={chat.id}
+                    onClick={() => setActiveChat(chat)}
+                    className={`w-full p-4 flex items-center justify-between gap-3 hover:bg-white/5 transition-all text-left border-b border-white/5 last:border-0 relative cursor-pointer group ${
+                      isActive ? 'bg-white/10 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : isUnread ? 'bg-brand/10' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="relative shrink-0">
+                        <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className={`w-12 h-12 transition-transform ${isActive ? 'scale-105 ring-2 ring-brand' : ''}`} textClassName="text-lg font-bold" />
+                        {getUserStatus(otherUser.lastLogin).isOnline && (
+                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col justify-center">
+                        <div className="flex justify-between items-baseline mb-0.5">
+                          <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
+                          <span className="text-[10px] text-slate-500 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-1">
+                          <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : 'text-slate-400'}`}>
+                            {isTyping ? 'Typing...' : chat.lastMessage || 'Start a conversation'}
+                          </p>
+                          {isUnread && (
+                            <span className="w-2.5 h-2.5 rounded-full bg-brand shrink-0" />
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : 'text-slate-400'}`}>
-                      {isTyping ? 'Typing...' : chat.lastMessage || 'Start a conversation'}
-                    </p>
+
+                    {/* Options Dropdown Trigger */}
+                    <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuChatId(activeMenuChatId === chat.id ? null : chat.id);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                        title="Chat Options"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+
+                      {activeMenuChatId === chat.id && (
+                        <div className="absolute right-0 top-8 w-44 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-1 animate-in fade-in zoom-in-95 duration-150">
+                          {isUnread ? (
+                            <button
+                              onClick={(e) => handleMarkAsRead(chat.id, e)}
+                              className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                            >
+                              <CheckCheck className="w-3.5 h-3.5 text-brand" />
+                              Mark as Read
+                            </button>
+                          ) : (
+                            <button
+                              onClick={(e) => handleMarkAsUnread(chat.id, e)}
+                              className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                            >
+                              <Mail className="w-3.5 h-3.5 text-brand" />
+                              Mark as Unread
+                            </button>
+                          )}
+
+                          <button
+                            onClick={(e) => handleToggleArchive(chat.id, !!isArchived, e)}
+                            className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                          >
+                            {isArchived ? (
+                              <>
+                                <ArchiveRestore className="w-3.5 h-3.5 text-amber-400" />
+                                Unarchive Chat
+                              </>
+                            ) : (
+                              <>
+                                <Archive className="w-3.5 h-3.5 text-amber-400" />
+                                Archive Chat
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={(e) => handleDeleteChat(chat.id, e)}
+                            className="w-full px-3 py-2 text-xs text-left text-red-400 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-2"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete Chat
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </button>
+                );
+              }) : (
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                  <EmptyState 
+                    icon={chatTab === 'archived' ? Archive : MessageSquarePlus}
+                    title={chatTab === 'archived' ? "No archived chats" : "No messages yet"}
+                    description={chatTab === 'archived' ? "Archived conversations will appear here." : "Search for any professional to start a conversation!"}
+                  />
+                </div>
               );
-            }) : (
-              <div className="h-full flex flex-col items-center justify-center">
-                <EmptyState 
-                  icon={MessageSquarePlus}
-                  title="No messages yet"
-                  description="Start a conversation with a connection!"
-                />
-              </div>
-            )
+            })()
           )}
         </div>
       </div>
@@ -427,40 +570,105 @@ export default function MessagesPage() {
         <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
           
           {/* Active Chat Header */}
-          <div className="p-6 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center gap-4">
-            <button 
-              className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
-              onClick={() => setActiveChat(null)}
-            >
-              ← Back
-            </button>
-            
-            {(() => {
-              const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
-              const otherUser = users[otherUserId];
+          <div className="p-6 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <button 
+                className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
+                onClick={() => setActiveChat(null)}
+              >
+                ← Back
+              </button>
               
-              return otherUser ? (
-                <Link href={`/profile?uid=${otherUserId}`} className="flex items-center gap-4 group cursor-pointer">
-                  <div className="relative">
-                    <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className="w-12 h-12 group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow" textClassName="text-lg font-bold" />
-                    {getUserStatus(otherUser.lastLogin).isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
-                    )}
+              {(() => {
+                const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
+                const otherUser = users[otherUserId];
+                
+                return otherUser ? (
+                  <Link href={`/profile?uid=${otherUserId}`} className="flex items-center gap-4 group cursor-pointer">
+                    <div className="relative">
+                      <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className="w-12 h-12 group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow" textClassName="text-lg font-bold" />
+                      {getUserStatus(otherUser.lastLogin).isOnline && (
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-white leading-tight group-hover:text-brand transition-colors">{otherUser.fullName}</h2>
+                      <p className={`text-xs font-medium ${getUserStatus(otherUser.lastLogin).isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {getUserStatus(otherUser.lastLogin).text}
+                      </p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <UserAvatar name="Member" className="w-10 h-10" textClassName="text-sm font-bold" />
+                    <h2 className="text-base font-bold text-white">Rhockstar Member</h2>
                   </div>
-                  <div>
-                    <h2 className="text-lg font-bold text-white leading-tight group-hover:text-brand transition-colors">{otherUser.fullName}</h2>
-                    <p className={`text-xs font-medium ${getUserStatus(otherUser.lastLogin).isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
-                      {getUserStatus(otherUser.lastLogin).text}
-                    </p>
-                  </div>
-                </Link>
-              ) : (
-                <div className="animate-pulse flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-white/10" />
-                  <div className="h-4 w-32 bg-white/10 rounded" />
+                );
+              })()}
+            </div>
+
+            {/* Active Header Menu */}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setHeaderMenuOpen(!headerMenuOpen)}
+                className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors border border-white/5"
+                title="Conversation Options"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+
+              {headerMenuOpen && (
+                <div className="absolute right-0 top-12 w-48 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-1 animate-in fade-in zoom-in-95 duration-150">
+                  {(() => {
+                    const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
+                    const isArchived = activeChat.archivedFor?.includes(profile.uid);
+                    return (
+                      <>
+                        <Link
+                          href={`/profile?uid=${otherUserId}`}
+                          className="w-full px-3.5 py-2.5 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                          onClick={() => setHeaderMenuOpen(false)}
+                        >
+                          <User className="w-3.5 h-3.5 text-brand" />
+                          View Profile
+                        </Link>
+
+                        <button
+                          onClick={() => {
+                            setHeaderMenuOpen(false);
+                            handleToggleArchive(activeChat.id, !!isArchived);
+                          }}
+                          className="w-full px-3.5 py-2.5 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                        >
+                          {isArchived ? (
+                            <>
+                              <ArchiveRestore className="w-3.5 h-3.5 text-amber-400" />
+                              Unarchive Chat
+                            </>
+                          ) : (
+                            <>
+                              <Archive className="w-3.5 h-3.5 text-amber-400" />
+                              Archive Chat
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setHeaderMenuOpen(false);
+                            handleDeleteChat(activeChat.id);
+                          }}
+                          className="w-full px-3.5 py-2.5 text-xs text-left text-red-400 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-2"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete Chat
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
-              );
-            })()}
+              )}
+            </div>
           </div>
 
           {/* Messages Area */}

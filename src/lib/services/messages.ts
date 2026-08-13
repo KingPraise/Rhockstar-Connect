@@ -25,6 +25,8 @@ export interface Chat {
   lastMessageTime: unknown;
   unreadCount: Record<string, number>;
   typingStatus?: Record<string, boolean>;
+  archivedFor?: string[];
+  deletedFor?: string[];
 }
 
 export interface Message {
@@ -121,12 +123,15 @@ export const sendMessage = async (
       const participants: string[] = chatSnap.data().participants || [];
       const recipientId = participants.find(p => p !== senderId);
       
-      const { increment } = await import('firebase/firestore');
+      const { increment, arrayRemove } = await import('firebase/firestore');
 
       await updateDoc(chatRef, {
         lastMessage: text,
         lastMessageTime: serverTimestamp(),
-        ...(recipientId ? { [`unreadCount.${recipientId}`]: increment(1) } : {})
+        ...(recipientId ? { 
+          [`unreadCount.${recipientId}`]: increment(1),
+          deletedFor: arrayRemove(recipientId)
+        } : {})
       });
 
       if (recipientId) {
@@ -192,9 +197,48 @@ export const markMessagesAsRead = async (chatId: string, currentUserId: string) 
       [`unreadCount.${currentUserId}`]: 0
     }));
 
-    await Promise.all(updatePromises);
+// Mark chat as unread
+export const markChatAsUnread = async (chatId: string, userId: string) => {
+  try {
+    const chatRef = doc(db, 'chats', chatId);
+    await updateDoc(chatRef, {
+      [`unreadCount.${userId}`]: 1
+    });
+    return { success: true };
   } catch (error) {
-    console.error("Error marking messages read:", error);
+    console.error("Error marking chat unread:", error);
+    return { success: false };
+  }
+};
+
+// Archive / Unarchive chat
+export const toggleArchiveChat = async (chatId: string, userId: string, isCurrentlyArchived: boolean) => {
+  try {
+    const chatRef = doc(db, 'chats', chatId);
+    const { arrayUnion, arrayRemove } = await import('firebase/firestore');
+    await updateDoc(chatRef, {
+      archivedFor: isCurrentlyArchived ? arrayRemove(userId) : arrayUnion(userId)
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error toggling archive status:", error);
+    return { success: false };
+  }
+};
+
+// Delete chat conversation for user
+export const deleteChatForUser = async (chatId: string, userId: string) => {
+  try {
+    const chatRef = doc(db, 'chats', chatId);
+    const { arrayUnion } = await import('firebase/firestore');
+    await updateDoc(chatRef, {
+      deletedFor: arrayUnion(userId),
+      [`unreadCount.${userId}`]: 0
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting chat:", error);
+    return { success: false };
   }
 };
 
