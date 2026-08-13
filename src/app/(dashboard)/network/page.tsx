@@ -11,7 +11,7 @@ import {
 } from "@/lib/services/connections";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Loader2, Users, UserPlus, Check, X, Search, Lock, Filter, Inbox, Send, ChevronRight } from "lucide-react";
+import { Loader2, Users, UserPlus, Check, X, Search, Lock, Filter, Inbox, Send, ChevronRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -19,6 +19,7 @@ import toast from "react-hot-toast";
 import { useSearchParams } from "next/navigation";
 
 type TabId = 'discover' | 'my-connections' | 'invitations' | 'sent-requests';
+type PremiumFilter = 'all' | 'verified' | 'executives' | 'topViews';
 
 export default function NetworkPage() {
   const { profile } = useAuthStore();
@@ -31,6 +32,7 @@ export default function NetworkPage() {
   const [actionLoading, setActionLoading] = useState<string[]>([]);
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('discover');
+  const [activePremiumFilter, setActivePremiumFilter] = useState<PremiumFilter>('all');
 
   useEffect(() => {
     const tab = searchParams?.get("tab") as TabId;
@@ -41,11 +43,23 @@ export default function NetworkPage() {
 
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
 
-  const handlePremiumFilterClick = () => {
-    if (isPremium) {
-      toast.success("This premium filter will be available soon!", { icon: "✨", style: { background: '#334155', color: '#fff' } });
-    } else {
+  const PREMIUM_FILTERS: Array<{ id: PremiumFilter; label: string }> = [
+    { id: 'verified', label: "Verified Gold Badge Only" },
+    { id: 'executives', label: "Senior Tech & Executive Roles" },
+    { id: 'topViews', label: "Highest Profile Views" }
+  ];
+
+  const handlePremiumFilterClick = (filterId: PremiumFilter) => {
+    if (!isPremium) {
       setPremiumLockOpen(true);
+      return;
+    }
+    if (activePremiumFilter === filterId) {
+      setActivePremiumFilter('all');
+      toast.success("Filter cleared", { icon: "🧹", style: { background: '#334155', color: '#fff' } });
+    } else {
+      setActivePremiumFilter(filterId);
+      toast.success(`Filtered by: ${PREMIUM_FILTERS.find(f => f.id === filterId)?.label}`, { icon: "✨", style: { background: '#334155', color: '#fff' } });
     }
   };
 
@@ -168,20 +182,38 @@ export default function NetworkPage() {
   const invitationsCount = users.filter(u => getStatusForUser(u.uid) === 'received').length;
   const sentRequestsCount = users.filter(u => getStatusForUser(u.uid) === 'sent').length;
 
-  // Filter for currently active tab
+  // Filter for currently active tab and active premium filter
   const getTabUsers = () => {
+    let baseList: UserBasic[] = [];
     switch(activeTab) {
       case 'my-connections':
-        return searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'connected');
+        baseList = searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'connected');
+        break;
       case 'invitations':
-        return searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'received');
+        baseList = searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'received');
+        break;
       case 'sent-requests':
-        return searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'sent');
+        baseList = searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'sent');
+        break;
       case 'discover':
       default:
-        // Exclude connected or pending if we just want "discover", and hide admins
-        return searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'none' && u.role !== 'admin');
+        baseList = searchFilteredUsers.filter(u => getStatusForUser(u.uid) === 'none' && u.role !== 'admin');
+        break;
     }
+
+    if (activePremiumFilter === 'verified') {
+      return baseList.filter(u => u.subscriptionTier === 'pro' || u.subscriptionTier === 'elite' || u.role === 'admin');
+    } else if (activePremiumFilter === 'executives') {
+      const keywords = ['senior', 'lead', 'executive', 'founder', 'ceo', 'cto', 'cfo', 'director', 'vp', 'head', 'manager', 'engineer', 'architect', 'developer', 'principal'];
+      return baseList.filter(u => {
+        const text = `${u.headline || ''} ${u.bio || ''} ${u.industry || ''}`.toLowerCase();
+        return keywords.some(kw => text.includes(kw));
+      });
+    } else if (activePremiumFilter === 'topViews') {
+      return [...baseList].sort((a, b) => (b.connections || 0) - (a.connections || 0));
+    }
+
+    return baseList;
   };
 
   const displayedUsers = getTabUsers();
@@ -253,20 +285,39 @@ export default function NetworkPage() {
           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
             <Filter className="w-3.5 h-3.5 text-amber-400" /> Filters:
           </span>
-          {[
-            "Verified Gold Badge Only",
-            "Senior Tech & Executive Roles",
-            "Highest Profile Views"
-          ].map((filterLabel, idx) => (
+          {PREMIUM_FILTERS.map((f) => {
+            const isActive = activePremiumFilter === f.id;
+            return (
+              <button
+                key={f.id}
+                onClick={() => handlePremiumFilterClick(f.id)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 group ${
+                  isActive
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.4)] border border-amber-300'
+                    : 'bg-slate-900/80 border border-amber-500/30 text-amber-300 hover:bg-amber-500/10'
+                }`}
+              >
+                {!isPremium ? (
+                  <Lock className="w-3 h-3 text-amber-400 group-hover:scale-110 transition-transform shrink-0" />
+                ) : (
+                  <Sparkles className={`w-3 h-3 shrink-0 ${isActive ? 'text-slate-950 animate-spin' : 'text-amber-400'}`} />
+                )}
+                <span>{f.label}</span>
+                {isActive && (
+                  <span className="ml-1 text-[10px] bg-slate-950/20 px-1.5 py-0.2 rounded-full">✕</span>
+                )}
+              </button>
+            );
+          })}
+
+          {activePremiumFilter !== 'all' && (
             <button
-              key={idx}
-              onClick={handlePremiumFilterClick}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-900/80 border border-amber-500/30 text-amber-300 text-xs font-bold hover:bg-amber-500/10 transition-all flex items-center gap-1.5 shrink-0 group"
+              onClick={() => setActivePremiumFilter('all')}
+              className="text-xs text-slate-400 hover:text-white underline px-2 shrink-0"
             >
-              <Lock className="w-3 h-3 text-amber-400 group-hover:scale-110 transition-transform" />
-              <span>{filterLabel}</span>
+              Reset filter
             </button>
-          ))}
+          )}
         </div>
 
         {/* TAB TITLE */}
