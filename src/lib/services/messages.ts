@@ -197,6 +197,12 @@ export const markMessagesAsRead = async (chatId: string, currentUserId: string) 
       [`unreadCount.${currentUserId}`]: 0
     }));
 
+    await Promise.all(updatePromises);
+  } catch (error) {
+    console.error("Error marking messages read:", error);
+  }
+};
+
 // Mark chat as unread
 export const markChatAsUnread = async (chatId: string, userId: string) => {
   try {
