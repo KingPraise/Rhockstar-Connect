@@ -602,8 +602,8 @@ export default function MessagesPage() {
                         </div>
                       </div>
 
-                      {/* Options Dropdown Trigger */}
-                      <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {/* Options Dropdown Trigger (Desktop/Tablet only; Mobile uses swipe left gesture) */}
+                      <div className="hidden sm:block relative shrink-0" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
