@@ -511,9 +511,11 @@ export default function MessagesPage() {
                 const isArchived = chat.archivedFor?.includes(profile.uid);
 
                 return (
-                  <div key={chat.id} className="relative overflow-hidden border-b border-white/5 last:border-0 group/swipe select-none">
-                    {/* SWIPE ACTIONS (Underneath layer) */}
-                    <div className="absolute right-0 top-0 bottom-0 flex items-center h-full z-0">
+                  <div key={chat.id} className="relative overflow-hidden border-b border-white/5 last:border-0 group/swipe select-none bg-slate-950">
+                    {/* SWIPE ACTIONS (Underneath layer - only visible when swiping/swiped) */}
+                    <div className={`absolute right-0 top-0 bottom-0 flex items-center h-full z-0 transition-opacity duration-150 ${
+                      swipedChatId === chat.id || swipingChatId === chat.id ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                    }`}>
                       <button
                         onClick={(e) => {
                           setSwipedChatId(null);
@@ -545,7 +547,7 @@ export default function MessagesPage() {
                       </button>
                     </div>
 
-                    {/* SWIPEABLE CARD (Top layer) */}
+                    {/* SWIPEABLE CARD (Top layer - 100% solid opacity) */}
                     <div
                       onTouchStart={(e) => handleTouchStart(chat.id, e)}
                       onTouchMove={(e) => handleTouchMove(chat.id, e)}
@@ -564,8 +566,8 @@ export default function MessagesPage() {
                             : (swipedChatId === chat.id ? '-140px' : '0px')
                         })`
                       }}
-                      className={`w-full p-4 flex items-center justify-between gap-3 bg-slate-900/90 hover:bg-slate-800/80 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${
-                        isActive ? 'bg-white/10 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : isUnread ? 'bg-brand/10' : ''
+                      className={`w-full p-4 flex items-center justify-between gap-3 bg-slate-900 hover:bg-slate-850 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${
+                        isActive ? 'bg-slate-800/90 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : isUnread ? 'bg-slate-800/40' : ''
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">

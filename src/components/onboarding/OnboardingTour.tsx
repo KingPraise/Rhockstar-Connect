@@ -44,7 +44,7 @@ export default function OnboardingTour() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const hasCompletedTour = localStorage.getItem('rhockstar_onboarding_completed');
+    const hasCompletedTour = localStorage.getItem('rhockstar_onboarding_completed') || sessionStorage.getItem('rhockstar_onboarding_dismissed');
     const isMobile = window.innerWidth < 768;
 
     // Dynamically set steps based on screen size
@@ -68,24 +68,27 @@ export default function OnboardingTour() {
             <p className="text-slate-300 text-sm">{isMobile ? 'Discover top-tier roles and track your applications directly from here.' : 'Connect with industry leaders, sync up with peers, and build meaningful professional relationships.'}</p>
           </div>
         ),
+        placement: isMobile ? 'top' : 'right',
       },
       {
-        target: isMobile ? '#tour-mobile-dating-nav' : '#tour-jobs-nav',
+        target: isMobile ? '#tour-mobile-messaging-nav' : '#tour-messaging-nav',
         content: (
           <div className="text-left space-y-1">
-            <h3 className="font-bold text-white">{isMobile ? 'Professional Dating' : 'Premium Job Board'}</h3>
-            <p className="text-slate-300 text-sm">{isMobile ? 'Opt-in to our exclusive dating network for verified professionals.' : 'Discover top-tier roles, track your applications, and find opportunities recommended just for you.'}</p>
+            <h3 className="font-bold text-white">Direct Messaging</h3>
+            <p className="text-slate-300 text-sm">Send real-time messages, voice notes, and media to any professional or connection on Rhockstar Connect.</p>
           </div>
         ),
+        placement: isMobile ? 'top' : 'right',
       },
       {
-        target: isMobile ? '#tour-mobile-messages-nav' : '#tour-dating-nav',
+        target: isMobile ? '#tour-mobile-dating-nav' : '#tour-dating-nav',
         content: (
           <div className="text-left space-y-1">
-            <h3 className="font-bold text-white">{isMobile ? 'Direct Messages' : 'Professional Dating'}</h3>
-            <p className="text-slate-300 text-sm">{isMobile ? 'Communicate seamlessly with connections, recruiters, and matches.' : 'Looking for more than just a professional connection? Opt-in to our exclusive dating network.'}</p>
+            <h3 className="font-bold text-white">Rhockstar Dating</h3>
+            <p className="text-slate-300 text-sm">Opt in to our exclusive professional dating portal to meet ambitious singles in your industry.</p>
           </div>
         ),
+        placement: isMobile ? 'top' : 'right',
       },
       {
         target: '#tour-ai-widget',
@@ -102,6 +105,7 @@ export default function OnboardingTour() {
     if (!hasCompletedTour && pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
       const timer = setTimeout(() => {
         setRun(true);
+        sessionStorage.setItem('rhockstar_onboarding_dismissed', 'true');
       }, 1000);
       return () => clearTimeout(timer);
     }
@@ -116,12 +120,13 @@ export default function OnboardingTour() {
   }, [pathname]);
 
   const handleJoyrideCallback = (data: any) => {
-    const { status } = data;
+    const { status, action } = data;
     const finishedStatuses = ['finished', 'skipped'];
     
-    if (finishedStatuses.includes(status)) {
+    if (finishedStatuses.includes(status) || action === 'close') {
       setRun(false);
       localStorage.setItem('rhockstar_onboarding_completed', 'true');
+      sessionStorage.setItem('rhockstar_onboarding_dismissed', 'true');
     }
   };
 
