@@ -511,7 +511,12 @@ export default function MessagesPage() {
                 const isArchived = chat.archivedFor?.includes(profile.uid);
 
                 return (
-                  <div key={chat.id} className="relative overflow-hidden border-b border-white/5 last:border-0 group/swipe select-none bg-slate-950">
+                  <div 
+                    key={chat.id} 
+                    className={`relative border-b border-white/5 last:border-0 group/swipe select-none bg-slate-950 ${
+                      activeMenuChatId === chat.id ? 'z-50 overflow-visible' : 'z-0 overflow-hidden'
+                    }`}
+                  >
                     {/* SWIPE ACTIONS (Underneath layer - only visible when swiped/swiping) */}
                     <div className={`absolute right-0 top-0 bottom-0 flex items-center h-full z-0 transition-opacity duration-150 ${
                       swipedChatId === chat.id || swipingChatId === chat.id ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
