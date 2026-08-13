@@ -27,6 +27,8 @@ export default function MessagesPage() {
   const [newMessage, setNewMessage] = useState("");
   const [users, setUsers] = useState<Record<string, UserBasic>>({});
   const [friends, setFriends] = useState<string[]>([]);
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [chatTab, setChatTab] = useState<'inbox' | 'archived'>('inbox');
   const [activeMenuChatId, setActiveMenuChatId] = useState<string | null>(null);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
