@@ -512,7 +512,7 @@ export default function MessagesPage() {
 
                 return (
                   <div key={chat.id} className="relative overflow-hidden border-b border-white/5 last:border-0 group/swipe select-none bg-slate-950">
-                    {/* SWIPE ACTIONS (Underneath layer - only visible when swiping/swiped) */}
+                    {/* SWIPE ACTIONS (Underneath layer - only visible when swiped/swiping) */}
                     <div className={`absolute right-0 top-0 bottom-0 flex items-center h-full z-0 transition-opacity duration-150 ${
                       swipedChatId === chat.id || swipingChatId === chat.id ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
                     }`}>
@@ -547,7 +547,7 @@ export default function MessagesPage() {
                       </button>
                     </div>
 
-                    {/* SWIPEABLE CARD (Top layer - 100% solid opacity) */}
+                    {/* SWIPEABLE CARD (Top layer - 100% SOLID opaque background) */}
                     <div
                       onTouchStart={(e) => handleTouchStart(chat.id, e)}
                       onTouchMove={(e) => handleTouchMove(chat.id, e)}
@@ -566,8 +566,12 @@ export default function MessagesPage() {
                             : (swipedChatId === chat.id ? '-140px' : '0px')
                         })`
                       }}
-                      className={`w-full p-4 flex items-center justify-between gap-3 bg-slate-900 hover:bg-slate-850 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${
-                        isActive ? 'bg-slate-800/90 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : isUnread ? 'bg-slate-800/40' : ''
+                      className={`w-full p-4 flex items-center justify-between gap-3 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${
+                        isActive 
+                          ? 'bg-slate-800 text-white shadow-md border-l-4 border-brand' 
+                          : isUnread 
+                            ? 'bg-slate-900 border-l-4 border-brand/70' 
+                            : 'bg-slate-900 hover:bg-slate-800/90'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -580,10 +584,10 @@ export default function MessagesPage() {
                         <div className="flex-1 min-w-0 flex flex-col justify-center">
                           <div className="flex justify-between items-baseline mb-0.5">
                             <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
-                            <span className="text-[10px] text-slate-500 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
+                            <span className="text-[10px] text-slate-400 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
                           </div>
                           <div className="flex items-center justify-between gap-1">
-                            <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : 'text-slate-400'}`}>
+                            <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : isUnread ? 'text-slate-200 font-medium' : 'text-slate-400'}`}>
                               {isTyping ? 'Typing...' : chat.lastMessage || 'Start a conversation'}
                             </p>
                             {isUnread && (
@@ -607,7 +611,7 @@ export default function MessagesPage() {
                         </button>
 
                         {activeMenuChatId === chat.id && (
-                          <div className="absolute right-0 top-8 w-44 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-1 animate-in fade-in zoom-in-95 duration-150">
+                          <div className="absolute right-0 top-8 w-44 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-[100] p-1 animate-in fade-in zoom-in-95 duration-150">
                             {isUnread ? (
                               <button
                                 onClick={(e) => handleMarkAsRead(chat.id, e)}
