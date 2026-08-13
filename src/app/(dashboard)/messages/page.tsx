@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead, editMessage, deleteMessage } from "@/lib/services/messages";
-import { getAllUsers, UserBasic } from "@/lib/services/users";
+import { getAllUsers, UserBasic, getUserById } from "@/lib/services/users";
 import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, Trash2, MoreHorizontal } from "lucide-react";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -161,6 +161,21 @@ export default function MessagesPage() {
 
     return () => unsubscribe();
   }, [profile?.uid]);
+
+  // Dynamically fetch missing chat participants if any chat references a user not in users map
+  useEffect(() => {
+    if (chats.length === 0 || !profile?.uid) return;
+
+    chats.forEach(async (chat) => {
+      const otherUserId = chat.participants.find(p => p !== profile.uid) || chat.participants[0];
+      if (otherUserId && !users[otherUserId]) {
+        const { success, user } = await getUserById(otherUserId);
+        if (success && user) {
+          setUsers(prev => ({ ...prev, [otherUserId]: user }));
+        }
+      }
+    });
+  }, [chats, profile?.uid]);
 
   useEffect(() => {
     if (!targetUserParam || !profile?.uid) return;
@@ -357,7 +372,13 @@ export default function MessagesPage() {
           ) : (
             chats.length > 0 ? chats.map((chat) => {
               const otherUserId = chat.participants.find(p => p !== profile?.uid) || chat.participants[0];
-              const otherUser = users[otherUserId];
+              const otherUser = users[otherUserId] || {
+                uid: otherUserId,
+                fullName: "Member",
+                username: "user",
+                avatar: "",
+                lastLogin: null
+              };
               const isTyping = chat.typingStatus?.[otherUserId];
               const isActive = activeChat?.id === chat.id;
               const unreadCount = chat.unreadCount?.[profile?.uid || ''] || 0;
@@ -371,30 +392,21 @@ export default function MessagesPage() {
                     isActive ? 'bg-white/10 before:absolute before:left-0 before:top-1/4 before:bottom-1/4 before:w-1 before:bg-brand before:rounded-r-md' : isUnread ? 'bg-brand/10' : ''
                   }`}
                 >
-                  {otherUser ? (
-                    <>
-                      <div className="relative">
-                        <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className={`w-12 h-12 transition-transform ${isActive ? 'scale-105 ring-2 ring-brand' : ''}`} textClassName="text-lg font-bold" />
-                        {getUserStatus(otherUser.lastLogin).isOnline && (
-                          <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex justify-between items-baseline mb-0.5">
-                          <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
-                          <span className="text-[10px] text-slate-500 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
-                        </div>
-                        <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : 'text-slate-400'}`}>
-                          {isTyping ? 'Typing...' : chat.lastMessage || 'Start a conversation'}
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="animate-pulse flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-white/10" />
-                      <div className="h-4 w-32 bg-white/10 rounded" />
+                  <div className="relative">
+                    <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className={`w-12 h-12 transition-transform ${isActive ? 'scale-105 ring-2 ring-brand' : ''}`} textClassName="text-lg font-bold" />
+                    {getUserStatus(otherUser.lastLogin).isOnline && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    <div className="flex justify-between items-baseline mb-0.5">
+                      <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
+                      <span className="text-[10px] text-slate-500 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
                     </div>
-                  )}
+                    <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : 'text-slate-400'}`}>
+                      {isTyping ? 'Typing...' : chat.lastMessage || 'Start a conversation'}
+                    </p>
+                  </div>
                 </button>
               );
             }) : (
