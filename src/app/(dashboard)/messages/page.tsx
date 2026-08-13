@@ -287,11 +287,11 @@ export default function MessagesPage() {
     );
   }
 
-  // Filter users for new chat: Only accepted friends (excluding self) matching search
+  // Filter users for new chat: Allow chatting with any user on Rhockstar Connect matching search
   const availableUsers = Object.values(users).filter(
     (u) => u.uid !== profile.uid && 
-           friends.includes(u.uid) &&
-           u.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+           (u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -304,9 +304,11 @@ export default function MessagesPage() {
           <h2 className="text-xl font-bold text-white">Messages</h2>
           <button 
             onClick={() => setShowNewChat(true)}
-            className="p-2 rounded-xl bg-brand/10 text-brand hover:bg-brand/20 transition-colors"
+            className="p-2 rounded-xl bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex items-center gap-1.5 text-xs font-bold"
+            title="Start New Chat"
           >
             <MessageSquarePlus className="w-5 h-5" />
+            <span className="hidden sm:inline">New Chat</span>
           </button>
         </div>
 
@@ -328,7 +330,10 @@ export default function MessagesPage() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
           {showNewChat ? (
             <div className="p-2 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Start New Chat</div>
+              <div className="flex justify-between items-center px-3 py-2">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Start New Chat</span>
+                <button onClick={() => setShowNewChat(false)} className="text-xs text-slate-400 hover:text-white">Cancel</button>
+              </div>
               {availableUsers.length > 0 ? (
                 availableUsers.map((u) => (
                   <button
@@ -339,12 +344,13 @@ export default function MessagesPage() {
                     <UserAvatar src={u.avatar} name={u.fullName} className="w-10 h-10 group-hover:scale-105 transition-transform" textClassName="text-sm font-bold" />
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm text-slate-200 truncate group-hover:text-white transition-colors">{u.fullName}</h3>
+                      <p className="text-xs text-slate-500 truncate">@{u.username}</p>
                     </div>
                   </button>
                 ))
               ) : (
                 <div className="p-4 text-center text-sm text-slate-500">
-                  {searchQuery ? "No matching connections found." : "No connections available to chat."}
+                  {searchQuery ? "No matching users found." : "Search for any user to start a conversation."}
                 </div>
               )}
             </div>

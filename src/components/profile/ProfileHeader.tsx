@@ -150,24 +150,23 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
               </Link>
             </>
           ) : (
-            <>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link 
+                href={`/messages?user=${profile.uid}`}
+                className="py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-all shadow-lg hover:scale-105"
+              >
+                <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Message
+              </Link>
+
               {connectionStatus === 'accepted' ? (
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Link 
-                    href={`/messages?user=${profile.uid}`}
-                    className="py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-all shadow-lg hover:scale-105"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Message
-                  </Link>
-                  <button 
-                    disabled
-                    className="py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-slate-800 text-brand font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 border border-brand/20 shadow-[inset_0_0_15px_rgba(56,189,248,0.1)]"
-                  >
-                    <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Connected
-                  </button>
-                </div>
+                <button 
+                  disabled
+                  className="py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-slate-800 text-brand font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 border border-brand/20 shadow-[inset_0_0_15px_rgba(56,189,248,0.1)]"
+                >
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Connected
+                </button>
               ) : connectionStatus === 'pending' ? (
                 <button 
                   disabled
@@ -180,13 +179,13 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
                 <button 
                   onClick={onConnectClick}
                   disabled={actionLoading}
-                  className={`py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-gradient-to-r ${themeClasses.button} text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-all shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100`}
+                  className={`py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-all border border-white/10 shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100`}
                 >
                   {actionLoading ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                   Connect
                 </button>
               )}
-            </>
+            </div>
           )}
         </div>
 

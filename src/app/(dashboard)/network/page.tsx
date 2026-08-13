@@ -306,16 +306,24 @@ export default function NetworkPage() {
                   </div>
                 </Link>
                 
-                <div className="mt-auto">
+                <div className="mt-auto flex flex-col gap-2">
+                  <Link 
+                    href={`/messages?user=${user.uid}`}
+                    className="w-full py-2.5 rounded-xl bg-gradient-to-r from-brand/10 to-brand-purple/10 border border-brand/20 text-brand font-bold hover:bg-brand hover:text-white transition-all flex items-center justify-center gap-2 text-sm shadow-sm"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    Message
+                  </Link>
+
                   {status === 'none' && (
                     <button 
                       onClick={() => handleConnect(user.uid)}
                       disabled={actionLoading.includes(user.uid)}
-                      className="w-full py-2.5 rounded-xl bg-brand/10 text-brand font-bold hover:bg-brand hover:text-white transition-all flex items-center justify-center gap-2 text-sm"
+                      className="w-full py-2 rounded-xl bg-slate-800 text-slate-200 font-bold hover:bg-slate-700 hover:text-white transition-all flex items-center justify-center gap-2 text-xs border border-white/5"
                     >
                       {actionLoading.includes(user.uid) ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                         <>
-                          <UserPlus className="w-4 h-4" />
+                          <UserPlus className="w-3.5 h-3.5" />
                           Connect
                         </>
                       )}
@@ -323,15 +331,16 @@ export default function NetworkPage() {
                   )}
 
                   {status === 'sent' && (
-                    <button disabled className="w-full py-2.5 rounded-xl bg-slate-800 text-slate-400 font-bold flex items-center justify-center gap-2 cursor-not-allowed text-sm">
+                    <button disabled className="w-full py-2 rounded-xl bg-slate-800/50 text-slate-500 font-bold flex items-center justify-center gap-2 cursor-not-allowed text-xs border border-white/5">
                       Request Pending
                     </button>
                   )}
 
                   {status === 'connected' && (
-                    <Link href="/messages" className="w-full py-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 font-bold hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-2 text-sm">
-                      Message
-                    </Link>
+                    <div className="w-full py-2 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold flex items-center justify-center gap-1.5 text-xs border border-emerald-500/20">
+                      <Check className="w-3.5 h-3.5" />
+                      Connected
+                    </div>
                   )}
 
                   {status === 'received' && receivedConn && (
@@ -339,14 +348,14 @@ export default function NetworkPage() {
                       <button 
                         onClick={() => handleRespond(receivedConn.id, 'accepted')}
                         disabled={actionLoading.includes(receivedConn.id)}
-                        className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 text-sm"
+                        className="flex-1 py-2 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5 text-xs"
                       >
-                        {actionLoading.includes(receivedConn.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Accept'}
+                        {actionLoading.includes(receivedConn.id) ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Accept'}
                       </button>
                       <button 
                         onClick={() => handleRespond(receivedConn.id, 'rejected')}
                         disabled={actionLoading.includes(receivedConn.id)}
-                        className="py-2.5 px-4 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-red-500/20 hover:text-red-400 transition-all flex items-center justify-center gap-2 text-sm"
+                        className="py-2 px-3 rounded-xl bg-slate-800 text-slate-300 font-bold hover:bg-red-500/20 hover:text-red-400 transition-all flex items-center justify-center text-xs"
                       >
                         Ignore
                       </button>
