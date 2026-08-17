@@ -172,12 +172,12 @@ export default function SettingsPage() {
                     <p className="text-sm text-slate-400">Choose a custom color theme for your public profile.</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && (
+                    {profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && profile?.role !== 'admin' && (
                       <span className="text-xs text-amber-500 font-bold px-2 py-1 bg-amber-500/10 rounded-md">PRO+</span>
                     )}
                     <select 
-                      className="bg-slate-900 border border-white/10 text-white text-sm rounded-lg focus:ring-brand focus:border-brand block p-2.5 disabled:opacity-50"
-                      disabled={profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite'}
+                      className="bg-slate-900 border border-white/10 text-white text-sm rounded-lg focus:ring-brand focus:border-brand block p-2.5 disabled:opacity-50 cursor-pointer"
+                      disabled={profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && profile?.role !== 'admin'}
                       value={(profile as any)?.profileTheme || 'default'}
                       onChange={async (e) => {
                         const newTheme = e.target.value;
@@ -186,14 +186,14 @@ export default function SettingsPage() {
                           const res = await updateUserProfile(profile.uid, { profileTheme: newTheme });
                           if (res.success) {
                             useAuthStore.getState().setProfile({ ...profile, profileTheme: newTheme } as any);
-                            toast.success('Profile theme updated!');
+                            toast.success(`Profile background theme updated to ${newTheme.toUpperCase()}!`);
                           } else {
                             toast.error('Failed to update theme');
                           }
                         }
                       }}
                     >
-                      <option value="default">Default (Brand)</option>
+                      <option value="default">Default (Brand Cyan/Purple)</option>
                       <option value="ocean">Ocean Blue</option>
                       <option value="emerald">Emerald Green</option>
                       <option value="rose">Rose Pink</option>

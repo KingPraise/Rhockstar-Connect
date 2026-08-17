@@ -20,6 +20,8 @@ import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import { useLightboxStore } from "@/store/useLightboxStore";
 import toast from "react-hot-toast";
 
+import { getThemeClasses } from "@/lib/constants/themes";
+
 export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile = true, onConnectClick, connectionStatus, actionLoading }: ProfileHeaderProps) {
   const { profile: loggedInProfile } = useAuthStore();
   const profile = customProfile || loggedInProfile;
@@ -38,41 +40,6 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
       toast.success("Profile boost activated! You are now prioritized in search.", { icon: "🚀", style: { background: '#334155', color: '#fff' } });
     } else {
       setPremiumLockOpen(true);
-    }
-  };
-
-  const getThemeClasses = (theme?: string) => {
-    switch (theme) {
-      case 'ocean':
-        return {
-          cover: 'from-blue-600 via-sky-500 to-blue-600',
-          avatar: 'from-blue-600 to-sky-500',
-          button: 'from-sky-500 to-blue-600'
-        };
-      case 'emerald':
-        return {
-          cover: 'from-emerald-600 via-teal-500 to-emerald-600',
-          avatar: 'from-emerald-600 to-teal-500',
-          button: 'from-teal-500 to-emerald-600'
-        };
-      case 'rose':
-        return {
-          cover: 'from-rose-600 via-pink-500 to-rose-600',
-          avatar: 'from-rose-600 to-pink-500',
-          button: 'from-pink-500 to-rose-600'
-        };
-      case 'amber':
-        return {
-          cover: 'from-amber-600 via-yellow-500 to-amber-600',
-          avatar: 'from-amber-600 to-yellow-500',
-          button: 'from-yellow-500 to-amber-600'
-        };
-      default:
-        return {
-          cover: 'from-brand-purple via-brand to-brand-purple',
-          avatar: 'from-brand-purple to-brand',
-          button: 'from-brand to-brand-purple'
-        };
     }
   };
 

@@ -14,6 +14,8 @@ import Link from "next/link";
 import { Briefcase } from "lucide-react";
 import toast from "react-hot-toast";
 
+import { getThemeClasses } from "@/lib/constants/themes";
+
 export default function ProfilePage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -72,6 +74,7 @@ export default function ProfilePage() {
   const activeProfile = targetUser || loggedInProfile;
   const isOwnProfile = Boolean(!targetUser || (loggedInProfile && targetUser?.uid === loggedInProfile.uid));
   const progress = calculateProfileProgress(activeProfile);
+  const themeClasses = getThemeClasses((activeProfile as any)?.profileTheme);
 
   const handleConnect = async () => {
     if (!loggedInProfile) {
@@ -129,7 +132,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="w-full max-w-5xl mx-auto flex flex-col gap-8 relative">
+    <div className={`w-full max-w-5xl mx-auto flex flex-col gap-8 relative p-2 sm:p-4 rounded-3xl transition-all duration-500 bg-gradient-to-b ${themeClasses.glow}`}>
       <ProfileHeader 
         onEditClick={() => setIsEditModalOpen(true)} 
         customProfile={activeProfile}
