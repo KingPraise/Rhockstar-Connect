@@ -193,7 +193,8 @@ export default function SettingsPage() {
                         }
                       }}
                     >
-                      <option value="default">Default (Brand Cyan/Purple)</option>
+                      <option value="default">Default (Neon Purple / Cyan Glow)</option>
+                      <option value="purple">Neon Purple (Cyberpunk Violet 🪩)</option>
                       <option value="ocean">Ocean Blue</option>
                       <option value="emerald">Emerald Green</option>
                       <option value="rose">Rose Pink</option>

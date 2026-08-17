@@ -12,6 +12,19 @@ export interface ThemeConfig {
 
 export const getThemeClasses = (theme?: string): ThemeConfig => {
   switch (theme) {
+    case 'purple':
+    case 'neon-purple':
+      return {
+        cover: 'from-purple-600 via-fuchsia-500 to-indigo-600',
+        avatar: 'from-purple-600 to-fuchsia-500',
+        button: 'from-purple-600 to-fuchsia-600 shadow-[0_0_20px_rgba(168,85,247,0.5)]',
+        accent: 'bg-purple-500',
+        glow: 'from-purple-500/30 via-fuchsia-600/15 to-transparent',
+        border: 'border-purple-500/40 shadow-[0_0_15px_rgba(168,85,247,0.2)]',
+        badge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+        appBg: 'bg-[#090314]',
+        radialGlow: 'bg-[radial-gradient(circle_at_20%_20%,rgba(168,85,247,0.28),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(217,70,239,0.22),transparent_50%)]'
+      };
     case 'ocean':
       return {
         cover: 'from-blue-600 via-sky-500 to-blue-600',
@@ -62,15 +75,15 @@ export const getThemeClasses = (theme?: string): ThemeConfig => {
       };
     default:
       return {
-        cover: 'from-brand-purple via-brand to-brand-purple',
-        avatar: 'from-brand-purple to-brand',
-        button: 'from-brand to-brand-purple',
-        accent: 'bg-brand',
-        glow: 'from-brand/25 via-brand-purple/10 to-transparent',
-        border: 'border-brand/30',
-        badge: 'bg-brand/10 text-brand border-brand/20',
-        appBg: 'bg-[#020617]',
-        radialGlow: 'bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.08),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(139,92,246,0.08),transparent_50%)]'
+        cover: 'from-purple-600 via-brand to-brand-purple',
+        avatar: 'from-brand-purple to-purple-600',
+        button: 'from-brand to-purple-600 shadow-[0_0_15px_rgba(168,85,247,0.3)]',
+        accent: 'bg-purple-500',
+        glow: 'from-purple-500/25 via-brand-purple/10 to-transparent',
+        border: 'border-purple-500/30',
+        badge: 'bg-purple-500/15 text-purple-300 border-purple-500/30',
+        appBg: 'bg-[#090314]',
+        radialGlow: 'bg-[radial-gradient(circle_at_20%_20%,rgba(168,85,247,0.25),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,0.15),transparent_50%)]'
       };
   }
 };
