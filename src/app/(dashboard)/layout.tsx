@@ -7,6 +7,7 @@ import ImageLightbox from "@/components/ui/ImageLightbox";
 import GlobalSearchModal from "@/components/ui/GlobalSearchModal";
 import PresenceHeartbeat from "@/components/layout/PresenceHeartbeat";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
+import DashboardThemeContainer from "@/components/layout/DashboardThemeContainer";
 
 export default function DashboardLayout({
   children,
@@ -14,10 +15,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-[#020617] text-white relative pb-16 md:pb-0">
+    <DashboardThemeContainer>
       <PresenceHeartbeat />
-      {/* Optimized Background Radial Glows */}
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.08),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(139,92,246,0.08),transparent_50%)] z-0" />
       
       {/* Mobile Top Navigation Header */}
       <MobileHeader />
@@ -46,6 +45,6 @@ export default function DashboardLayout({
       
       {/* Onboarding Tour */}
       <OnboardingTour />
-    </div>
+    </DashboardThemeContainer>
   );
 }
