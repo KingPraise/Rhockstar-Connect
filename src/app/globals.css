@@ -9,9 +9,13 @@
 
 @layer base {
   :root {
+    --theme-primary: #a855f7;
+    --theme-primary-hover: #9333ea;
+    --theme-primary-rgb: 168, 85, 247;
+
     --bg-base: #020617;
-    --primary: #38bdf8;
-    --primary-glow: rgba(56, 189, 248, 0.4);
+    --primary: var(--theme-primary, #a855f7);
+    --primary-glow: rgba(var(--theme-primary-rgb, 168, 85, 247), 0.4);
     --secondary: #8b5cf6;
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
@@ -75,13 +79,13 @@
 
   /* Neomorphic Buttons - Instant click feedback (150ms) */
   .neo-button-primary {
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    background: linear-gradient(135deg, var(--theme-primary, #a855f7), var(--theme-primary-hover, #9333ea));
     color: white;
     font-weight: 700;
     border-radius: 1rem;
     padding: 1rem 1.5rem;
-    box-shadow: 0 10px 25px rgba(56, 189, 248, 0.3), var(--neo-shadow-sm);
-    transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 10px 25px rgba(var(--theme-primary-rgb, 168, 85, 247), 0.35), var(--neo-shadow-sm);
+    transition: transform 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease, background 0.3s ease;
     border: none;
     display: inline-flex;
     align-items: center;
