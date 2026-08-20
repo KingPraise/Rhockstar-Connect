@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X, FileText, Image as ImageIcon, Briefcase, Users, BarChart2, Sparkles } from "lucide-react";
+import { X, FileText, Image as ImageIcon, Briefcase, Users, BarChart2, Sparkles, Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CreateCommunityModal from "@/components/chat/CreateCommunityModal";
+import { useAuthStore } from "@/store/useAuthStore";
 import toast from "react-hot-toast";
 
 interface QuickCreateModalProps {
@@ -13,20 +14,24 @@ interface QuickCreateModalProps {
 
 export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalProps) {
   const router = useRouter();
+  const { profile } = useAuthStore();
   const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
+
+  const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
 
   if (!isOpen && !isCommunityModalOpen) return null;
 
   const handleAction = (action: string) => {
-    onClose();
     switch (action) {
       case "post":
+        onClose();
         router.push("/feed");
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: "smooth" });
         }, 100);
         break;
       case "photo":
+        onClose();
         router.push("/feed");
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -34,12 +39,19 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
         }, 100);
         break;
       case "job":
-        router.push("/jobs/post");
+        if (isEmployer) {
+          onClose();
+          router.push("/jobs/post");
+        } else {
+          toast.error("Only Employer accounts can post job listings. Upgrade your account in Settings!", { icon: "💼" });
+        }
         break;
       case "community":
+        onClose();
         setIsCommunityModalOpen(true);
         break;
       case "poll":
+        onClose();
         router.push("/feed");
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -101,19 +113,34 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
                 </div>
               </button>
 
+              {/* Create Job - Role Gated */}
               <button
                 onClick={() => handleAction("job")}
-                className="flex items-center gap-4 p-3.5 bg-slate-800/60 hover:bg-emerald-900/30 border border-white/5 hover:border-emerald-500/30 rounded-2xl transition-all group text-left"
+                className={`flex items-center gap-4 p-3.5 border rounded-2xl transition-all group text-left ${
+                  isEmployer 
+                    ? "bg-slate-800/60 hover:bg-emerald-900/30 border-white/5 hover:border-emerald-500/30" 
+                    : "bg-slate-800/30 border-white/5 opacity-80"
+                }`}
               >
-                <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                <div className={`p-3 rounded-xl transition-colors ${
+                  isEmployer ? "bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white" : "bg-slate-700/50 text-slate-400"
+                }`}>
                   <Briefcase className="w-5 h-5" />
                 </div>
-                <div>
-                  <h4 className="font-bold text-white text-sm group-hover:text-emerald-300">Create Job</h4>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-white text-sm group-hover:text-emerald-300">Create Job</h4>
+                    {!isEmployer && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Employer Only
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-400">Post open opportunities for top talent</p>
                 </div>
               </button>
 
+              {/* Create Community - Opens Chat Community Builder */}
               <button
                 onClick={() => handleAction("community")}
                 className="flex items-center gap-4 p-3.5 bg-slate-800/60 hover:bg-amber-900/30 border border-white/5 hover:border-amber-500/30 rounded-2xl transition-all group text-left"
@@ -123,7 +150,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
                 </div>
                 <div>
                   <h4 className="font-bold text-white text-sm group-hover:text-amber-300">Create Community</h4>
-                  <p className="text-xs text-slate-400">Start a public chat room for topics & interest groups</p>
+                  <p className="text-xs text-slate-400">Launch a public chat room inside the Messages page</p>
                 </div>
               </button>
 
@@ -151,6 +178,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
         onCreated={(id) => {
           setIsCommunityModalOpen(false);
           router.push("/messages");
+          toast.success("Public community created! Opening Chat...");
         }}
       />
     </>
