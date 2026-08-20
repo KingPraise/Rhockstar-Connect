@@ -1,10 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2, FileText, Check, Eye, EyeOff } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2, FileText, Check, Eye, EyeOff, BarChart2, CheckCircle2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, updatePost, updateComment, toggleCommentVisibility, Post } from "@/lib/services/posts";
+import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, updatePost, updateComment, toggleCommentVisibility, votePoll, Post } from "@/lib/services/posts";
 import { getUserById } from "@/lib/services/users";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
@@ -330,26 +330,82 @@ export default function PostCard({ post }: PostCardProps) {
 
       {/* Document Attachment */}
       {post.documentUrl && (
-        <div className="mb-6">
+        <div className="mb-3">
           <a 
             href={post.documentUrl} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="flex items-center justify-between p-4 rounded-xl border border-white/10 bg-slate-800/40 hover:bg-slate-800/80 transition-colors group"
+            className="flex items-center justify-between p-3 rounded-xl border border-white/10 bg-slate-800/40 hover:bg-slate-800/80 transition-colors group"
           >
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <FileText className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <FileText className="w-4 h-4" />
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-bold text-white truncate">{post.documentName || "Document"}</span>
-                <span className="text-xs text-slate-400">Click to view/download</span>
+                <span className="text-xs font-bold text-white truncate">{post.documentName || "Document"}</span>
+                <span className="text-[11px] text-slate-400">Click to view/download</span>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 group-hover:bg-brand group-hover:text-white transition-colors shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 group-hover:bg-purple-600 group-hover:text-white transition-colors shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
             </div>
           </a>
+        </div>
+      )}
+
+      {/* Interactive Poll Widget */}
+      {post.poll && (
+        <div className="mb-3 p-3.5 rounded-2xl bg-slate-950/60 border border-purple-500/20 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <h4 className="font-bold text-white text-xs sm:text-sm flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-purple-400 shrink-0" />
+              <span>{post.poll.question}</span>
+            </h4>
+            <span className="text-[10px] font-semibold text-purple-300 px-2 py-0.5 rounded-full bg-purple-500/10 border border-purple-500/20">
+              {post.poll.totalVotes || 0} {post.poll.totalVotes === 1 ? 'vote' : 'votes'}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {post.poll.options.map((option) => {
+              const hasVoted = profile ? option.votes.includes(profile.uid) : false;
+              const percentage = post.poll!.totalVotes > 0 
+                ? Math.round((option.votes.length / post.poll!.totalVotes) * 100) 
+                : 0;
+
+              return (
+                <button
+                  key={option.id}
+                  onClick={async () => {
+                    if (!profile) {
+                      promptGuestAuth("vote in polls");
+                      return;
+                    }
+                    await votePoll(post.id, option.id, profile.uid);
+                  }}
+                  className={`w-full relative overflow-hidden p-2.5 rounded-xl text-left border transition-all ${
+                    hasVoted 
+                      ? "bg-purple-900/30 border-purple-500/50 text-white font-bold" 
+                      : "bg-slate-900/70 hover:bg-slate-800/80 border-white/5 text-slate-200"
+                  }`}
+                >
+                  {/* Progress Fill Bar */}
+                  <div 
+                    className="absolute top-0 bottom-0 left-0 bg-purple-600/20 transition-all duration-500" 
+                    style={{ width: `${percentage}%` }}
+                  />
+
+                  <div className="relative z-10 flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-2 truncate font-medium">
+                      {hasVoted && <CheckCircle2 className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
+                      <span className="truncate">{option.text}</span>
+                    </span>
+                    <span className="font-bold text-slate-300 ml-2 shrink-0">{percentage}%</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 

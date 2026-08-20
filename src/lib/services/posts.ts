@@ -18,6 +18,18 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { UserProfile } from '../../store/useAuthStore';
 
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: string[];
+}
+
+export interface PollData {
+  question: string;
+  options: PollOption[];
+  totalVotes: number;
+}
+
 export interface Post {
   id: string;
   userId: string;
@@ -30,6 +42,7 @@ export interface Post {
   imageUrl?: string;
   documentUrl?: string; // Support for PDFs/Docs
   documentName?: string;
+  poll?: PollData;
   createdAt: unknown;
   likes: string[];
   commentsCount: number;
@@ -110,7 +123,8 @@ const uploadMediaFile = async (mediaFile: File, userUid: string): Promise<{ url:
 export const createPost = async (
   user: UserProfile, 
   content: string, 
-  mediaFile?: File | null
+  mediaFile?: File | null,
+  pollData?: PollData | null
 ) => {
   try {
     let imageUrl = null;
@@ -138,6 +152,7 @@ export const createPost = async (
       content,
       ...(imageUrl && { imageUrl }),
       ...(documentUrl && { documentUrl, documentName }),
+      ...(pollData && { poll: pollData }),
       createdAt: serverTimestamp(),
       likes: [],
       commentsCount: 0
@@ -145,9 +160,42 @@ export const createPost = async (
 
     const docRef = await addDoc(collection(db, 'posts'), postData);
     return { success: true, postId: docRef.id };
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("Error creating post:", error);
-    return { success: false, error: (error as Error).message };
+    return { success: false, error: error.message || "Failed to create post" };
+  }
+};
+
+// Vote on a poll option
+export const votePoll = async (postId: string, optionId: string, userId: string) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postDoc = await getDoc(postRef);
+    if (!postDoc.exists()) return { success: false, error: "Post not found" };
+
+    const postData = postDoc.data() as Post;
+    if (!postData.poll) return { success: false, error: "Poll not found on this post" };
+
+    const updatedOptions = postData.poll.options.map(opt => {
+      // Remove user from all options first (single choice)
+      const newVotes = opt.votes.filter(id => id !== userId);
+      if (opt.id === optionId) {
+        newVotes.push(userId);
+      }
+      return { ...opt, votes: newVotes };
+    });
+
+    const totalVotes = updatedOptions.reduce((acc, opt) => acc + opt.votes.length, 0);
+
+    await updateDoc(postRef, {
+      "poll.options": updatedOptions,
+      "poll.totalVotes": totalVotes
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error voting on poll:", error);
+    return { success: false, error: error.message || "Failed to submit vote" };
   }
 };
 

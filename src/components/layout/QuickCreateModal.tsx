@@ -55,7 +55,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
         router.push("/feed");
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: "smooth" });
-          toast("Poll feature coming in next update!", { icon: "📊" });
+          toast("Click the Poll icon (📊) in the composer to launch a poll!", { icon: "📊" });
         }, 100);
         break;
     }

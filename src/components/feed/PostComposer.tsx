@@ -1,12 +1,12 @@
 "use client";
 
 import UserAvatar from "@/components/ui/UserAvatar";
-
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { Image as ImageIcon, Video, Send, X, Loader2, Sparkles, AlertCircle, FileText } from "lucide-react";
+import { Image as ImageIcon, Send, X, Loader2, Sparkles, AlertCircle, FileText, BarChart2, Plus } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { createPost } from "@/lib/services/posts";
+import { createPost, PollData } from "@/lib/services/posts";
+import toast from "react-hot-toast";
 
 export default function PostComposer() {
   const { profile } = useAuthStore();
@@ -16,6 +16,11 @@ export default function PostComposer() {
   const [isPosting, setIsPosting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Poll state
+  const [showPollBuilder, setShowPollBuilder] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
 
   const handleMediaSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -42,59 +47,92 @@ export default function PostComposer() {
     }
   };
 
+  const handleAddPollOption = () => {
+    if (pollOptions.length < 4) {
+      setPollOptions([...pollOptions, ""]);
+    }
+  };
+
+  const handlePollOptionChange = (index: number, val: string) => {
+    const updated = [...pollOptions];
+    updated[index] = val;
+    setPollOptions(updated);
+  };
+
+  const handleRemovePollOption = (index: number) => {
+    if (pollOptions.length > 2) {
+      setPollOptions(pollOptions.filter((_, i) => i !== index));
+    }
+  };
+
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!content.trim() && !mediaFile) || !profile) return;
+    if ((!content.trim() && !mediaFile && !pollQuestion.trim()) || !profile) return;
+
+    let pollData: PollData | null = null;
+    if (showPollBuilder) {
+      const validOptions = pollOptions.map(o => o.trim()).filter(Boolean);
+      if (!pollQuestion.trim() || validOptions.length < 2) {
+        setErrorMsg("Poll requires a question and at least 2 options!");
+        return;
+      }
+      pollData = {
+        question: pollQuestion.trim(),
+        options: validOptions.map((opt, idx) => ({
+          id: `opt_${idx + 1}_${Date.now()}`,
+          text: opt,
+          votes: []
+        })),
+        totalVotes: 0
+      };
+    }
     
     setIsPosting(true);
     setErrorMsg(null);
 
-    // 15 second timeout safety condition
-    const postPromise = createPost(profile, content, mediaFile);
-    const timeoutPromise = new Promise<{ success: boolean; error?: string }>((resolve) => {
-      setTimeout(() => {
-        resolve({ 
-          success: false, 
-          error: "Posting timed out. Please check your internet connection and try again." 
-        });
-      }, 15000);
-    });
+    try {
+      const res = await createPost(profile, content, mediaFile, pollData);
+      setIsPosting(false);
 
-    const result = await Promise.race([postPromise, timeoutPromise]);
-    setIsPosting(false);
-
-    if (result.success) {
-      setContent("");
-      removeMedia();
-      setErrorMsg(null);
-    } else {
-      setErrorMsg(result.error || "Failed to create post. Please try again.");
+      if (res.success) {
+        setContent("");
+        removeMedia();
+        setShowPollBuilder(false);
+        setPollQuestion("");
+        setPollOptions(["", ""]);
+        toast.success("Post published!");
+      } else {
+        setErrorMsg(res.error || "Failed to publish post.");
+      }
+    } catch {
+      setIsPosting(false);
+      setErrorMsg("An unexpected error occurred.");
     }
   };
 
   if (!profile) {
     return (
-      <div className="neo-card p-6 mb-8 border border-brand/20 bg-slate-900/80 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+      <div className="neo-card p-6 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 border border-white/10 bg-slate-900/60 rounded-2xl">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center text-white shrink-0 shadow-md">
+          <div className="p-3 rounded-full bg-brand/10 text-brand">
             <Sparkles className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-bold text-white text-lg">Viewing as Guest</h3>
-            <p className="text-slate-400 text-sm">Log in or sign up to like, comment, share, and connect with professionals.</p>
+            <h3 className="font-bold text-white text-base">Viewing as Guest</h3>
+            <p className="text-slate-400 text-xs">Log in or sign up to like, comment, share, and connect with professionals.</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
           <Link
             href="/login"
-            className="flex-1 md:flex-initial py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-sm text-center shadow-md hover:scale-105 transition-all"
+            className="flex-1 md:flex-initial py-2 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs text-center transition-all"
           >
             Log In
           </Link>
           <Link
             href="/register"
-            className="flex-1 md:flex-initial py-2.5 px-5 rounded-xl bg-slate-800 text-white font-bold text-sm text-center border border-white/10 hover:bg-slate-700 transition-all"
+            className="flex-1 md:flex-initial py-2 px-4 rounded-xl bg-slate-800 text-white font-bold text-xs text-center border border-white/10 hover:bg-slate-700 transition-all"
           >
             Sign Up
           </Link>
@@ -133,10 +171,69 @@ export default function PostComposer() {
               disabled={isPosting}
             />
             
+            {/* Poll Builder Widget */}
+            {showPollBuilder && (
+              <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/30 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                    <BarChart2 className="w-3.5 h-3.5 text-purple-400" /> Create Community Poll
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPollBuilder(false)}
+                    className="text-slate-400 hover:text-white text-xs"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Ask a question..."
+                  value={pollQuestion}
+                  onChange={(e) => setPollQuestion(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-slate-900 text-xs text-white rounded-lg border border-white/10 focus:outline-none focus:border-purple-500"
+                />
+
+                <div className="space-y-2">
+                  {pollOptions.map((opt, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder={`Option ${idx + 1}`}
+                        value={opt}
+                        onChange={(e) => handlePollOptionChange(idx, e.target.value)}
+                        className="flex-1 px-3 py-1.5 bg-slate-900 text-xs text-white rounded-lg border border-white/10 focus:outline-none focus:border-purple-500"
+                      />
+                      {pollOptions.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePollOption(idx)}
+                          className="text-rose-400 hover:text-rose-300 p-1"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {pollOptions.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={handleAddPollOption}
+                    className="text-xs text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1 pt-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Option
+                  </button>
+                )}
+              </div>
+            )}
+
             {mediaPreview && (
               <div className="relative rounded-xl overflow-hidden border border-white/10 w-full max-w-sm mt-2">
                 {mediaPreview.type === 'image' ? (
-                  <img src={mediaPreview.url} alt="Upload preview" className="w-full h-auto object-cover" />
+                  <img src={mediaPreview.url} alt="Upload preview" className="w-full max-h-48 object-cover" />
                 ) : (
                   <div className="flex items-center gap-3 p-4 bg-slate-800/80">
                     <div className="w-10 h-10 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
@@ -157,8 +254,8 @@ export default function PostComposer() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-4 pl-16">
-          <div className="flex gap-3">
+        <div className="flex items-center justify-between mt-3 pl-12">
+          <div className="flex items-center gap-2">
             <input 
               type="file" 
               accept="image/*,application/pdf,.doc,.docx" 
@@ -171,27 +268,36 @@ export default function PostComposer() {
               type="button" 
               onClick={() => fileInputRef.current?.click()}
               disabled={isPosting}
-              className="w-10 h-10 rounded-full neo-card bg-slate-800/40 flex items-center justify-center text-slate-400 hover:text-brand hover:border-brand/30 transition-all group disabled:opacity-50"
+              className="p-2 rounded-xl bg-slate-800/40 text-slate-400 hover:text-purple-300 hover:bg-slate-800 transition-all"
               title="Add Image or Document"
             >
-              <ImageIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+              <ImageIcon className="w-4 h-4" />
             </button>
-            <button type="button" disabled className="w-10 h-10 rounded-full neo-card bg-slate-800/40 flex items-center justify-center text-slate-400 hover:text-brand-purple hover:border-brand-purple/30 transition-all group disabled:opacity-50">
-              <Video className="w-5 h-5 group-hover:scale-110 transition-transform" />
+
+            <button 
+              type="button" 
+              onClick={() => setShowPollBuilder(!showPollBuilder)}
+              disabled={isPosting}
+              className={`p-2 rounded-xl transition-all ${
+                showPollBuilder ? "bg-purple-600/30 text-purple-300 border border-purple-500/40" : "bg-slate-800/40 text-slate-400 hover:text-purple-300 hover:bg-slate-800"
+              }`}
+              title="Create Poll"
+            >
+              <BarChart2 className="w-4 h-4" />
             </button>
           </div>
 
           <button
             type="submit"
-            disabled={(!content.trim() && !mediaFile) || isPosting}
-            className="neo-button-primary !w-auto px-6 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center min-w-[100px] justify-center"
+            disabled={(!content.trim() && !mediaFile && !(showPollBuilder && pollQuestion.trim())) || isPosting}
+            className="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-lg shadow-purple-600/20 transition-all"
           >
             {isPosting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <>
                 <span>Post</span>
-                <Send className="w-4 h-4 ml-2" />
+                <Send className="w-3.5 h-3.5" />
               </>
             )}
           </button>
