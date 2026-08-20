@@ -29,7 +29,7 @@ const SUGGESTED_PEOPLE = [
 ];
 
 const FEATURED_JOBS = [
-  { id: "j1", title: "Frontend Developer", company: "Rhockstar Tech", location: "Lagos, Nigeria (Hybrid)", salary: "₦250k–₦500k/mo" },
+  { id: "j1", title: "Frontend Developer", company: "Rhockstar Tech", location: "Lagos (Hybrid)", salary: "₦250k–₦500k/mo" },
   { id: "j2", title: "Social Media Manager", company: "Pulse Media", location: "Remote", salary: "₦180k–₦300k/mo" },
 ];
 
@@ -76,15 +76,15 @@ export default function FeedPage() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="w-full max-w-6xl mx-auto px-1 sm:px-2">
+      <div className="w-full max-w-6xl mx-auto px-1 sm:px-2 pb-16 lg:pb-6">
         
         {/* Top Header & Search Section */}
-        <div className="mb-6 space-y-4">
+        <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
+              <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
                 <span>Rhockstar Feed</span>
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">Hub</span>
+                <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">Hub</span>
               </h1>
               <p className="text-xs sm:text-sm text-slate-400">Connect with people, join communities, and explore opportunities.</p>
             </div>
@@ -92,9 +92,9 @@ export default function FeedPage() {
             {/* Global Search Bar */}
             <button
               onClick={openSearch}
-              className="w-full sm:w-80 flex items-center gap-3 px-4 py-2.5 bg-slate-900/80 hover:bg-slate-800 border border-white/10 rounded-2xl text-slate-400 hover:text-white transition-all shadow-inner group text-left"
+              className="w-full sm:w-80 flex items-center gap-3 px-3.5 py-2 sm:py-2.5 bg-slate-900/80 hover:bg-slate-800 border border-white/10 rounded-2xl text-slate-400 hover:text-white transition-all shadow-inner group text-left"
             >
-              <Search className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+              <Search className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform shrink-0" />
               <span className="text-xs font-medium truncate">Search people, jobs, communities...</span>
             </button>
           </div>
@@ -102,21 +102,21 @@ export default function FeedPage() {
           {/* Community Discovery Categories Strip */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-wider">
-                <Compass className="w-3.5 h-3.5 text-purple-400" />
+              <span className="text-[11px] sm:text-xs font-bold text-slate-400 flex items-center gap-1.5 uppercase tracking-wider">
+                <Compass className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                 Public Communities
               </span>
-              <Link href="/messages" className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1">
+              <Link href="/messages" className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-0.5">
                 Explore All <ChevronRight className="w-3 h-3" />
               </Link>
             </div>
 
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none -mx-1 px-1">
               {COMMUNITY_CHIPS.map((chip) => (
                 <Link
                   key={chip.name}
                   href={`/messages?category=${encodeURIComponent(chip.category)}`}
-                  className={`whitespace-nowrap px-3 py-1.5 rounded-xl bg-gradient-to-r ${chip.color} border text-xs font-bold flex items-center gap-2 hover:scale-105 transition-transform shrink-0`}
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-xl bg-gradient-to-r ${chip.color} border text-xs font-bold flex items-center gap-1.5 hover:scale-105 transition-transform shrink-0`}
                 >
                   <span>{chip.icon}</span>
                   <span>{chip.name}</span>
@@ -126,18 +126,49 @@ export default function FeedPage() {
           </div>
         </div>
 
+        {/* Mobile / Tablet Horizontal Suggestions Widget */}
+        <div className="block lg:hidden mb-4 space-y-3">
+          <div className="p-3 bg-slate-900/80 border border-white/5 rounded-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-purple-400" /> Suggested Connections
+              </span>
+              <Link href="/network" className="text-[11px] font-medium text-purple-400 hover:underline">
+                View All
+              </Link>
+            </div>
+            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+              {SUGGESTED_PEOPLE.map((user) => (
+                <div key={user.id} className="p-2.5 bg-slate-800/40 border border-white/5 rounded-xl flex items-center gap-2 shrink-0 min-w-[200px]">
+                  <UserAvatar name={user.name} className="w-7 h-7 text-[10px] font-bold shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-white text-xs truncate">{user.name}</h4>
+                    <p className="text-[10px] text-purple-300/80 truncate">{user.interest}</p>
+                  </div>
+                  <button
+                    onClick={() => toast.success(`Request sent to ${user.name}!`)}
+                    className="p-1.5 bg-purple-600/20 text-purple-300 hover:bg-purple-600 hover:text-white rounded-lg text-xs shrink-0"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* 2-Column Responsive Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
           
           {/* Main Feed Column */}
-          <div className="lg:col-span-8 space-y-4">
+          <div className="lg:col-span-8 space-y-3.5">
             
             {/* Post Composer */}
             <PostComposer />
 
             {/* Posts Stream */}
             {loading ? (
-              <div className="space-y-4">
+              <div className="space-y-3.5">
                 {[1, 2, 3].map((i) => (
                   <PostCardSkeleton key={i} />
                 ))}
