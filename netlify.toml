@@ -7,3 +7,9 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+  from = "https://rhockstarconnect1.netlify.app/*"
+  to = "https://rhockstarconnect.com/:splat"
+  status = 301
+  force = true
