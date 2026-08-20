@@ -229,18 +229,18 @@ export default function PostCard({ post }: PostCardProps) {
   }, [post.id, searchParams]);
 
   return (
-    <div id={`post-${post.id}`} className="neo-card p-6 mb-6 transition-all duration-700">
+    <div id={`post-${post.id}`} className="neo-card p-3.5 sm:p-4 mb-3.5 border border-white/5 bg-slate-900/60 rounded-2xl hover:border-white/10 transition-all duration-300">
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <Link href={`/profile?uid=${post.userId}`} className="flex items-center gap-4 group">
-          <UserAvatar src={post.user.avatar} name={post.user.name} className="w-12 h-12 shadow-inner group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow" textClassName="text-base font-bold" />
-          <div>
-            <h4 className="font-bold text-white group-hover:text-brand transition-colors flex items-center gap-1.5">
-              <span>{post.user.name}</span>
+      <div className="flex items-center justify-between mb-3">
+        <Link href={`/profile?uid=${post.userId}`} className="flex items-center gap-3 group min-w-0">
+          <UserAvatar src={post.user.avatar} name={post.user.name} className="w-9 h-9 shrink-0 shadow-inner group-hover:scale-105 transition-transform" textClassName="text-xs font-bold" />
+          <div className="min-w-0">
+            <h4 className="font-bold text-sm text-white group-hover:text-purple-300 transition-colors flex items-center gap-1.5 truncate">
+              <span className="truncate">{post.user.name}</span>
               <VerifiedBadge tier={(post.user as any)?.subscriptionTier} />
             </h4>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <span>@{post.user.handle}</span>
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
+              <span className="truncate">@{post.user.handle}</span>
               <span>•</span>
               <span>{timeAgo}</span>
             </div>
@@ -310,18 +310,18 @@ export default function PostCard({ post }: PostCardProps) {
           </div>
         </div>
       ) : (
-        <div className="mb-4 text-slate-300 leading-relaxed whitespace-pre-wrap">
+        <div className="mb-3 text-sm text-slate-200 leading-snug whitespace-pre-wrap">
           {post.content}
         </div>
       )}
 
       {/* Image Attachment */}
       {post.imageUrl && (
-        <div className="mb-6 rounded-xl overflow-hidden border border-white/5 bg-black/20 max-h-[500px] flex items-center justify-center">
+        <div className="mb-3 rounded-xl overflow-hidden border border-white/5 bg-black/20 max-h-72 sm:max-h-80 flex items-center justify-center">
           <img 
             src={post.imageUrl} 
             alt="Post attachment" 
-            className="max-w-full max-h-[500px] object-contain cursor-pointer hover:opacity-90 transition-opacity"
+            className="max-w-full max-h-72 sm:max-h-80 object-cover cursor-pointer hover:opacity-95 transition-opacity w-full"
             loading="lazy"
             onClick={() => openLightbox([post.imageUrl!])}
           />
@@ -354,23 +354,23 @@ export default function PostCard({ post }: PostCardProps) {
       )}
 
       {/* Action Bar */}
-      <div className="flex items-center gap-6 pt-4 border-t border-white/5">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-4 sm:gap-6 pt-2.5 border-t border-white/5 text-xs text-slate-400">
+        <div className="flex items-center gap-1.5">
           <button 
             onClick={handleLike}
             disabled={!profile || isLiking}
-            className={`flex items-center text-sm font-medium transition-all group ${
+            className={`flex items-center transition-all group ${
               isLiked ? "text-red-500" : "text-slate-400 hover:text-red-400"
             } ${isLiking ? "opacity-50 cursor-not-allowed" : ""}`}
             title="Like Post"
           >
-            <div className={`p-2 rounded-full neo-card ${isLiked ? 'bg-red-500/10 border-red-500/30 shadow-[0_0_10px_rgba(239,68,68,0.2)]' : 'bg-slate-800/30 hover:border-red-400/30'}`}>
-              <Heart className={`w-4 h-4 transition-transform group-hover:scale-110 ${isLiked ? 'fill-current' : ''}`} />
+            <div className={`p-1.5 rounded-full ${isLiked ? 'bg-red-500/10 text-red-500 border border-red-500/30' : 'bg-slate-800/40 hover:bg-slate-800'}`}>
+              <Heart className={`w-3.5 h-3.5 transition-transform group-hover:scale-110 ${isLiked ? 'fill-current' : ''}`} />
             </div>
           </button>
           <button 
             onClick={handleOpenLikesModal} 
-            className="text-sm font-medium text-slate-400 hover:text-white transition-colors hover:underline px-1 cursor-pointer"
+            className="text-xs font-semibold text-slate-400 hover:text-white transition-colors hover:underline px-0.5 cursor-pointer"
             title="See who liked this"
           >
             {likeCount}
@@ -379,20 +379,20 @@ export default function PostCard({ post }: PostCardProps) {
 
         <button 
           onClick={() => setShowComments(!showComments)}
-          className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-brand transition-all group"
+          className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-purple-300 transition-all group"
         >
-          <div className="p-2 rounded-full neo-card bg-slate-800/30 group-hover:border-brand/30">
-            <MessageCircle className="w-4 h-4 transition-transform group-hover:scale-110" />
+          <div className="p-1.5 rounded-full bg-slate-800/40 group-hover:bg-slate-800">
+            <MessageCircle className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
           </div>
           <span>{post.commentsCount || 0}</span>
         </button>
 
         <button 
           onClick={handleShare}
-          className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-emerald-400 transition-all group"
+          className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-emerald-400 transition-all group"
         >
-          <div className="p-2 rounded-full neo-card bg-slate-800/30 group-hover:border-emerald-400/30">
-            <Share2 className="w-4 h-4 transition-transform group-hover:scale-110" />
+          <div className="p-1.5 rounded-full bg-slate-800/40 group-hover:bg-slate-800">
+            <Share2 className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
           </div>
           <span className="hidden sm:inline">Share</span>
         </button>
@@ -400,12 +400,12 @@ export default function PostCard({ post }: PostCardProps) {
         <button 
           onClick={handleSave}
           disabled={!profile || isSaving}
-          className={`flex items-center gap-2 text-sm font-medium transition-all group ml-auto ${
+          className={`flex items-center gap-1.5 text-xs font-medium transition-all group ml-auto ${
             isSaved ? "text-amber-400" : "text-slate-400 hover:text-amber-400"
           }`}
         >
-          <div className={`p-2 rounded-full neo-card ${isSaved ? 'bg-amber-400/10 border-amber-400/30' : 'bg-slate-800/30 hover:border-amber-400/30'}`}>
-            <Bookmark className={`w-4 h-4 transition-transform group-hover:scale-110 ${isSaved ? 'fill-current' : ''}`} />
+          <div className={`p-1.5 rounded-full ${isSaved ? 'bg-amber-400/10 text-amber-400 border border-amber-400/30' : 'bg-slate-800/40 hover:bg-slate-800'}`}>
+            <Bookmark className={`w-3.5 h-3.5 transition-transform group-hover:scale-110 ${isSaved ? 'fill-current' : ''}`} />
           </div>
         </button>
       </div>

@@ -104,13 +104,10 @@ export default function PostComposer() {
   }
 
   return (
-    <div className="neo-card p-6 mb-8 relative overflow-hidden">
-      {/* Decorative Glow */}
-      <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand/10 rounded-full blur-2xl" />
-      
+    <div className="neo-card p-3.5 sm:p-4 mb-4 border border-white/5 bg-slate-900/80 rounded-2xl relative overflow-hidden">
       <form onSubmit={handlePost}>
         {errorMsg && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-rose-400 text-sm">
+          <div className="mb-3 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-rose-400 text-xs">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
               <span>{errorMsg}</span>
@@ -125,12 +122,12 @@ export default function PostComposer() {
           </div>
         )}
 
-        <div className="flex gap-4">
-          <UserAvatar src={profile.avatar} name={profile.fullName} className="w-12 h-12 border border-brand/20 shadow-inner shrink-0" textClassName="text-base font-bold" />
-          <div className="flex-1 flex flex-col gap-3">
+        <div className="flex gap-3">
+          <UserAvatar src={profile.avatar} name={profile.fullName} className="w-9 h-9 shrink-0" textClassName="text-xs font-bold" />
+          <div className="flex-1 flex flex-col gap-2">
             <textarea
-              className="neo-input w-full min-h-[100px] resize-none bg-slate-900/40 text-lg placeholder:text-slate-500"
-              placeholder={`What's on your mind, ${profile.fullName.split(' ')[0]}?`}
+              className="w-full min-h-[75px] resize-none bg-slate-800/40 text-sm text-slate-200 placeholder:text-slate-500 p-3 rounded-xl border border-white/5 focus:outline-none focus:border-purple-500/50"
+              placeholder={`Share an update or opportunity, ${profile.fullName.split(' ')[0]}...`}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               disabled={isPosting}

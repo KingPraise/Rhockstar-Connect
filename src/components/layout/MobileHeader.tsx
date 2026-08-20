@@ -22,7 +22,8 @@ import {
   Gift,
   Shield,
   Search,
-  Building2
+  Building2,
+  Plus
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
@@ -30,9 +31,11 @@ import { logoutUser } from "@/lib/auth";
 
 import LogoutConfirmModal from "@/components/auth/LogoutConfirmModal";
 import UserAvatar from "@/components/ui/UserAvatar";
+import QuickCreateModal from "@/components/layout/QuickCreateModal";
 
 export default function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const lastScrollY = useRef(0);
@@ -124,6 +127,15 @@ export default function MobileHeader() {
         </Link>
 
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button
+            onClick={() => setIsCreateOpen(true)}
+            className="p-2 rounded-xl bg-purple-600/20 text-purple-400 hover:text-white border border-purple-500/30 active:scale-95 transition-all flex items-center justify-center"
+            aria-label="Create New"
+            title="Create New Content"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+
           <Link
             href="/messages"
             className="relative p-2 rounded-xl bg-slate-800/80 text-slate-300 hover:text-white border border-white/5 active:scale-95 transition-all"
@@ -336,6 +348,9 @@ export default function MobileHeader() {
 
       {/* Logout Confirmation Modal for Mobile */}
       <LogoutConfirmModal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} />
+
+      {/* Quick Create Action Modal */}
+      <QuickCreateModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} />
     </>
   );
 }

@@ -21,11 +21,13 @@ import {
   Gift,
   Shield,
   Search,
-  Building2
+  Building2,
+  Plus
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { logoutUser } from "@/lib/auth";
+import QuickCreateModal from "@/components/layout/QuickCreateModal";
 
 export default function Sidebar() {
   const { profile, logout, unreadNotifications, unreadMessages } = useAuthStore();
@@ -33,6 +35,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
   const isEmployer = (profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (profile?.subscriptionTier === 'elite' || profile?.role === 'admin');
 
@@ -121,6 +124,18 @@ export default function Sidebar() {
             </div>
           )}
         </Link>
+
+        {/* Quick Create Action Button */}
+        <button
+          onClick={() => setIsCreateOpen(true)}
+          className={`w-full flex items-center ${isMinimized ? "justify-center px-0" : "gap-3 px-5"} py-3 mt-3 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg transition-all active:scale-95 group`}
+          title="Create New Content"
+        >
+          <div className="p-1 rounded-lg bg-white/20 text-white group-hover:scale-110 transition-transform">
+            <Plus className="w-4 h-4" />
+          </div>
+          {!isMinimized && <span>Create</span>}
+        </button>
       </div>
 
       <nav className="flex flex-col gap-2 px-4 flex-1">
@@ -245,7 +260,22 @@ export default function Sidebar() {
           </Link>
         )}
 
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className={`w-full p-3 rounded-xl flex items-center ${isMinimized ? "justify-center" : "gap-3"} text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors border border-transparent hover:border-red-500/20`}
+          title={isMinimized ? "Log Out" : undefined}
+        >
+          <LogOut className="w-5 h-5 text-red-400 shrink-0" />
+          {!isMinimized && <span className="font-semibold text-sm">Log Out</span>}
+        </button>
       </div>
+
+      {/* Quick Create Action Modal */}
+      <QuickCreateModal 
+        isOpen={isCreateOpen} 
+        onClose={() => setIsCreateOpen(false)} 
+      />
     </aside>
   );
 }
