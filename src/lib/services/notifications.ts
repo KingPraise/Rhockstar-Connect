@@ -23,6 +23,7 @@ export interface Notification {
   read: boolean;
   createdAt: any;
   link?: string;
+  targetId?: string;
   senderId?: string;
   senderName?: string;
   senderAvatar?: string;

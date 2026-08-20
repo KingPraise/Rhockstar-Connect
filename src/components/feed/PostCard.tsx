@@ -45,6 +45,7 @@ export default function PostCard({ post }: PostCardProps) {
 
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const commentInputRef = useRef<HTMLInputElement>(null);
   
@@ -311,7 +312,31 @@ export default function PostCard({ post }: PostCardProps) {
         </div>
       ) : (
         <div className="mb-3 text-sm text-slate-200 leading-snug whitespace-pre-wrap">
-          {post.content}
+          {post.content.length > 220 && !isExpanded ? (
+            <>
+              <span>{post.content.slice(0, 220)}... </span>
+              <button
+                type="button"
+                onClick={() => setIsExpanded(true)}
+                className="text-purple-400 hover:text-purple-300 font-bold text-xs hover:underline inline-block ml-1"
+              >
+                See More
+              </button>
+            </>
+          ) : (
+            <>
+              <span>{post.content} </span>
+              {post.content.length > 220 && (
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(false)}
+                  className="text-slate-400 hover:text-white font-bold text-xs hover:underline inline-block ml-1"
+                >
+                  Show Less
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
 

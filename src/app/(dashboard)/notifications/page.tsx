@@ -45,17 +45,37 @@ export default function NotificationsPage() {
     }
 
     switch (notification.type) {
-      case "match":
-        router.push("/dating");
+      case "like":
+      case "comment":
+        if (notification.targetId) {
+          router.push(`/feed?postId=${notification.targetId}#post-${notification.targetId}`);
+        } else {
+          router.push("/feed");
+        }
         break;
       case "message":
-        router.push("/messages");
+        if (notification.targetId || notification.senderId) {
+          router.push(`/messages?chatId=${notification.targetId || notification.senderId}`);
+        } else {
+          router.push("/messages");
+        }
         break;
       case "connection":
-        router.push("/network");
+        if (notification.senderId) {
+          router.push(`/profile?uid=${notification.senderId}`);
+        } else {
+          router.push("/network");
+        }
         break;
       case "job":
-        router.push("/jobs");
+        if (notification.targetId) {
+          router.push(`/jobs?jobId=${notification.targetId}`);
+        } else {
+          router.push("/jobs");
+        }
+        break;
+      case "match":
+        router.push("/dating");
         break;
       default:
         router.push("/feed");
