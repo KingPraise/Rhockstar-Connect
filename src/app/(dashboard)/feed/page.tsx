@@ -4,7 +4,11 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import PostComposer from "@/components/feed/PostComposer";
 import PostCard from "@/components/feed/PostCard";
 import { subscribeToFeed, Post } from "@/lib/services/posts";
-import { Loader2, MessageSquarePlus, Search, Compass, Users, Briefcase, ChevronRight, UserPlus, Sparkles, TrendingUp } from "lucide-react";
+import { getAllUsers, UserBasic } from "@/lib/services/users";
+import { getJobs, JobListing } from "@/lib/services/jobs";
+import { sendConnectionRequest } from "@/lib/services/connections";
+import { useAuthStore } from "@/store/useAuthStore";
+import { Loader2, MessageSquarePlus, Search, Compass, Users, Briefcase, ChevronRight, UserPlus, Sparkles, Check } from "lucide-react";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import PostCardSkeleton from "@/components/feed/PostCardSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -22,23 +26,19 @@ const COMMUNITY_CHIPS = [
   { name: "Relationships", category: "General", icon: "❤️", color: "from-rose-600/20 to-pink-600/20 border-rose-500/30 text-rose-300" },
 ];
 
-const SUGGESTED_PEOPLE = [
-  { id: "1", name: "Adewale Sunday", role: "Automobile Specialist", interest: "Automobiles", avatar: "", handle: "adewale_autos" },
-  { id: "2", name: "Chinedu Okeke", role: "Fullstack Developer", interest: "Technology", avatar: "", handle: "chinedu_dev" },
-  { id: "3", name: "Blessing Amadi", role: "HR & Recruiter", interest: "Jobs & HR", avatar: "", handle: "blessing_hr" },
-];
-
-const FEATURED_JOBS = [
-  { id: "j1", title: "Frontend Developer", company: "Rhockstar Tech", location: "Lagos (Hybrid)", salary: "₦250k–₦500k/mo" },
-  { id: "j2", title: "Social Media Manager", company: "Pulse Media", location: "Remote", salary: "₦180k–₦300k/mo" },
-];
-
 export default function FeedPage() {
+  const { profile } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [limitCount, setLimitCount] = useState(10);
   const [hasMore, setHasMore] = useState(true);
   const { openSearch } = useSearchStore();
+
+  // Dynamic Real Time DB State
+  const [suggestedPeople, setSuggestedPeople] = useState<UserBasic[]>([]);
+  const [featuredJobs, setFeaturedJobs] = useState<JobListing[]>([]);
+  const [connectingUserIds, setConnectingUserIds] = useState<Set<string>>(new Set());
+  const [sentRequestIds, setSentRequestIds] = useState<Set<string>>(new Set());
 
   const observer = useRef<IntersectionObserver | null>(null);
   
@@ -60,6 +60,7 @@ export default function FeedPage() {
     await new Promise(resolve => setTimeout(resolve, 800));
   };
 
+  // Subscribe to real-time posts feed
   useEffect(() => {
     const unsubscribe = subscribeToFeed(limitCount, (newPosts) => {
       setPosts(newPosts);
@@ -73,6 +74,64 @@ export default function FeedPage() {
 
     return () => unsubscribe();
   }, [limitCount]);
+
+  // Fetch real database users & jobs from Firestore
+  useEffect(() => {
+    const fetchSidebarData = async () => {
+      // 1. Fetch Real Users from Firestore
+      try {
+        const userRes = await getAllUsers(true);
+        if (userRes.success && userRes.users) {
+          const filtered = userRes.users
+            .filter(u => u.uid !== profile?.uid)
+            .slice(0, 5);
+          setSuggestedPeople(filtered);
+        }
+      } catch (err) {
+        console.error("Failed to load suggested users:", err);
+      }
+
+      // 2. Fetch Real Jobs from Firestore
+      try {
+        const jobRes = await getJobs({ limitCount: 4 });
+        if (jobRes.success && jobRes.jobs && jobRes.jobs.length > 0) {
+          setFeaturedJobs(jobRes.jobs);
+        }
+      } catch (err) {
+        console.error("Failed to load featured jobs:", err);
+      }
+    };
+
+    fetchSidebarData();
+  }, [profile?.uid]);
+
+  // Handle real connection request to Firestore
+  const handleConnect = async (targetUserId: string, targetName: string) => {
+    if (!profile?.uid) {
+      toast.error("Please sign in to connect with users");
+      return;
+    }
+
+    setConnectingUserIds(prev => new Set(prev).add(targetUserId));
+
+    try {
+      const res = await sendConnectionRequest(profile.uid, targetUserId);
+      if (res.success) {
+        setSentRequestIds(prev => new Set(prev).add(targetUserId));
+        toast.success(`Connection request sent to ${targetName}! 🎉`);
+      } else {
+        toast.error(res.error || "Failed to send connection request");
+      }
+    } catch (err: any) {
+      toast.error("Failed to send connection request");
+    } finally {
+      setConnectingUserIds(prev => {
+        const next = new Set(prev);
+        next.delete(targetUserId);
+        return next;
+      });
+    }
+  };
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
@@ -126,36 +185,51 @@ export default function FeedPage() {
           </div>
         </div>
 
-        {/* Mobile / Tablet Horizontal Suggestions Widget */}
-        <div className="block lg:hidden mb-4 space-y-3">
-          <div className="p-3 bg-slate-900/80 border border-white/5 rounded-2xl space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5 text-purple-400" /> Suggested Connections
-              </span>
-              <Link href="/network" className="text-[11px] font-medium text-purple-400 hover:underline">
-                View All
-              </Link>
-            </div>
-            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
-              {SUGGESTED_PEOPLE.map((user) => (
-                <div key={user.id} className="p-2.5 bg-slate-800/40 border border-white/5 rounded-xl flex items-center gap-2 shrink-0 min-w-[200px]">
-                  <UserAvatar name={user.name} className="w-7 h-7 text-[10px] font-bold shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-bold text-white text-xs truncate">{user.name}</h4>
-                    <p className="text-[10px] text-purple-300/80 truncate">{user.interest}</p>
+        {/* Mobile / Tablet Horizontal Suggestions Widget (Real DB Users) */}
+        {suggestedPeople.length > 0 && (
+          <div className="block lg:hidden mb-4 space-y-3">
+            <div className="p-3 bg-slate-900/80 border border-white/5 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-purple-400" /> Suggested Connections
+                </span>
+                <Link href="/network" className="text-[11px] font-medium text-purple-400 hover:underline">
+                  View All
+                </Link>
+              </div>
+              <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+                {suggestedPeople.map((user) => (
+                  <div key={user.uid} className="p-2.5 bg-slate-800/40 border border-white/5 rounded-xl flex items-center gap-2 shrink-0 min-w-[210px]">
+                    <UserAvatar name={user.fullName} src={user.avatar} className="w-8 h-8 text-xs font-bold shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/profile?uid=${user.uid}`} className="font-bold text-white text-xs truncate block hover:underline">
+                        {user.fullName}
+                      </Link>
+                      <p className="text-[10px] text-purple-300/80 truncate">{user.headline || user.industry || user.accountType || "Member"}</p>
+                    </div>
+                    {sentRequestIds.has(user.uid) ? (
+                      <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs shrink-0 flex items-center gap-1 font-semibold">
+                        <Check className="w-3.5 h-3.5" />
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleConnect(user.uid, user.fullName)}
+                        disabled={connectingUserIds.has(user.uid)}
+                        className="p-1.5 bg-purple-600/20 text-purple-300 hover:bg-purple-600 hover:text-white rounded-lg text-xs shrink-0 disabled:opacity-50"
+                      >
+                        {connectingUserIds.has(user.uid) ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <UserPlus className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    )}
                   </div>
-                  <button
-                    onClick={() => toast.success(`Request sent to ${user.name}!`)}
-                    className="p-1.5 bg-purple-600/20 text-purple-300 hover:bg-purple-600 hover:text-white rounded-lg text-xs shrink-0"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* 2-Column Responsive Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
@@ -211,7 +285,7 @@ export default function FeedPage() {
           {/* Right Sidebar Column (Desktop) */}
           <div className="hidden lg:flex flex-col gap-5 lg:col-span-4 sticky top-20">
             
-            {/* People You May Know Widget */}
+            {/* People You May Know Widget (Real DB Users) */}
             <div className="neo-card p-4 bg-slate-900/80 border border-white/5 rounded-2xl space-y-3">
               <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
                 <h3 className="font-bold text-white text-sm flex items-center gap-2">
@@ -224,29 +298,49 @@ export default function FeedPage() {
               </div>
 
               <div className="space-y-3">
-                {SUGGESTED_PEOPLE.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between gap-2 p-2 rounded-xl hover:bg-slate-800/50 transition-colors">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <UserAvatar name={user.name} className="w-8 h-8 text-xs font-bold shrink-0" />
-                      <div className="min-w-0">
-                        <h4 className="font-bold text-white text-xs truncate">{user.name}</h4>
-                        <p className="text-[11px] text-purple-300/80 truncate">{user.interest}</p>
+                {suggestedPeople.length > 0 ? (
+                  suggestedPeople.map((user) => (
+                    <div key={user.uid} className="flex items-center justify-between gap-2 p-2 rounded-xl hover:bg-slate-800/50 transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <UserAvatar name={user.fullName} src={user.avatar} className="w-8 h-8 text-xs font-bold shrink-0" />
+                        <div className="min-w-0">
+                          <Link href={`/profile?uid=${user.uid}`} className="font-bold text-white text-xs truncate block hover:underline">
+                            {user.fullName}
+                          </Link>
+                          <p className="text-[11px] text-purple-300/80 truncate">{user.headline || user.industry || user.accountType || "Member"}</p>
+                        </div>
                       </div>
-                    </div>
 
-                    <button
-                      onClick={() => toast.success(`Connection request sent to ${user.name}!`)}
-                      className="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1 border border-purple-500/30"
-                    >
-                      <UserPlus className="w-3 h-3" />
-                      <span>Connect</span>
-                    </button>
-                  </div>
-                ))}
+                      {sentRequestIds.has(user.uid) ? (
+                        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold shrink-0 flex items-center gap-1 border border-emerald-500/30">
+                          <Check className="w-3 h-3" />
+                          <span>Sent</span>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleConnect(user.uid, user.fullName)}
+                          disabled={connectingUserIds.has(user.uid)}
+                          className="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white rounded-lg text-xs font-bold transition-all shrink-0 flex items-center gap-1 border border-purple-500/30 disabled:opacity-50"
+                        >
+                          {connectingUserIds.has(user.uid) ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <>
+                              <UserPlus className="w-3 h-3" />
+                              <span>Connect</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-2">No suggested users found yet.</p>
+                )}
               </div>
             </div>
 
-            {/* Jobs Showcase Widget */}
+            {/* Jobs Showcase Widget (Real DB Jobs) */}
             <div className="neo-card p-4 bg-slate-900/80 border border-white/5 rounded-2xl space-y-3">
               <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
                 <h3 className="font-bold text-white text-sm flex items-center gap-2">
@@ -259,25 +353,29 @@ export default function FeedPage() {
               </div>
 
               <div className="space-y-2.5">
-                {FEATURED_JOBS.map((job) => (
-                  <div key={job.id} className="p-3 bg-slate-800/40 rounded-xl border border-white/5 hover:border-emerald-500/30 transition-all space-y-1.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-bold text-white text-xs">{job.title}</h4>
-                        <p className="text-[11px] text-slate-400">{job.company} • {job.location}</p>
+                {featuredJobs.length > 0 ? (
+                  featuredJobs.map((job) => (
+                    <div key={job.id} className="p-3 bg-slate-800/40 rounded-xl border border-white/5 hover:border-emerald-500/30 transition-all space-y-1.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-white text-xs">{job.title}</h4>
+                          <p className="text-[11px] text-slate-400">{job.company} • {job.location}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[11px] font-bold text-emerald-400">{job.salary}</span>
+                        <Link 
+                          href="/jobs" 
+                          className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg text-[11px] font-bold transition-all border border-emerald-500/30"
+                        >
+                          View Job
+                        </Link>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[11px] font-bold text-emerald-400">{job.salary}</span>
-                      <Link 
-                        href="/jobs" 
-                        className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg text-[11px] font-bold transition-all border border-emerald-500/30"
-                      >
-                        View Job
-                      </Link>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 text-center py-2">No active jobs listed yet.</p>
+                )}
               </div>
             </div>
 
