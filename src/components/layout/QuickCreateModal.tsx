@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X, FileText, Image as ImageIcon, Briefcase, Users, BarChart2, Sparkles, Lock } from "lucide-react";
+import { X, FileText, Image as ImageIcon, Briefcase, Users, BarChart2, Sparkles, Lock, Megaphone } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CreateCommunityModal from "@/components/chat/CreateCommunityModal";
+import CreateAdModal from "@/components/ads/CreateAdModal";
 import { useAuthStore } from "@/store/useAuthStore";
 import toast from "react-hot-toast";
 
@@ -16,10 +17,11 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
   const router = useRouter();
   const { profile } = useAuthStore();
   const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
+  const [isAdModalOpen, setIsAdModalOpen] = useState(false);
 
   const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
 
-  if (!isOpen && !isCommunityModalOpen) return null;
+  if (!isOpen && !isCommunityModalOpen && !isAdModalOpen) return null;
 
   const handleAction = (action: string) => {
     switch (action) {
@@ -45,6 +47,10 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
         } else {
           toast.error("Only Employer accounts can post job listings. Upgrade your account in Settings!", { icon: "💼" });
         }
+        break;
+      case "ad":
+        onClose();
+        setIsAdModalOpen(true);
         break;
       case "community":
         onClose();
@@ -166,6 +172,20 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
                   <p className="text-xs text-slate-400">Ask questions and gather opinions from the community</p>
                 </div>
               </button>
+
+              {/* Create Advert Option */}
+              <button
+                onClick={() => handleAction("ad")}
+                className="flex items-center gap-4 p-3.5 bg-slate-800/60 hover:bg-purple-900/30 border border-white/5 hover:border-purple-500/30 rounded-2xl transition-all group text-left"
+              >
+                <div className="p-3 bg-purple-500/10 text-purple-400 rounded-xl group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm group-hover:text-purple-300">Create Advert</h4>
+                  <p className="text-xs text-slate-400">Promote your brand or product to Rhockstar Connect feed</p>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -180,6 +200,12 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
           router.push("/messages");
           toast.success("Public community created! Opening Chat...");
         }}
+      />
+
+      {/* Advert Creation Modal */}
+      <CreateAdModal
+        isOpen={isAdModalOpen}
+        onClose={() => setIsAdModalOpen(false)}
       />
     </>
   );

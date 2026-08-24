@@ -26,6 +26,9 @@ const COMMUNITY_CHIPS = [
   { name: "Relationships", category: "General", icon: "❤️", color: "from-rose-600/20 to-pink-600/20 border-rose-500/30 text-rose-300" },
 ];
 
+import { subscribeToActiveAds, Advertisement } from "@/lib/services/ads";
+import SponsoredAdCard from "@/components/feed/SponsoredAdCard";
+
 export default function FeedPage() {
   const { profile } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -37,6 +40,7 @@ export default function FeedPage() {
   // Dynamic Real Time DB State
   const [suggestedPeople, setSuggestedPeople] = useState<UserBasic[]>([]);
   const [featuredJobs, setFeaturedJobs] = useState<JobListing[]>([]);
+  const [activeAds, setActiveAds] = useState<Advertisement[]>([]);
   const [connectingUserIds, setConnectingUserIds] = useState<Set<string>>(new Set());
   const [sentRequestIds, setSentRequestIds] = useState<Set<string>>(new Set());
 
@@ -74,6 +78,14 @@ export default function FeedPage() {
 
     return () => unsubscribe();
   }, [limitCount]);
+
+  // Subscribe to real-time active sponsored ads
+  useEffect(() => {
+    const unsubscribe = subscribeToActiveAds((fetchedAds) => {
+      setActiveAds(fetchedAds);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Fetch real database users & jobs from Firestore
   useEffect(() => {
@@ -250,15 +262,20 @@ export default function FeedPage() {
             ) : posts.length > 0 ? (
               <div className="space-y-3.5">
                 {posts.map((post, index) => {
-                  if (posts.length === index + 1) {
-                    return (
-                      <div ref={lastPostElementRef} key={post.id}>
+                  const adIndex = Math.floor((index + 1) / 4) - 1;
+                  const showAdAfterThisPost = (index + 1) % 4 === 0 && activeAds.length > 0;
+                  const sponsoredAd = showAdAfterThisPost ? activeAds[adIndex % activeAds.length] : null;
+
+                  return (
+                    <div key={post.id} className="space-y-3.5">
+                      <div ref={posts.length === index + 1 ? lastPostElementRef : null}>
                         <PostCard post={post} />
                       </div>
-                    );
-                  } else {
-                    return <PostCard key={post.id} post={post} />;
-                  }
+                      {sponsoredAd && (
+                        <SponsoredAdCard key={`ad-${sponsoredAd.id}-${index}`} ad={sponsoredAd} />
+                      )}
+                    </div>
+                  );
                 })}
                 {hasMore && (
                   <div className="flex justify-center py-6">
