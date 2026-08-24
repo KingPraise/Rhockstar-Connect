@@ -24,7 +24,7 @@ export default function PostJobPage() {
     description: "",
   });
 
-  const isEmployer = profile?.accountType === 'employer' || profile?.role === 'employer' || profile?.role === 'admin';
+  const isEmployer = (profile as any)?.accountType === 'employer' || (profile?.role as string) === 'employer' || profile?.role === 'admin';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData(prev => ({

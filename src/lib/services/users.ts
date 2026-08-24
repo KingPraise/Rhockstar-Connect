@@ -7,7 +7,8 @@ import {
   updateDoc,
   query,
   where,
-  writeBatch
+  writeBatch,
+  onSnapshot
 } from 'firebase/firestore';
 
 export interface UserBasic {
@@ -261,14 +262,10 @@ export const trackProfileView = async (viewedUid: string, viewerUid?: string) =>
 };
 
 export const listenToUserProfile = (uid: string, callback: (user: any) => void) => {
-  import('firebase/firestore').then(({ doc, onSnapshot }) => {
-    import('../firebase').then(({ db }) => {
-      return onSnapshot(doc(db, 'users', uid), (snapshot) => {
-        if (snapshot.exists()) {
-          callback({ uid: snapshot.id, ...snapshot.data() });
-        }
-      });
-    });
+  return onSnapshot(doc(db, 'users', uid), (snapshot) => {
+    if (snapshot.exists()) {
+      callback({ uid: snapshot.id, ...snapshot.data() });
+    }
   });
 };
 
