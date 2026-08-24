@@ -343,7 +343,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                         </span>
                         {isParsing && (
                           <span className="text-xs text-emerald-400 font-bold animate-pulse">
-                            ✨ Rhockstar AI Parsing...
+                            ⚡ Rhockstar AI Parsing...
                           </span>
                         )}
                       </div>

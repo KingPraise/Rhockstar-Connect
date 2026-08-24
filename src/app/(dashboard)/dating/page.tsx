@@ -203,7 +203,7 @@ export default function DatingPage() {
         <div className="flex items-center gap-3">
           <div className="relative flex -space-x-3">
             <div className={`w-10 h-10 rounded-full bg-slate-800 border-2 ${isPremium ? 'border-emerald-400' : 'border-amber-500/50'} flex items-center justify-center font-extrabold ${isPremium ? 'text-emerald-400' : 'text-amber-400 text-xs blur-[2px]'}`}>
-              {isPremium ? '✨' : '?'}
+              {isPremium ? '★' : '?'}
             </div>
             <div className={`w-10 h-10 rounded-full bg-slate-800 border-2 ${isPremium ? 'border-brand' : 'border-rose-500/50'} flex items-center justify-center font-extrabold ${isPremium ? 'text-brand' : 'text-rose-400 text-xs blur-[2px]'}`}>
               {isPremium ? '💖' : '?'}

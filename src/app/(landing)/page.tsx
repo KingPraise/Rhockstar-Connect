@@ -92,7 +92,7 @@ export default function Home() {
                   <span className="font-bold text-sm text-white">New Premium Job Match</span>
                 </div>
                 <div className="neo-card p-4 bg-slate-800/80 backdrop-blur-md border-l-4 border-l-brand-purple flex items-center gap-3 ml-4">
-                  <span className="text-xl">✨</span>
+                  <span className="text-xl">🚀</span>
                   <span className="font-bold text-sm text-white">It&apos;s a Match! Say Hello</span>
                 </div>
               </div>

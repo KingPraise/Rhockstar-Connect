@@ -62,7 +62,7 @@ export default function SponsoredAdCard({ ad }: SponsoredAdCardProps) {
             </h4>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-full border border-purple-500/30 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-purple-400" />
+                <Megaphone className="w-3 h-3 text-purple-400" />
                 Sponsored
               </span>
             </div>

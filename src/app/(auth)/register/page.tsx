@@ -281,7 +281,7 @@ function RegisterForm() {
               </div>
               <div className="flex justify-between items-center ml-1">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Referral Code (Optional)</label>
-                {referralCode && <span className="text-xs text-amber-400 font-bold">Applied! ✨</span>}
+                {referralCode && <span className="text-xs text-amber-400 font-bold">Applied! ✓</span>}
               </div>
               <input
                 type="text"

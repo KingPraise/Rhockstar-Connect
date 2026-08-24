@@ -59,7 +59,7 @@ export default function NetworkPage() {
       toast.success("Filter cleared", { icon: "🧹", style: { background: '#334155', color: '#fff' } });
     } else {
       setActivePremiumFilter(filterId);
-      toast.success(`Filtered by: ${PREMIUM_FILTERS.find(f => f.id === filterId)?.label}`, { icon: "✨", style: { background: '#334155', color: '#fff' } });
+      toast.success(`Filtered by: ${PREMIUM_FILTERS.find(f => f.id === filterId)?.label}`, { icon: "🎯", style: { background: '#334155', color: '#fff' } });
     }
   };
 

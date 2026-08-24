@@ -235,7 +235,7 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
             {/* Right Column: Live Feed Ad Preview */}
             <div className="space-y-2">
               <span className="block text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <Megaphone className="w-3.5 h-3.5 text-purple-400" />
                 Live Feed Preview
               </span>
 
