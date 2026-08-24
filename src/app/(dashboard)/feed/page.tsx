@@ -262,8 +262,8 @@ export default function FeedPage() {
             ) : posts.length > 0 ? (
               <div className="space-y-3.5">
                 {posts.map((post, index) => {
-                  const adIndex = Math.floor((index + 1) / 4) - 1;
-                  const showAdAfterThisPost = (index + 1) % 4 === 0 && activeAds.length > 0;
+                  const adIndex = Math.floor((index + 1) / 7) - 1;
+                  const showAdAfterThisPost = (index + 1) % 7 === 0 && activeAds.length > 0;
                   const sponsoredAd = showAdAfterThisPost ? activeAds[adIndex % activeAds.length] : null;
 
                   return (

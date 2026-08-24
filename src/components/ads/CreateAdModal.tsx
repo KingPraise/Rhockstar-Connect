@@ -62,6 +62,7 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
         companyId: profile.uid,
         companyName: companyName.trim() || profile.fullName,
         companyLogo: companyLogo.trim() || profile.avatar || "",
+        companyEmail: profile.email || "",
         title: title.trim(),
         content: content.trim(),
         mediaUrl: mediaUrl.trim() || undefined,
