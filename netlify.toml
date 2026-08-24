@@ -13,3 +13,14 @@
   to = "https://rhockstarconnect.com/:splat"
   status = 301
   force = true
+
+# Rate Limiting Protection (Netlify Edge)
+[[rate_limits]]
+  for = "/api/*"
+  window_limit = 100
+  window_ms = 60000
+
+[[rate_limits]]
+  for = "/login"
+  window_limit = 15
+  window_ms = 60000

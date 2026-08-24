@@ -4,7 +4,7 @@ import { useState } from "react";
 import { 
   Settings as SettingsIcon, User, Lock, Bell, 
   Shield, Eye, Smartphone, Globe, CreditCard,
-  LogOut, Sparkles, Briefcase, Crown, Play
+  LogOut, Zap, Briefcase, Crown, Play
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -140,7 +140,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
                   <div>
                     <h4 className="font-bold text-white flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-brand" />
+                      <Zap className="w-4 h-4 text-brand" />
                       AI Assistant Widget
                     </h4>
                     <p className="text-sm text-slate-400">Show the floating AI assistant on your dashboard.</p>
