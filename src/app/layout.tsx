@@ -38,6 +38,37 @@ export const metadata: Metadata = {
 import NextTopLoader from 'nextjs-toploader';
 import ToastProvider from '@/components/ui/ToastProvider';
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': 'https://rhockstarconnect.com/#organization',
+      'name': 'Rhockstar Connect',
+      'url': 'https://rhockstarconnect.com',
+      'logo': 'https://rhockstarconnect.com/icon.png',
+      'sameAs': [
+        'https://facebook.com/RhockstarConnect',
+        'https://twitter.com/RhockstarConnect',
+        'https://linkedin.com/company/rhockstarconnect'
+      ],
+      'description': 'Online professional networking, career advancement, community chat, and relationship platform.'
+    },
+    {
+      '@type': 'WebSite',
+      '@id': 'https://rhockstarconnect.com/#website',
+      'url': 'https://rhockstarconnect.com',
+      'name': 'Rhockstar Connect',
+      'publisher': { '@id': 'https://rhockstarconnect.com/#organization' },
+      'potentialAction': {
+        '@type': 'SearchAction',
+        'target': 'https://rhockstarconnect.com/search?q={search_term_string}',
+        'query-input': 'required name=search_term_string'
+      }
+    }
+  ]
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -45,6 +76,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className={inter.className} suppressHydrationWarning>
         <NextTopLoader
           color="#38bdf8"
