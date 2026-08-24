@@ -1,19 +1,9 @@
 "use client";
 
-import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock, Settings, Check, Loader2, UserPlus, MessageSquare } from "lucide-react";
+import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock, Settings, Check, Loader2, UserPlus, MessageSquare, UserCheck } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { format } from "date-fns";
 import Link from "next/link";
-
-interface ProfileHeaderProps {
-  onEditClick: () => void;
-  customProfile?: any;
-  isOwnProfile?: boolean;
-  onConnectClick?: () => void;
-  connectionStatus?: 'pending' | 'accepted' | 'rejected' | 'none';
-  actionLoading?: boolean;
-}
-
 import { useState } from "react";
 import { Crown } from "lucide-react";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
@@ -22,16 +12,37 @@ import toast from "react-hot-toast";
 
 import { getThemeClasses } from "@/lib/constants/themes";
 
-export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile = true, onConnectClick, connectionStatus, actionLoading }: ProfileHeaderProps) {
+interface ProfileHeaderProps {
+  onEditClick: () => void;
+  customProfile?: any;
+  isOwnProfile?: boolean;
+  onConnectClick?: () => void;
+  connectionStatus?: 'pending' | 'accepted' | 'rejected' | 'none';
+  actionLoading?: boolean;
+  isFollowing?: boolean;
+  onFollowClick?: () => void;
+  followLoading?: boolean;
+}
+
+export default function ProfileHeader({ 
+  onEditClick, 
+  customProfile, 
+  isOwnProfile = true, 
+  onConnectClick, 
+  connectionStatus, 
+  actionLoading,
+  isFollowing = false,
+  onFollowClick,
+  followLoading = false
+}: ProfileHeaderProps) {
   const { profile: loggedInProfile } = useAuthStore();
   const profile = customProfile || loggedInProfile;
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
   const { openLightbox } = useLightboxStore();
 
-  if (!profile) return null; // Or a skeleton loader
+  if (!profile) return null;
 
   const isFree = !profile.subscriptionTier || profile.subscriptionTier === 'free';
-  const isPremium = profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite';
   const isLoggedInUserPremium = loggedInProfile?.subscriptionTier === 'pro' || loggedInProfile?.subscriptionTier === 'elite' || loggedInProfile?.role === 'admin';
   const locationString = typeof profile.location === 'string' ? profile.location : (profile.location?.city ? `${profile.location.city}, ${profile.location.country}` : "Earth");
 
@@ -44,6 +55,11 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
   };
 
   const themeClasses = getThemeClasses((profile as any).profileTheme);
+
+  const followersCount = profile.followersCount ?? profile.stats?.followers ?? 0;
+  const connectionsCount = profile.connectionsCount ?? profile.connections ?? profile.stats?.connections ?? 0;
+  const profileViews = profile.profileViews ?? 0;
+  const postsCount = profile.postsCount ?? profile.stats?.posts ?? 0;
 
   return (
     <div className="neo-card p-0 overflow-hidden flex flex-col mb-6 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl group">
@@ -117,38 +133,67 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
               </Link>
             </>
           ) : (
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {/* Follow Button */}
+              {onFollowClick && (
+                <button
+                  onClick={onFollowClick}
+                  disabled={followLoading}
+                  className={`py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-lg hover:scale-105 disabled:opacity-50 ${
+                    isFollowing 
+                      ? "bg-slate-800 text-emerald-400 border border-emerald-500/30" 
+                      : "bg-brand text-white hover:bg-brand-dark"
+                  }`}
+                >
+                  {followLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : isFollowing ? (
+                    <>
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Follow
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* Message Button */}
               <Link 
                 href={`/messages?user=${profile.uid}`}
-                className="py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-all shadow-lg hover:scale-105"
+                className="py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-lg hover:scale-105"
               >
                 <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Message
               </Link>
 
+              {/* Connect Button */}
               {connectionStatus === 'accepted' ? (
                 <button 
                   disabled
-                  className="py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-slate-800 text-brand font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 border border-brand/20 shadow-[inset_0_0_15px_rgba(56,189,248,0.1)]"
+                  className="py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl bg-slate-800 text-brand font-bold text-xs sm:text-sm flex items-center gap-1.5 border border-brand/20 shadow-[inset_0_0_15px_rgba(56,189,248,0.1)]"
                 >
-                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <Users className="w-3.5 h-3.5" />
                   Connected
                 </button>
               ) : connectionStatus === 'pending' ? (
                 <button 
                   disabled
-                  className="py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 border border-white/10"
+                  className="py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs sm:text-sm flex items-center gap-1.5 border border-white/10"
                 >
-                  <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <Check className="w-3.5 h-3.5" />
                   Pending
                 </button>
               ) : (
                 <button 
                   onClick={onConnectClick}
                   disabled={actionLoading}
-                  className={`py-2 px-4 sm:py-2.5 sm:px-6 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-all border border-white/10 shadow-lg hover:scale-105 disabled:opacity-50 disabled:hover:scale-100`}
+                  className="py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all border border-white/10 shadow-lg hover:scale-105 disabled:opacity-50"
                 >
-                  {actionLoading ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
+                  {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
                   Connect
                 </button>
               )}
@@ -165,17 +210,11 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
               )}
             </h1>
             
-            {/* Premium Badges */}
             {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite') && (
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                   <Crown className="w-3 h-3" /> Premium Verified
                 </span>
-                {profile.accountType !== 'employer' && (
-                  <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-brand-purple/10 text-brand-purple border border-brand-purple/20 rounded-full text-[10px] sm:text-xs font-bold shadow-[0_0_10px_rgba(168,85,247,0.2)]">
-                    Open to Work
-                  </span>
-                )}
               </div>
             )}
           </div>
@@ -209,35 +248,38 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
         </div>
       </div>
       
-      {/* Stats Divider */}
+      {/* Stats Divider with Real-Time Data */}
       <div className="grid grid-cols-4 divide-x divide-white/5 border-t border-white/5 bg-slate-900/50">
         <div className="py-3 sm:py-5 md:py-6 px-1 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
           <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-white group-hover/stat:text-brand transition-colors">
             <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-brand shrink-0" />
-            <span>{profile.stats?.followers || 0}</span>
+            <span>{followersCount}</span>
           </div>
           <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider truncate max-w-full text-center">Followers</span>
         </div>
+
         <div className="py-3 sm:py-5 md:py-6 px-1 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
           <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
             <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-brand-purple shrink-0" />
-            <span>{profile.stats?.connections || 0}</span>
+            <span>{connectionsCount}</span>
           </div>
           <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider truncate max-w-full text-center">Connections</span>
         </div>
+
         <div className="py-3 sm:py-5 md:py-6 px-1 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
           <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-white group-hover/stat:text-brand transition-colors">
             <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-brand shrink-0" />
-            <span>{profile.stats?.posts || 0}</span>
+            <span>{postsCount}</span>
           </div>
           <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider truncate max-w-full text-center">Posts</span>
         </div>
+
         <div className="py-3 sm:py-5 md:py-6 px-1 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat relative">
-          {isLoggedInUserPremium ? (
+          {isLoggedInUserPremium || isOwnProfile ? (
             <>
               <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
                 <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-brand-purple shrink-0" />
-                <span>24</span>
+                <span>{profileViews}</span>
               </div>
               <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider truncate max-w-full text-center">Views</span>
             </>
@@ -245,7 +287,7 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
             <>
               <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-slate-600 blur-[2px]">
                 <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-                <span>24</span>
+                <span>{profileViews}</span>
               </div>
               <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-600 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider blur-[1px] truncate max-w-full text-center">Views</span>
               <div 

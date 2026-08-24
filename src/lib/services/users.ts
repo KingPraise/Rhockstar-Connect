@@ -245,3 +245,30 @@ export const updateUserProfile = async (
 export const becomeEmployer = async (uid: string) => {
   return updateUserProfile(uid, { role: 'employer' });
 };
+
+export const trackProfileView = async (viewedUid: string, viewerUid?: string) => {
+  try {
+    if (!viewedUid || viewedUid === viewerUid) return;
+    const { doc, updateDoc, increment, setDoc } = await import('firebase/firestore');
+    const { db } = await import('../firebase');
+    const userRef = doc(db, 'users', viewedUid);
+    await updateDoc(userRef, { profileViews: increment(1) }).catch(async () => {
+      await setDoc(userRef, { profileViews: 1 }, { merge: true });
+    });
+  } catch (error) {
+    console.error("Error tracking profile view:", error);
+  }
+};
+
+export const listenToUserProfile = (uid: string, callback: (user: any) => void) => {
+  import('firebase/firestore').then(({ doc, onSnapshot }) => {
+    import('../firebase').then(({ db }) => {
+      return onSnapshot(doc(db, 'users', uid), (snapshot) => {
+        if (snapshot.exists()) {
+          callback({ uid: snapshot.id, ...snapshot.data() });
+        }
+      });
+    });
+  });
+};
+

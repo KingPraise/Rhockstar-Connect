@@ -5,10 +5,11 @@ import { useSearchParams } from "next/navigation";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
-import { Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap, Loader2, UserPlus, LogIn, Target, CheckCircle2 } from "lucide-react";
+import { Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap, UserPlus, Target, CheckCircle2 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { getUserById, getUserByUsername } from "@/lib/services/users";
+import { getUserById, getUserByUsername, trackProfileView, listenToUserProfile } from "@/lib/services/users";
 import { sendConnectionRequest } from "@/lib/services/connections";
+import { followUser, unfollowUser, listenToFollowState } from "@/lib/services/follows";
 import { calculateProfileProgress } from "@/lib/utils/profileProgress";
 import Link from "next/link";
 import { Briefcase } from "lucide-react";
@@ -29,8 +30,14 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
   const [actionLoading, setActionLoading] = useState(false);
+  
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
+    let unsubscribeUser: (() => void) | undefined;
+    let unsubscribeFollow: (() => void) | undefined;
+
     const fetchTargetUser = async () => {
       let fetchedUser = null;
       if (queryUser) {
@@ -53,8 +60,20 @@ export default function ProfilePage() {
         setTargetUser(null);
       }
 
-      // Fetch connection status if viewing someone else
+      const activeUid = fetchedUser?.uid || loggedInProfile?.uid;
+      if (activeUid) {
+        // Listen to live user profile changes (for connections, followers, views)
+        unsubscribeUser = listenToUserProfile(activeUid, (updatedUser) => {
+          setTargetUser(updatedUser);
+        });
+      }
+
+      // If viewing another user's profile
       if (fetchedUser && loggedInProfile && fetchedUser.uid !== loggedInProfile.uid) {
+        // 1. Track profile view
+        trackProfileView(fetchedUser.uid, loggedInProfile.uid);
+
+        // 2. Fetch connection status
         const { getUserConnections } = await import("@/lib/services/connections");
         const connRes = await getUserConnections(loggedInProfile.uid);
         if (connRes.success && connRes.connections) {
@@ -66,9 +85,20 @@ export default function ProfilePage() {
             setConnectionStatus(conn.status);
           }
         }
+
+        // 3. Listen to follow state
+        unsubscribeFollow = listenToFollowState(loggedInProfile.uid, fetchedUser.uid, (following) => {
+          setIsFollowing(following);
+        });
       }
     };
+
     fetchTargetUser();
+
+    return () => {
+      if (unsubscribeUser) unsubscribeUser();
+      if (unsubscribeFollow) unsubscribeFollow();
+    };
   }, [queryUser, queryUid, loggedInProfile]);
 
   const activeProfile = targetUser || loggedInProfile;
@@ -92,6 +122,34 @@ export default function ProfilePage() {
       }
       setActionLoading(false);
     }
+  };
+
+  const handleFollowToggle = async () => {
+    if (!loggedInProfile) {
+      setAuthModalOpen(true);
+      return;
+    }
+    if (!activeProfile?.uid) return;
+
+    setFollowLoading(true);
+    if (isFollowing) {
+      const res = await unfollowUser(loggedInProfile.uid, activeProfile.uid);
+      if (res.success) {
+        setIsFollowing(false);
+        toast.success(`Unfollowed @${activeProfile.username || 'user'}`);
+      } else {
+        toast.error(res.error || "Failed to unfollow");
+      }
+    } else {
+      const res = await followUser(loggedInProfile.uid, activeProfile.uid);
+      if (res.success) {
+        setIsFollowing(true);
+        toast.success(`Following @${activeProfile.username || 'user'}!`);
+      } else {
+        toast.error(res.error || "Failed to follow");
+      }
+    }
+    setFollowLoading(false);
   };
 
   if (loading) {
@@ -140,11 +198,12 @@ export default function ProfilePage() {
         onConnectClick={handleConnect}
         connectionStatus={connectionStatus}
         actionLoading={actionLoading}
+        isFollowing={isFollowing}
+        onFollowClick={isOwnProfile ? undefined : handleFollowToggle}
+        followLoading={followLoading}
       />
 
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
-        
         {/* Left Column (Main Content) */}
         <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6 md:gap-8">
           {/* About Section */}
@@ -169,67 +228,66 @@ export default function ProfilePage() {
           {activeProfile?.accountType !== 'employer' && (
             <>
               {/* Experience Section */}
-          <div className="neo-card p-4 sm:p-6 md:p-8 flex flex-col gap-4 sm:gap-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
-            <div className="absolute top-0 left-0 w-1 h-full bg-brand-purple"></div>
-            <div className="flex justify-between items-center z-10">
-              <h2 className="text-lg sm:text-xl md:text-2xl font-bold flex items-center gap-2 sm:gap-3 text-white">
-                <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-brand-purple" />
-                Experience
-              </h2>
-              <button className="text-slate-400 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-all group-hover:scale-110">
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            </div>
-            
-            <div className="flex flex-col gap-6 relative before:absolute before:inset-0 before:ml-7 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent z-10">
-              {/* Experience Item */}
-              <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group/item is-active mt-2 sm:mt-4">
-                <div className="flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-slate-900 border-2 sm:border-4 border-slate-900 shadow-[0_0_15px_rgba(168,85,247,0.4)] text-white z-10 shrink-0 md:order-1 md:group-odd/item:-translate-x-1/2 md:group-even/item:translate-x-1/2">
-                  <Building2 className="w-4 h-4 sm:w-6 sm:h-6" />
+              <div className="neo-card p-4 sm:p-6 md:p-8 flex flex-col gap-4 sm:gap-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
+                <div className="absolute top-0 left-0 w-1 h-full bg-brand-purple"></div>
+                <div className="flex justify-between items-center z-10">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold flex items-center gap-2 sm:gap-3 text-white">
+                    <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-brand-purple" />
+                    Experience
+                  </h2>
+                  <button className="text-slate-400 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-all group-hover:scale-110">
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
                 </div>
-                <div className="w-[calc(100%-3rem)] sm:w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] neo-card p-4 sm:p-6 bg-slate-800/50 hover:bg-slate-800 border border-white/5 group-hover/item:border-brand-purple/50 transition-all shadow-lg hover:shadow-brand-purple/10">
-                  <div className="flex flex-col">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-bold text-base sm:text-xl text-white">Software Developer</h3>
+                
+                <div className="flex flex-col gap-6 relative before:absolute before:inset-0 before:ml-7 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-white/10 before:to-transparent z-10">
+                  <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group/item is-active mt-2 sm:mt-4">
+                    <div className="flex items-center justify-center w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-slate-900 border-2 sm:border-4 border-slate-900 shadow-[0_0_15px_rgba(168,85,247,0.4)] text-white z-10 shrink-0 md:order-1 md:group-odd/item:-translate-x-1/2 md:group-even/item:translate-x-1/2">
+                      <Building2 className="w-4 h-4 sm:w-6 sm:h-6" />
                     </div>
-                    <p className="text-brand-purple font-semibold text-sm sm:text-lg">Acme Corp</p>
-                    <p className="text-slate-300 text-xs sm:text-sm mt-2 font-medium bg-white/5 w-fit px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-white/10">Jan 2024 - Present</p>
-                    <p className="text-slate-400 text-xs sm:text-sm mt-3 leading-relaxed">Add dynamic experience entries here.</p>
+                    <div className="w-[calc(100%-3rem)] sm:w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] neo-card p-4 sm:p-6 bg-slate-800/50 hover:bg-slate-800 border border-white/5 group-hover/item:border-brand-purple/50 transition-all shadow-lg hover:shadow-brand-purple/10">
+                      <div className="flex flex-col">
+                        <div className="flex justify-between items-start mb-1">
+                          <h3 className="font-bold text-base sm:text-xl text-white">Software Developer</h3>
+                        </div>
+                        <p className="text-brand-purple font-semibold text-sm sm:text-lg">Acme Corp</p>
+                        <p className="text-slate-300 text-xs sm:text-sm mt-2 font-medium bg-white/5 w-fit px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-white/10">Jan 2024 - Present</p>
+                        <p className="text-slate-400 text-xs sm:text-sm mt-3 leading-relaxed">Add dynamic experience entries here.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-          
-          {/* Education Section */}
-          <div className="neo-card p-4 sm:p-6 md:p-8 flex flex-col gap-4 sm:gap-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
-            <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
-            <div className="flex justify-between items-center z-10">
-              <h2 className="text-lg sm:text-xl md:text-2xl font-bold flex items-center gap-2 sm:gap-3 text-white">
-                <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
-                Education
-              </h2>
-              <button onClick={() => setIsEditModalOpen(true)} className="text-slate-400 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-all group-hover:scale-110">
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            </div>
-            
-            <div className="z-10 mt-1 sm:mt-2">
-              {activeProfile?.education ? (
-                <div className="flex gap-3 sm:gap-5 group/edu p-3 sm:p-4 -mx-2 sm:-mx-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-transparent hover:border-white/5 transition-colors cursor-pointer">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-800 shadow-lg border border-white/10 rounded-xl flex items-center justify-center text-white shrink-0 group-hover/edu:scale-105 group-hover/edu:border-emerald-500/50 group-hover/edu:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all">
-                    <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8" />
-                  </div>
-                  <div className="flex flex-col justify-center flex-grow">
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-bold text-base sm:text-xl text-white group-hover/edu:text-emerald-400 transition-colors">{activeProfile.education}</h3>
-                      <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 opacity-0 group-hover/edu:opacity-100 transition-opacity" />
-                    </div>
-                  </div>
+              
+              {/* Education Section */}
+              <div className="neo-card p-4 sm:p-6 md:p-8 flex flex-col gap-4 sm:gap-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                <div className="flex justify-between items-center z-10">
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold flex items-center gap-2 sm:gap-3 text-white">
+                    <GraduationCap className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500" />
+                    Education
+                  </h2>
+                  <button onClick={() => setIsEditModalOpen(true)} className="text-slate-400 hover:text-white hover:bg-white/10 p-1.5 rounded-full transition-all group-hover:scale-110">
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
                 </div>
-              ) : (
-                <p className="text-slate-400 text-sm mt-1">No education added yet.</p>
-              )}
+                
+                <div className="z-10 mt-1 sm:mt-2">
+                  {activeProfile?.education ? (
+                    <div className="flex gap-3 sm:gap-5 group/edu p-3 sm:p-4 -mx-2 sm:-mx-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-transparent hover:border-white/5 transition-colors cursor-pointer">
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-800 shadow-lg border border-white/10 rounded-xl flex items-center justify-center text-white shrink-0 group-hover/edu:scale-105 group-hover/edu:border-emerald-500/50 group-hover/edu:shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all">
+                        <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8" />
+                      </div>
+                      <div className="flex flex-col justify-center flex-grow">
+                        <div className="flex justify-between items-center">
+                          <h3 className="font-bold text-base sm:text-xl text-white group-hover/edu:text-emerald-400 transition-colors">{activeProfile.education}</h3>
+                          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-500 opacity-0 group-hover/edu:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-400 text-sm mt-1">No education added yet.</p>
+                  )}
                 </div>
               </div>
             </>
@@ -238,7 +296,6 @@ export default function ProfilePage() {
 
         {/* Right Column (Sidebar Content) */}
         <div className="flex flex-col gap-8">
-          
           {isOwnProfile && (
             <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
               <div className="absolute top-0 left-0 w-1 h-full bg-brand"></div>
@@ -328,7 +385,7 @@ export default function ProfilePage() {
             </>
           ) : (
             <>
-              {/* Resume Download - Top Priority for Users */}
+              {/* Resume Download */}
               {activeProfile?.resumeUrl && (
                 <div className="neo-card p-6 relative overflow-hidden group bg-gradient-to-br from-brand/20 to-brand-purple/20 border-brand/30 shadow-2xl">
                   <h2 className="text-xl font-bold text-brand mb-2">Professional Resume</h2>
@@ -444,7 +501,7 @@ export default function ProfilePage() {
       <AuthRequiredModal 
         isOpen={authModalOpen} 
         onClose={() => setAuthModalOpen(false)} 
-        actionName="connect with users" 
+        actionName="connect or follow users" 
       />
     </div>
   );

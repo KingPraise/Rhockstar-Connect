@@ -9,6 +9,8 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  increment,
+  onSnapshot,
   serverTimestamp
 } from 'firebase/firestore';
 
@@ -77,15 +79,21 @@ export const sendConnectionRequest = async (fromUserId: string, toUserId: string
 export const updateConnectionStatus = async (connectionId: string, status: 'accepted' | 'rejected') => {
   try {
     const docRef = doc(db, 'connections', connectionId);
+    const docSnap = await getDoc(docRef);
+    const connData = docSnap.data();
+
     if (status === 'rejected') {
       await deleteDoc(docRef);
     } else {
       await updateDoc(docRef, { status });
 
-      // Get connection doc to notify sender
-      const docSnap = await getDoc(docRef);
-      const connData = docSnap.data();
       if (connData?.fromUserId && connData?.toUserId) {
+        // Increment connection count on both user profiles
+        await Promise.all([
+          updateDoc(doc(db, 'users', connData.fromUserId), { connectionsCount: increment(1), connections: increment(1) }).catch(() => {}),
+          updateDoc(doc(db, 'users', connData.toUserId), { connectionsCount: increment(1), connections: increment(1) }).catch(() => {})
+        ]);
+
         // Fetch acceptor profile to include in notification
         const { user: acceptorProfile } = await getUserById(connData.toUserId);
         const acceptorName = acceptorProfile?.fullName || 'Someone';
@@ -110,13 +118,35 @@ export const updateConnectionStatus = async (connectionId: string, status: 'acce
   }
 };
 
+export const removeConnection = async (connectionId: string) => {
+  try {
+    const docRef = doc(db, 'connections', connectionId);
+    const docSnap = await getDoc(docRef);
+    const connData = docSnap.data();
+
+    if (docSnap.exists() && connData) {
+      await deleteDoc(docRef);
+
+      if (connData.status === 'accepted') {
+        // Decrement connection counts
+        await Promise.all([
+          updateDoc(doc(db, 'users', connData.fromUserId), { connectionsCount: increment(-1), connections: increment(-1) }).catch(() => {}),
+          updateDoc(doc(db, 'users', connData.toUserId), { connectionsCount: increment(-1), connections: increment(-1) }).catch(() => {})
+        ]);
+      }
+    }
+    return { success: true };
+  } catch (error: unknown) {
+    console.error("Error removing connection:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
 // Get all connection relationships for a user (both sent and received)
 export const getUserConnections = async (userId: string) => {
   try {
     const connRef = collection(db, 'connections');
     
-    // As Firestore doesn't support logical OR natively without composite indexes in client SDK easily,
-    // we fetch sent and received separately and combine them.
     const sentQ = query(connRef, where('fromUserId', '==', userId));
     const recQ = query(connRef, where('toUserId', '==', userId));
 
@@ -132,4 +162,29 @@ export const getUserConnections = async (userId: string) => {
     console.error("Error fetching connections:", error);
     return { success: false, error: (error as Error).message };
   }
+};
+
+// Real-time listener for accepted connections count
+export const listenToUserConnectionsCount = (userId: string, callback: (count: number) => void) => {
+  const connRef = collection(db, 'connections');
+  const sentQ = query(connRef, where('fromUserId', '==', userId), where('status', '==', 'accepted'));
+  const recQ = query(connRef, where('toUserId', '==', userId), where('status', '==', 'accepted'));
+
+  let sentCount = 0;
+  let recCount = 0;
+
+  const unsub1 = onSnapshot(sentQ, (snap) => {
+    sentCount = snap.size;
+    callback(sentCount + recCount);
+  });
+
+  const unsub2 = onSnapshot(recQ, (snap) => {
+    recCount = snap.size;
+    callback(sentCount + recCount);
+  });
+
+  return () => {
+    unsub1();
+    unsub2();
+  };
 };

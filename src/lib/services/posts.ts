@@ -40,6 +40,7 @@ export interface Post {
   };
   content: string;
   imageUrl?: string;
+  videoUrl?: string; // Support for Video uploads
   documentUrl?: string; // Support for PDFs/Docs
   documentName?: string;
   poll?: PollData;
@@ -88,11 +89,12 @@ const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.
   });
 };
 
-const uploadMediaFile = async (mediaFile: File, userUid: string): Promise<{ url: string, isDocument: boolean }> => {
-  const isDocument = mediaFile.type.includes('pdf') || mediaFile.type.includes('document') || mediaFile.name.endsWith('.pdf');
+const uploadMediaFile = async (mediaFile: File, userUid: string): Promise<{ url: string, isDocument: boolean, isVideo: boolean }> => {
+  const isVideo = mediaFile.type.startsWith('video/') || mediaFile.name.endsWith('.mp4') || mediaFile.name.endsWith('.mov') || mediaFile.name.endsWith('.webm');
+  const isDocument = !isVideo && (mediaFile.type.includes('pdf') || mediaFile.type.includes('document') || mediaFile.name.endsWith('.pdf') || mediaFile.name.endsWith('.doc') || mediaFile.name.endsWith('.docx'));
   let fallbackData = "";
 
-  if (!isDocument) {
+  if (!isDocument && !isVideo) {
     fallbackData = await compressImage(mediaFile);
   }
 
@@ -105,17 +107,17 @@ const uploadMediaFile = async (mediaFile: File, userUid: string): Promise<{ url:
     })();
 
     const timeoutPromise = new Promise<string>((_, reject) => 
-      setTimeout(() => reject(new Error("Storage upload timed out")), 5000)
+      setTimeout(() => reject(new Error("Storage upload timed out")), 15000)
     );
 
     const url = await Promise.race([uploadPromise, timeoutPromise]);
-    return { url, isDocument };
+    return { url, isDocument, isVideo };
   } catch (err) {
     console.warn("Storage upload failed or timed out. Falling back if image:", err);
-    if (!isDocument && fallbackData) {
-      return { url: fallbackData, isDocument: false };
+    if (!isDocument && !isVideo && fallbackData) {
+      return { url: fallbackData, isDocument: false, isVideo: false };
     }
-    throw new Error("Failed to upload document");
+    throw new Error("Failed to upload media");
   }
 };
 
@@ -128,12 +130,15 @@ export const createPost = async (
 ) => {
   try {
     let imageUrl = null;
+    let videoUrl = null;
     let documentUrl = null;
     let documentName = null;
 
     if (mediaFile) {
       const result = await uploadMediaFile(mediaFile, user.uid);
-      if (result.isDocument) {
+      if (result.isVideo) {
+        videoUrl = result.url;
+      } else if (result.isDocument) {
         documentUrl = result.url;
         documentName = mediaFile.name;
       } else {
@@ -151,6 +156,7 @@ export const createPost = async (
       },
       content,
       ...(imageUrl && { imageUrl }),
+      ...(videoUrl && { videoUrl }),
       ...(documentUrl && { documentUrl, documentName }),
       ...(pollData && { poll: pollData }),
       createdAt: serverTimestamp(),
@@ -263,7 +269,6 @@ export const toggleLike = async (postId: string, userId: string) => {
       });
       
       if (!isLiked && postData.userId !== userId) {
-        // Fire and forget notification logic
         (async () => {
           try {
             const { getUserById } = await import('./users');
@@ -357,7 +362,6 @@ export const addComment = async (postId: string, user: UserProfile, content: str
           const { createNotification } = await import('./notifications');
           const notifiedUserIds = new Set<string>();
 
-          // 1. If this is a reply to another comment, notify the comment author
           if (replyToId) {
             const parentComment = currentComments.find((c: Comment) => c.id === replyToId);
             if (parentComment && parentComment.userId !== user.uid) {
@@ -389,7 +393,6 @@ export const addComment = async (postId: string, user: UserProfile, content: str
             }
           }
 
-          // 2. Notify post author if not their own comment and not already notified as comment author
           if (postData.userId !== user.uid && !notifiedUserIds.has(postData.userId)) {
             notifiedUserIds.add(postData.userId);
             const title = "New Comment";
@@ -418,7 +421,6 @@ export const addComment = async (postId: string, user: UserProfile, content: str
             }).catch(console.error);
           }
 
-          // 3. Notify @mentioned users in comment text
           const mentionMatches = content.match(/@([a-zA-Z0-9_]+)/g);
           if (mentionMatches && mentionMatches.length > 0) {
             const { getAllUsers } = await import('./users');
@@ -496,7 +498,6 @@ export const deleteComment = async (postId: string, commentId: string) => {
 
     if (postSnap.exists()) {
       const currentComments = postSnap.data().comments || [];
-      // Filter out the comment itself AND any replies to it
       const updatedComments = currentComments.filter((c: Comment) => c.id !== commentId && c.replyToId !== commentId);
       
       const removedCount = currentComments.length - updatedComments.length;

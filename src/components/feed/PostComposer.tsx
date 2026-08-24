@@ -3,7 +3,7 @@
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { Image as ImageIcon, Send, X, Loader2, Sparkles, AlertCircle, FileText, BarChart2, Plus } from "lucide-react";
+import { Image as ImageIcon, Send, X, Loader2, Sparkles, AlertCircle, FileText, BarChart2, Plus, Video } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createPost, PollData } from "@/lib/services/posts";
 import toast from "react-hot-toast";
@@ -12,7 +12,7 @@ export default function PostComposer() {
   const { profile } = useAuthStore();
   const [content, setContent] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
-  const [mediaPreview, setMediaPreview] = useState<{ url: string, type: 'image' | 'document', name?: string } | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<{ url: string, type: 'image' | 'video' | 'document', name?: string } | null>(null);
   const [isPosting, setIsPosting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,9 +27,12 @@ export default function PostComposer() {
       const file = e.target.files[0];
       setMediaFile(file);
       
-      const isDocument = file.type.includes('pdf') || file.type.includes('document') || file.name.endsWith('.pdf') || file.name.endsWith('.doc') || file.name.endsWith('.docx');
+      const isVideo = file.type.startsWith('video/') || file.name.endsWith('.mp4') || file.name.endsWith('.mov') || file.name.endsWith('.webm');
+      const isDocument = !isVideo && (file.type.includes('pdf') || file.type.includes('document') || file.name.endsWith('.pdf') || file.name.endsWith('.doc') || file.name.endsWith('.docx'));
       
-      if (isDocument) {
+      if (isVideo) {
+        setMediaPreview({ url: URL.createObjectURL(file), type: 'video', name: file.name });
+      } else if (isDocument) {
         setMediaPreview({ url: '', type: 'document', name: file.name });
       } else {
         setMediaPreview({ url: URL.createObjectURL(file), type: 'image' });
@@ -165,7 +168,7 @@ export default function PostComposer() {
           <div className="flex-1 flex flex-col gap-2">
             <textarea
               className="w-full min-h-[75px] resize-none bg-slate-800/40 text-sm text-slate-200 placeholder:text-slate-500 p-3 rounded-xl border border-white/5 focus:outline-none focus:border-purple-500/50"
-              placeholder={`Share an update or opportunity, ${profile.fullName.split(' ')[0]}...`}
+              placeholder={`Share an update, video, or opportunity, ${profile.fullName.split(' ')[0]}...`}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               disabled={isPosting}
@@ -232,7 +235,9 @@ export default function PostComposer() {
 
             {mediaPreview && (
               <div className="relative rounded-xl overflow-hidden border border-white/10 w-full max-w-sm mt-2">
-                {mediaPreview.type === 'image' ? (
+                {mediaPreview.type === 'video' ? (
+                  <video src={mediaPreview.url} controls className="w-full max-h-56 object-cover rounded-xl" />
+                ) : mediaPreview.type === 'image' ? (
                   <img src={mediaPreview.url} alt="Upload preview" className="w-full max-h-48 object-cover" />
                 ) : (
                   <div className="flex items-center gap-3 p-4 bg-slate-800/80">
@@ -258,7 +263,7 @@ export default function PostComposer() {
           <div className="flex items-center gap-2">
             <input 
               type="file" 
-              accept="image/*,application/pdf,.doc,.docx" 
+              accept="image/*,video/*,application/pdf,.doc,.docx" 
               className="hidden" 
               ref={fileInputRef}
               onChange={handleMediaSelect}
@@ -268,10 +273,20 @@ export default function PostComposer() {
               type="button" 
               onClick={() => fileInputRef.current?.click()}
               disabled={isPosting}
-              className="p-2 rounded-xl bg-slate-800/40 text-slate-400 hover:text-purple-300 hover:bg-slate-800 transition-all"
+              className="p-2 rounded-xl bg-slate-800/40 text-slate-400 hover:text-purple-300 hover:bg-slate-800 transition-all flex items-center gap-1 text-xs"
               title="Add Image or Document"
             >
               <ImageIcon className="w-4 h-4" />
+            </button>
+
+            <button 
+              type="button" 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isPosting}
+              className="p-2 rounded-xl bg-slate-800/40 text-slate-400 hover:text-purple-300 hover:bg-slate-800 transition-all flex items-center gap-1 text-xs"
+              title="Add Video"
+            >
+              <Video className="w-4 h-4 text-purple-400" />
             </button>
 
             <button 

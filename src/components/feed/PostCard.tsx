@@ -353,6 +353,19 @@ export default function PostCard({ post }: PostCardProps) {
         </div>
       )}
 
+      {/* Video Attachment */}
+      {post.videoUrl && (
+        <div className="mb-3 rounded-xl overflow-hidden border border-white/5 bg-black/40 max-h-80 flex items-center justify-center">
+          <video 
+            src={post.videoUrl} 
+            controls
+            playsInline
+            preload="metadata"
+            className="w-full max-h-80 rounded-xl"
+          />
+        </div>
+      )}
+
       {/* Document Attachment */}
       {post.documentUrl && (
         <div className="mb-3">
