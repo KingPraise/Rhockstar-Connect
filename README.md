@@ -162,12 +162,12 @@ npm run build
 
 ## 🌐 Production Deployment Protocol
 
-Rhockstar Connect is deployed live on Netlify via Netlify CLI.
+Rhockstar Connect is deployed live on Netlify via Netlify Cloud Continuous Integration (CI/CD).
 
-To trigger a manual production deployment to [`https://rhockstarconnect.com`](https://rhockstarconnect.com):
+Whenever changes are committed and pushed to `main`, Netlify automatically builds Next.js in the cloud and updates [`https://rhockstarconnect.com`](https://rhockstarconnect.com):
 
 ```bash
-npx netlify deploy --prod
+git push origin main
 ```
 
 ---
