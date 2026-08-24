@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Advertisements Collection
+    match /advertisements/{adId} {
+      allow read: if true; // Public feed sponsored posts
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.companyId == request.auth.uid);
+    }
+
+    // Posts Collection
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.authorId == request.auth.uid);
+    }
+
+    // Communities Collection
+    match /communities/{communityId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+    }
+
+    // Direct Messages
+    match /messages/{messageId} {
+      allow read, create: if isAuthenticated();
+    }
+
+    // Mail Trigger Email Collection
+    match /mail/{mailId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Reports Collection
+    match /reports/{reportId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}

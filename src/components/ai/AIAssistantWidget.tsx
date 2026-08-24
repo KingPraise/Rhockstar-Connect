@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, X, Send, Bot, Heart, Briefcase, ChevronDown } from "lucide-react";
+import { X, Send, Bot, Heart, Briefcase, ChevronDown } from "lucide-react";
 import { getAIResponse, AIPersona, AIMessage } from "@/lib/services/ai";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -233,7 +233,7 @@ export default function AIAssistantWidget() {
           onClick={handleButtonClick}
           className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-[0_4px_14px_0_rgb(0,118,255,39%)] hover:shadow-[0_6px_20px_rgba(168,85,247,0.5)] hover:scale-110 transition-transform"
         >
-          <Sparkles className="w-6 h-6 animate-pulse" />
+          <Bot className="w-6 h-6 animate-pulse" />
         </button>
       </div>
 
@@ -245,7 +245,7 @@ export default function AIAssistantWidget() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center p-0.5">
               <div className="w-full h-full bg-slate-900 rounded-full flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-purple-400" />
+                <Bot className="w-5 h-5 text-purple-400" />
               </div>
             </div>
             <div>
