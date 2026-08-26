@@ -70,10 +70,10 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-md max-h-[80vh] sm:max-h-[85vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 custom-scrollbar">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 pb-4 bg-slate-900/95 backdrop-blur-md -mx-4 sm:-mx-6 px-4 sm:px-6 -mt-4 sm:-mt-6 pt-4 sm:pt-6 rounded-t-3xl">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30">
                   <Sparkles className="w-5 h-5" />
@@ -92,7 +92,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
             </div>
 
             {/* Action Grid */}
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 gap-3 pb-8">
               <button
                 onClick={() => handleAction("post")}
                 className="flex items-center gap-4 p-3.5 bg-slate-800/60 hover:bg-purple-900/30 border border-white/5 hover:border-purple-500/30 rounded-2xl transition-all group text-left"
