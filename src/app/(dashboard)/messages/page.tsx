@@ -1085,7 +1085,7 @@ export default function MessagesPage() {
                             </div>
                           )}
                         </div>
-                        </div>
+
                       )}
 
                       <div className={`max-w-[75vw] sm:max-w-[75%] rounded-2xl p-3.5 space-y-1 relative shadow-md ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-tr-sm" : "bg-slate-800/90 text-white border border-white/5 rounded-tl-sm"}`}>
@@ -1147,7 +1147,8 @@ export default function MessagesPage() {
                       </div>
                     </div>
                   </div>
-                );
+                    </div>
+                  );
               });
             })()}
             <div ref={messagesEndRef} />
@@ -1295,6 +1296,8 @@ export default function MessagesPage() {
                           </div>
                         </div>
                       </div>
+                      </div>
+
                     );
                   })
                 })()
