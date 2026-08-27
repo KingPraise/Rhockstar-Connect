@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/icon.png',
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "Rhockstar Connect | Connect, Join Communities & Find Jobs",
     description: "The all-in-one professional networking, job matching, public communities, and social platform.",

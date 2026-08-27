@@ -16,6 +16,7 @@ export default function PostComposer() {
   const [isPosting, setIsPosting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   // Poll state
   const [showPollBuilder, setShowPollBuilder] = useState(false);

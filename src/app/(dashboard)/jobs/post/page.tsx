@@ -90,7 +90,7 @@ export default function PostJobPage() {
                 toast.error("Failed to upgrade");
               }
             }}
-            className="whitespace-nowrap px-6 py-3 bg-brand hover:bg-brand-dark text-white font-bold text-sm rounded-xl transition-all shadow-[0_0_15px_rgba(56,189,248,0.3)]"
+            className="neo-button-primary whitespace-nowrap px-6 py-3 font-bold text-sm"
           >
             Become Employer Now
           </button>
@@ -137,7 +137,7 @@ export default function PostJobPage() {
                   value={formData.title}
                   onChange={handleChange}
                   placeholder="e.g. Senior Full-Stack Engineer" 
-                  className="w-full bg-slate-800/80 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all text-sm"
+                  className="neo-input text-sm"
                 />
               </div>
               
@@ -147,7 +147,7 @@ export default function PostJobPage() {
                   name="type"
                   value={formData.type}
                   onChange={handleChange}
-                  className="w-full bg-slate-800/80 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all text-sm cursor-pointer"
+                  className="neo-input text-sm cursor-pointer"
                 >
                   <option value="Full-time">Full-time</option>
                   <option value="Part-time">Part-time</option>
@@ -168,7 +168,7 @@ export default function PostJobPage() {
                     value={formData.location}
                     onChange={handleChange}
                     placeholder="e.g. Lagos, Nigeria or Remote (Global)" 
-                    className="w-full bg-slate-800/80 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all text-sm"
+                    className="neo-input pl-12 text-sm"
                   />
                 </div>
               </div>
@@ -184,7 +184,7 @@ export default function PostJobPage() {
                     value={formData.salary}
                     onChange={handleChange}
                     placeholder="e.g. ₦600k - ₦1.2M / mo or $3,000 / mo" 
-                    className="w-full bg-slate-800/80 border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all text-sm"
+                    className="neo-input pl-12 text-sm"
                   />
                 </div>
               </div>
@@ -199,7 +199,7 @@ export default function PostJobPage() {
                 onChange={handleChange}
                 placeholder="Detail key responsibilities, qualifications, stack, and application guidelines..." 
                 rows={7}
-                className="w-full bg-slate-800/80 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all text-sm resize-y"
+                className="neo-input text-sm resize-y"
               ></textarea>
             </div>
 
@@ -211,7 +211,7 @@ export default function PostJobPage() {
               <button 
                 type="submit" 
                 disabled={loading}
-                className="w-full sm:w-auto py-3.5 px-8 rounded-xl bg-gradient-to-r from-brand via-brand-purple to-emerald-500 text-white font-extrabold hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(56,189,248,0.3)] text-sm"
+                className="neo-button-primary w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Briefcase className="w-5 h-5" />}
                 Publish Job Listing Now

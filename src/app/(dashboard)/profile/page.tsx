@@ -64,8 +64,11 @@ export default function ProfilePage() {
       if (activeUid) {
         // Listen to live user profile changes (for connections, followers, views)
         unsubscribeUser = listenToUserProfile(activeUid, (updatedUser) => {
-          setTargetUser(updatedUser);
-        });
+            setTargetUser(updatedUser);
+            if (loggedInProfile && updatedUser.uid === loggedInProfile.uid) {
+              useAuthStore.getState().setProfile(updatedUser);
+            }
+          });
       }
 
       // If viewing another user's profile

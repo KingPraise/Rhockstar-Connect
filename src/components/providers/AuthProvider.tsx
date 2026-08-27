@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthStore, UserProfile } from '@/store/useAuthStore';
 
@@ -15,20 +15,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       
       if (firebaseUser) {
         // Fetch user profile from Firestore
-        try {
-          const docRef = doc(db, 'users', firebaseUser.uid);
-          const docSnap = await getDoc(docRef);
-          
+        const docRef = doc(db, 'users', firebaseUser.uid);
+        const unsubscribeProfile = onSnapshot(docRef, (docSnap) => {
           if (docSnap.exists()) {
             setProfile(docSnap.data() as UserProfile);
           } else {
             console.warn("User profile document not found!");
             setProfile(null);
           }
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setProfile(null);
+        }, (error) => {
+          console.error("Error listening to user profile:", error);
+        });
+        
+        // Clean up profile listener when auth state changes (if needed, though this is handled by the parent effect cleanup)
+        // Store it on the window to prevent memory leaks if auth state changes rapidly
+        if ((window as any)._profileUnsub) {
+          (window as any)._profileUnsub();
         }
+        (window as any)._profileUnsub = unsubscribeProfile;
       } else {
         setProfile(null);
       }
@@ -36,7 +40,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if ((window as any)._profileUnsub) (window as any)._profileUnsub();
+    };
   }, [setUser, setProfile, setLoading]);
 
   return <>{children}</>;

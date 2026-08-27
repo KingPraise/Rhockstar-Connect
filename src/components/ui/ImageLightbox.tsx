@@ -56,7 +56,7 @@ export default function ImageLightbox() {
         
         <div className="flex items-center gap-2 sm:gap-3 bg-slate-900/80 px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
           <button 
-            onClick={handleZoomIn}
+            onClick={(e) => { e.stopPropagation(); handleZoomIn(); }}
             className="p-1.5 text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/10"
             title="Zoom In (+)"
           >
@@ -64,7 +64,7 @@ export default function ImageLightbox() {
           </button>
 
           <button 
-            onClick={handleZoomOut}
+            onClick={(e) => { e.stopPropagation(); handleZoomOut(); }}
             className="p-1.5 text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/10"
             title="Zoom Out (-)"
           >
@@ -73,7 +73,7 @@ export default function ImageLightbox() {
 
           {scale > 1 && (
             <button 
-              onClick={handleResetZoom}
+              onClick={(e) => { e.stopPropagation(); handleResetZoom(); }}
               className="p-1.5 text-white/80 hover:text-white transition-colors rounded-full hover:bg-white/10"
               title="Reset Zoom"
             >
@@ -84,7 +84,7 @@ export default function ImageLightbox() {
           <div className="w-px h-4 bg-white/20 my-auto" />
 
           <button 
-            onClick={closeLightbox}
+            onClick={(e) => { e.stopPropagation(); closeLightbox(); }}
             className="p-1.5 text-slate-300 hover:text-rose-400 transition-colors rounded-full hover:bg-white/10"
             title="Close (Esc)"
           >
@@ -95,24 +95,32 @@ export default function ImageLightbox() {
 
       {/* Main Image Container */}
       <div 
-        className="relative w-full h-full flex items-center justify-center p-4 md:p-12 overflow-auto"
-        onClick={closeLightbox}
+        className="relative w-full h-full overflow-auto flex items-center justify-center"
+        onClick={(e) => { e.stopPropagation(); closeLightbox(); }}
       >
-        <img
-          src={images[currentIndex]}
-          alt={`Lightbox image ${currentIndex + 1}`}
-          className="max-w-full max-h-full object-contain transition-transform duration-200 ease-out shadow-2xl rounded-lg"
-          style={{ transform: `scale(${scale})` }}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (scale > 1) {
-              handleResetZoom();
-            } else {
-              handleZoomIn();
-            }
-          }}
-          draggable={false}
-        />
+        <div className="flex items-center justify-center min-w-full min-h-full p-4 md:p-12 transition-all duration-200">
+          <img
+            src={images[currentIndex]}
+            alt={Lightbox image }
+            className="object-contain shadow-2xl rounded-lg transition-all duration-200"
+            style={{ 
+              width: scale > 1 ? calc(vw - 2rem) : 'auto',
+              height: scale > 1 ? 'auto' : 'auto',
+              maxWidth: scale === 1 ? '100%' : 'none',
+              maxHeight: scale === 1 ? '100%' : 'none',
+              cursor: scale > 1 ? 'zoom-out' : 'zoom-in'
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (scale > 1) {
+                handleResetZoom();
+              } else {
+                handleZoomIn();
+              }
+            }}
+            draggable={false}
+          />
+        </div>
       </div>
 
       {/* Navigation Arrows */}
