@@ -101,10 +101,10 @@ export default function ImageLightbox() {
         <div className="flex items-center justify-center min-w-full min-h-full p-4 md:p-12 transition-all duration-200">
           <img
             src={images[currentIndex]}
-            alt={Lightbox image }
+            alt="Lightbox image"
             className="object-contain shadow-2xl rounded-lg transition-all duration-200"
             style={{ 
-              width: scale > 1 ? calc(vw - 2rem) : 'auto',
+              width: scale > 1 ? `calc(${scale * 100}vw - 2rem)` : 'auto',
               height: scale > 1 ? 'auto' : 'auto',
               maxWidth: scale === 1 ? '100%' : 'none',
               maxHeight: scale === 1 ? '100%' : 'none',

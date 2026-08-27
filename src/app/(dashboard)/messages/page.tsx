@@ -1038,11 +1038,10 @@ export default function MessagesPage() {
                         </span>
                       </div>
                     )}
-                    <div className={lex items-start gap-2  group relative mb-2}>
+                    <div className="flex items-start gap-2  group relative mb-2">
                       {/* Action Menu Trigger (Dropdown) */}
                       {!msg.isDeleted && !isEditingThis && (
-                        <div className={
-elative flex items-center gap-1 }>
+                        <div className={`relative flex items-center gap-1 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                           <button
                             onClick={() => setOpenMessageMenuId(isMenuOpen ? null : msg.id)}
                             className="p-1 rounded-full text-slate-500 hover:bg-slate-800 hover:text-white transition-colors"
@@ -1051,7 +1050,7 @@ elative flex items-center gap-1 }>
                           </button>
 
                           {isMenuOpen && (
-                            <div className={bsolute top-full  mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col}>
+                            <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
                               <button
                                 onClick={() => { setReplyingTo(msg); setOpenMessageMenuId(null); }}
                                 className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
@@ -1087,7 +1086,7 @@ elative flex items-center gap-1 }>
                         </div>
                       )}
 
-                      <div className={max-w-[75%] rounded-2xl p-3.5 space-y-1 relative shadow-md }>
+                      <div className="max-w-[75%] rounded-2xl p-3.5 space-y-1 relative shadow-md ">
                         {/* Reply preview */}
                         {msg.replyToText && (
                           <div className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-2 opacity-80">
@@ -1139,7 +1138,7 @@ elative flex items-center gap-1 }>
                           </>
                         )}
 
-                        <div className={lex items-center justify-end gap-1.5 text-[10px] }>
+                        <div className="flex items-center justify-end gap-1.5 text-[10px] ">
                           {msg.isEdited && !msg.isDeleted && <span className="italic font-normal">(edited)</span>}
                           <span>{formatMessageTime(msg.createdAt)}</span>
                         </div>
@@ -1254,11 +1253,11 @@ elative flex items-center gap-1 }>
                             </span>
                           </div>
                         )}
-                        <div className={lex gap-3  group mb-2}>
+                        <div className="flex gap-3  group mb-2">
                           {!isMe && (
                             <UserAvatar src={msg.senderAvatar} name={msg.senderName} className="w-8 h-8 rounded-full shrink-0 mt-1" textClassName="text-xs font-bold" />
                           )}
-                          <div className={max-w-[80%] sm:max-w-[70%] rounded-2xl p-3.5 space-y-1 relative shadow-md }>
+                          <div className="max-w-[80%] sm:max-w-[70%] rounded-2xl p-3.5 space-y-1 relative shadow-md ">
                             {!isMe && (
                               <div className="flex items-center justify-between gap-2 mb-1">
                                 <span className="text-xs font-bold text-brand truncate flex items-center gap-1">
@@ -1272,7 +1271,7 @@ elative flex items-center gap-1 }>
                               </div>
                             )}
                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                            <div className={lex items-center justify-end gap-2 text-[10px] }>
+                            <div className="flex items-center justify-end gap-2 text-[10px] ">
                               <span>{formatMessageTime(msg.createdAt)}</span>
                               
                               {/* Delete Message Button (For message owner or Community Creator) */}
