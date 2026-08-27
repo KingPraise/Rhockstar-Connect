@@ -2,7 +2,7 @@
   "name": "Rhockstar Connect",
   "short_name": "Rhockstar",
   "description": "The premier professional networking, career advancement, and community platform.",
-  "start_url": "/feed",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#020617",
   "theme_color": "#8b5cf6",
@@ -12,13 +12,13 @@
       "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
