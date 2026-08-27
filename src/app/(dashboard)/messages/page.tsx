@@ -1005,7 +1005,7 @@ export default function MessagesPage() {
             )}
 
             {(() => {
-              let dmLastDate = null;
+              let dmLastDate: string | null = null;
               
               return messages.map((msg) => {
                 const isMe = msg.senderId === profile.uid;
