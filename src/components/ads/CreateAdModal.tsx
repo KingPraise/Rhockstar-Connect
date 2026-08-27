@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { X, Megaphone, Loader2, Image as ImageIcon, ExternalLink, Sparkles, ShieldCheck } from "lucide-react";
+import { useState, useRef } from "react";
+import { X, Megaphone, Loader2, Image as ImageIcon, ExternalLink, ShieldCheck, Upload } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createAdvertisement } from "@/lib/services/ads";
 import UserAvatar from "@/components/ui/UserAvatar";
 import toast from "react-hot-toast";
+import { storage } from "@/lib/firebase";
+import { uploadBytes, ref, getDownloadURL } from "firebase/storage";
 
 interface CreateAdModalProps {
   isOpen: boolean;
@@ -15,27 +17,52 @@ interface CreateAdModalProps {
 
 const CTA_OPTIONS = [
   "Learn More",
-  "Shop Now",
-  "Apply Now",
-  "Visit Website",
-  "Sign Up",
   "Contact Us",
+  "Join Now",
+  "Visit Profile",
+  "Message Us",
+  "Apply Now",
+  "Book Now",
   "Get Started"
 ];
 
 export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdModalProps) {
   const { profile } = useAuthStore();
   const [companyName, setCompanyName] = useState(profile?.fullName || "");
-  const [companyLogo, setCompanyLogo] = useState(profile?.avatar || "");
+  const [companyLogoPreview, setCompanyLogoPreview] = useState(profile?.avatar || "");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [mediaUrl, setMediaUrl] = useState("");
+  
+  const [mediaPreview, setMediaPreview] = useState("");
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+  
   const [ctaText, setCtaText] = useState("Learn More");
   const [targetUrl, setTargetUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
+
   if (!isOpen) return null;
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      setCompanyLogoPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setMediaFile(file);
+      setMediaPreview(URL.createObjectURL(file));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,20 +79,35 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
 
     // Basic URL validation
     let formattedUrl = targetUrl.trim();
-    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://")) {
+    if (!formattedUrl.startsWith("http://") && !formattedUrl.startsWith("https://") && !formattedUrl.startsWith("mailto:") && !formattedUrl.startsWith("tel:") && !formattedUrl.startsWith("whatsapp:")) {
       formattedUrl = `https://${formattedUrl}`;
     }
 
     try {
       setLoading(true);
+
+      let finalLogoUrl = companyLogoPreview; // Fallback to current preview/avatar
+      if (logoFile) {
+        const logoRef = ref(storage, `ads/${profile.uid}/logo_${Date.now()}_${logoFile.name}`);
+        await uploadBytes(logoRef, logoFile);
+        finalLogoUrl = await getDownloadURL(logoRef);
+      }
+
+      let finalMediaUrl = "";
+      if (mediaFile) {
+        const mediaRef = ref(storage, `ads/${profile.uid}/media_${Date.now()}_${mediaFile.name}`);
+        await uploadBytes(mediaRef, mediaFile);
+        finalMediaUrl = await getDownloadURL(mediaRef);
+      }
+
       const res = await createAdvertisement({
         companyId: profile.uid,
         companyName: companyName.trim() || profile.fullName,
-        companyLogo: companyLogo.trim() || profile.avatar || "",
+        companyLogo: finalLogoUrl || profile.avatar || "",
         companyEmail: profile.email || "",
         title: title.trim(),
         content: content.trim(),
-        mediaUrl: mediaUrl.trim() || undefined,
+        mediaUrl: finalMediaUrl || undefined,
         mediaType,
         ctaText,
         targetUrl: formattedUrl,
@@ -78,7 +120,8 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
         // Reset form
         setTitle("");
         setContent("");
-        setMediaUrl("");
+        setMediaFile(null);
+        setMediaPreview("");
         setTargetUrl("");
       } else {
         toast.error(res.error || "Failed to submit advert");
@@ -135,16 +178,29 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
                 />
               </div>
 
-              {/* Company Logo URL */}
+              {/* Company Logo Upload */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Company Logo URL (Optional)</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Upload Company Logo (Optional)</label>
                 <input
-                  type="url"
-                  value={companyLogo}
-                  onChange={(e) => setCompanyLogo(e.target.value)}
-                  placeholder="https://example.com/logo.png"
-                  className="w-full neo-input py-2.5 text-xs text-white"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoChange}
+                  ref={logoInputRef}
+                  className="hidden"
                 />
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => logoInputRef.current?.click()}
+                    className="flex-1 neo-input py-2.5 text-xs text-white flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
+                  >
+                    <Upload className="w-4 h-4 text-purple-400" />
+                    {logoFile ? logoFile.name : "Choose File..."}
+                  </button>
+                  {companyLogoPreview && (
+                    <img src={companyLogoPreview} alt="Logo preview" className="w-9 h-9 rounded-full object-cover border border-purple-500/30" />
+                  )}
+                </div>
               </div>
 
               {/* Ad Headline Title */}
@@ -162,21 +218,21 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
 
               {/* Ad Body Content */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Ad Text Content</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Ad Description</label>
                 <textarea
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   rows={3}
-                  placeholder="Describe your offer, event, or product..."
+                  placeholder="Describe your offer, product, service, event or opportunity..."
                   className="w-full neo-input py-2.5 text-xs text-white resize-none"
                   required
                 />
               </div>
 
-              {/* Media URL & Type */}
+              {/* Media Upload & Type */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-400">Media URL (Image / Video)</label>
+                  <label className="text-xs font-semibold text-slate-400">Upload Image / Video</label>
                   <div className="flex items-center gap-2 text-[10px]">
                     <button
                       type="button"
@@ -194,13 +250,22 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
                     </button>
                   </div>
                 </div>
+                
                 <input
-                  type="url"
-                  value={mediaUrl}
-                  onChange={(e) => setMediaUrl(e.target.value)}
-                  placeholder={mediaType === 'image' ? "https://images.unsplash.com/photo..." : "https://example.com/video.mp4"}
-                  className="w-full neo-input py-2.5 text-xs text-white"
+                  type="file"
+                  accept={mediaType === 'image' ? "image/*" : "video/*"}
+                  onChange={handleMediaChange}
+                  ref={mediaInputRef}
+                  className="hidden"
                 />
+                <button
+                  type="button"
+                  onClick={() => mediaInputRef.current?.click()}
+                  className="w-full neo-input py-2.5 text-xs text-white flex items-center justify-center gap-2 hover:bg-slate-800 transition-colors"
+                >
+                  <Upload className="w-4 h-4 text-purple-400" />
+                  {mediaFile ? mediaFile.name : `Select ${mediaType === 'image' ? 'Image' : 'Video'} File...`}
+                </button>
               </div>
 
               {/* CTA Button Text */}
@@ -219,12 +284,12 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
 
               {/* Destination URL */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Target Website Link</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Target Link</label>
                 <input
                   type="text"
                   value={targetUrl}
                   onChange={(e) => setTargetUrl(e.target.value)}
-                  placeholder="https://yourcompany.com/landing-page"
+                  placeholder="Paste the destination link"
                   className="w-full neo-input py-2.5 text-xs text-white"
                   required
                 />
@@ -245,7 +310,7 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
                 {/* Header Row */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <UserAvatar name={companyName || "Company"} src={companyLogo} className="w-9 h-9 text-xs font-bold shrink-0" />
+                    <UserAvatar name={companyName || "Company"} src={companyLogoPreview} className="w-9 h-9 text-xs font-bold shrink-0" />
                     <div>
                       <h4 className="font-bold text-white text-xs flex items-center gap-1">
                         {companyName || "Your Company Name"}
@@ -266,12 +331,12 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
                 </div>
 
                 {/* Media Preview */}
-                {mediaUrl ? (
+                {mediaPreview ? (
                   <div className="rounded-xl overflow-hidden border border-white/10 max-h-48 bg-black/40 flex items-center justify-center">
                     {mediaType === 'video' ? (
-                      <video src={mediaUrl} controls className="max-h-48 w-full object-cover" />
+                      <video src={mediaPreview} controls className="max-h-48 w-full object-cover" />
                     ) : (
-                      <img src={mediaUrl} alt="Ad preview" className="max-h-48 w-full object-cover" />
+                      <img src={mediaPreview} alt="Ad preview" className="max-h-48 w-full object-cover" />
                     )}
                   </div>
                 ) : (
