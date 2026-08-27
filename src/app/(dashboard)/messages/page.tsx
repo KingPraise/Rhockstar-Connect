@@ -1038,7 +1038,8 @@ export default function MessagesPage() {
                         </span>
                       </div>
                     )}
-                    <div className="flex items-start gap-2  group relative mb-2">
+                    <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-2`}>
+                      <div className={`flex items-start gap-2 group relative ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                       {/* Action Menu Trigger (Dropdown) */}
                       {!msg.isDeleted && !isEditingThis && (
                         <div className={`relative flex items-center gap-1 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
@@ -1084,9 +1085,10 @@ export default function MessagesPage() {
                             </div>
                           )}
                         </div>
+                        </div>
                       )}
 
-                      <div className="max-w-[75%] rounded-2xl p-3.5 space-y-1 relative shadow-md ">
+                      <div className={`max-w-[75vw] sm:max-w-[75%] rounded-2xl p-3.5 space-y-1 relative shadow-md ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-tr-sm" : "bg-slate-800/90 text-white border border-white/5 rounded-tl-sm"}`}>
                         {/* Reply preview */}
                         {msg.replyToText && (
                           <div className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-2 opacity-80">
@@ -1253,11 +1255,12 @@ export default function MessagesPage() {
                             </span>
                           </div>
                         )}
-                        <div className="flex gap-3  group mb-2">
+                        <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-2`}>
+                          <div className={`flex items-start gap-2 group relative ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                           {!isMe && (
                             <UserAvatar src={msg.senderAvatar} name={msg.senderName} className="w-8 h-8 rounded-full shrink-0 mt-1" textClassName="text-xs font-bold" />
                           )}
-                          <div className="max-w-[80%] sm:max-w-[70%] rounded-2xl p-3.5 space-y-1 relative shadow-md ">
+                          <div className={`max-w-[80vw] sm:max-w-[70%] rounded-2xl p-3.5 space-y-1 relative shadow-md ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-tr-sm" : "bg-slate-800/90 text-white border border-white/5 rounded-tl-sm"}`}>
                             {!isMe && (
                               <div className="flex items-center justify-between gap-2 mb-1">
                                 <span className="text-xs font-bold text-brand truncate flex items-center gap-1">
