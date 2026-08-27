@@ -1005,7 +1005,7 @@ export default function MessagesPage() {
             )}
 
             {(() => {
-              let dmLastDate: string | null = null;
+              let dmLastDate: Date | null = null;
               
               return messages.map((msg) => {
                 const isMe = msg.senderId === profile.uid;
@@ -1014,12 +1014,12 @@ export default function MessagesPage() {
 
                 if (msg.deletedForMe?.includes(profile.uid)) return null;
 
-                const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date(msg.createdAt || Date.now());
+                const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date((msg.createdAt as any) || Date.now());
                 const now = new Date();
                 const yesterday = new Date(now);
                 yesterday.setDate(yesterday.getDate() - 1);
                 
-                const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+                const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
                 const showDateHeader = !dmLastDate || !isSameDay(dmLastDate, msgDate);
                 if (showDateHeader) {
                   dmLastDate = msgDate;
@@ -1223,18 +1223,18 @@ export default function MessagesPage() {
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
                 {communityMessages.length > 0 ? (
                   (() => {
-                  let commLastDate = null;
+                  let commLastDate: Date | null = null;
                   
                   return communityMessages.map((msg) => {
                     const isMe = msg.senderId === profile.uid;
                     const isCreator = msg.senderId === activeCommunity.creatorId;
                     
-                    const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date(msg.createdAt || Date.now());
+                    const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date((msg.createdAt as any) || Date.now());
                     const now = new Date();
                     const yesterday = new Date(now);
                     yesterday.setDate(yesterday.getDate() - 1);
                     
-                    const isSameDay = (d1, d2) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+                    const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
                     const showDateHeader = !commLastDate || !isSameDay(commLastDate, msgDate);
                     if (showDateHeader) {
                       commLastDate = msgDate;
