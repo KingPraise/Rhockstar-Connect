@@ -133,7 +133,7 @@ export default function MessagesPage() {
   // Helper for last seen status
   const getUserStatus = (lastLogin: any) => {
     if (!lastLogin) return { isOnline: false, text: "Offline" };
-    const date = lastLogin.toDate ? lastLogin.toDate() : new Date(lastLogin);
+    const date = (lastLogin as any)?.toDate ? (lastLogin as any).toDate() : new Date(lastLogin as any);
     const diffInMinutes = (new Date().getTime() - date.getTime()) / (1000 * 60);
     if (diffInMinutes < 3) return { isOnline: true, text: "Online" };
     return { isOnline: false, text: `Last seen ${formatDistanceToNow(date, { addSuffix: true })}` };
@@ -142,7 +142,7 @@ export default function MessagesPage() {
   // Helper to format timestamps
   const formatMessageTime = (createdAt: any) => {
     if (!createdAt) return "";
-    const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+    const date = (createdAt as any)?.toDate ? (createdAt as any).toDate() : new Date(createdAt as any);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
@@ -1014,7 +1014,7 @@ export default function MessagesPage() {
 
                 if (msg.deletedForMe?.includes(profile.uid)) return null;
 
-                const msgDate = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date(msg.createdAt || Date.now());
+                const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date(msg.createdAt || Date.now());
                 const now = new Date();
                 const yesterday = new Date(now);
                 yesterday.setDate(yesterday.getDate() - 1);
@@ -1229,7 +1229,7 @@ export default function MessagesPage() {
                     const isMe = msg.senderId === profile.uid;
                     const isCreator = msg.senderId === activeCommunity.creatorId;
                     
-                    const msgDate = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date(msg.createdAt || Date.now());
+                    const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date(msg.createdAt || Date.now());
                     const now = new Date();
                     const yesterday = new Date(now);
                     yesterday.setDate(yesterday.getDate() - 1);
