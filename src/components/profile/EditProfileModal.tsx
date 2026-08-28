@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Upload, Save, Loader2 } from "lucide-react";
+import { X, Upload, Save, Loader2, ChevronDown, Heart, Shield } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { updateUserProfile, UserBasic } from "@/lib/services/users";
 import { logoutUser } from "@/lib/auth";
@@ -276,12 +276,16 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-sm font-medium text-secondary ml-1">Relationship Status</label>
-                      <select name="relationship" value={formData.relationship} onChange={handleInputChange} className="neo-input cursor-pointer bg-slate-900 text-white border border-white/10">
-                        <option className="bg-slate-900 text-white">Single</option>
-                        <option className="bg-slate-900 text-white">In a Relationship</option>
-                        <option className="bg-slate-900 text-white">Married</option>
-                        <option className="bg-slate-900 text-white">Complicated</option>
-                      </select>
+                      <div className="relative">
+                        <Heart className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+                        <select name="relationship" value={formData.relationship} onChange={handleInputChange} className="neo-input pl-11 pr-10 cursor-pointer appearance-none bg-slate-900 text-white border border-white/10">
+                          <option className="bg-slate-900 text-white">Single</option>
+                          <option className="bg-slate-900 text-white">In a Relationship</option>
+                          <option className="bg-slate-900 text-white">Married</option>
+                          <option className="bg-slate-900 text-white">Complicated</option>
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
                     </div>
                   </div>
 
@@ -369,11 +373,15 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
                 <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
                   <div className="flex flex-col gap-1">
                     <label className="text-sm font-medium text-secondary ml-1">Profile Visibility</label>
-                    <select name="visibility" value={formData.visibility} onChange={handleInputChange} className="neo-input cursor-pointer bg-transparent">
-                      <option value="public">Public - Anyone can see</option>
-                      <option value="connections">Connections Only</option>
-                      <option value="private">Private - Only me</option>
-                    </select>
+                    <div className="relative">
+                      <Shield className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+                      <select name="visibility" value={formData.visibility} onChange={handleInputChange} className="neo-input pl-11 pr-10 cursor-pointer appearance-none bg-slate-900 text-white border border-white/10">
+                        <option value="public" className="bg-slate-900 text-white">Public - Anyone can see</option>
+                        <option value="connections" className="bg-slate-900 text-white">Connections Only</option>
+                        <option value="private" className="bg-slate-900 text-white">Private - Only me</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -382,7 +390,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 pb-24 md:pb-4 border-t border-border bg-surface-raised flex justify-end gap-4">
+        <div className="p-4 sm:p-5 border-t border-border bg-surface-raised flex justify-end gap-4">
           <button 
             onClick={onClose}
             disabled={isSaving}

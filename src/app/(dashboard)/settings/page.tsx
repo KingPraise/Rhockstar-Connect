@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import { logoutUser } from "@/lib/auth";
 
 import LogoutConfirmModal from "@/components/auth/LogoutConfirmModal";
-import { AlertTriangle, Trash2, X } from "lucide-react";
+import { AlertTriangle, Trash2, X, ChevronDown } from "lucide-react";
 
 export default function SettingsPage() {
   const { user, profile, logout, aiWidgetVisible, setAiWidgetVisible } = useAuthStore();
@@ -200,6 +200,7 @@ export default function SettingsPage() {
                       <option value="rose">Rose Pink</option>
                       <option value="amber">Amber Gold</option>
                     </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-slate-800/50 border border-white/5 rounded-xl mt-4">

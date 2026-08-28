@@ -1,7 +1,7 @@
 "use client";
 
 import { useCurrencyStore, CURRENCIES, CurrencyCode } from "@/store/useCurrencyStore";
-import { DollarSign, Globe } from "lucide-react";
+import { DollarSign, Globe, ChevronDown } from "lucide-react";
 import { useEffect } from "react";
 
 export default function CurrencySelector({ className = "" }: { className?: string }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Users, Sparkles, MessageSquare, Loader2, Compass } from "lucide-react";
+import { X, Users, Sparkles, MessageSquare, Loader2, Compass, ChevronDown, Tag } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createCommunity } from "@/lib/services/communities";
 import toast from "react-hot-toast";
@@ -70,7 +70,7 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-white/5 bg-slate-900/90">
           <div className="flex items-center gap-3">
@@ -120,24 +120,28 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
               placeholder="e.g. Football Lovers, Tech Developers"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand text-sm"
+              className="neo-input text-sm"
             />
           </div>
 
           {/* Category */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1">Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-800 border border-white/10 rounded-xl text-white focus:outline-none focus:border-brand text-sm cursor-pointer"
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+          <div className="space-y-1.5 text-left">
+            <label className="text-xs font-semibold text-slate-400">Category</label>
+            <div className="relative">
+              <Tag className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="neo-input pl-11 pr-10 text-sm cursor-pointer appearance-none bg-slate-900"
+              >
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat} className="bg-slate-900 text-white">
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
           </div>
 
           {/* Description */}
@@ -148,7 +152,7 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
               placeholder="What is this community about? Share what members will discuss..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2.5 bg-slate-800 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand text-sm resize-none"
+              className="neo-input text-sm resize-none"
             />
           </div>
 

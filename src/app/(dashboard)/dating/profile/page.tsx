@@ -5,7 +5,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { updateUserProfile } from "@/lib/services/users";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { Heart, Loader2, Save, Upload, Plus, Trash2, Mic, Settings, X } from "lucide-react";
+import { Heart, Loader2, Save, Upload, Plus, Trash2, Mic, Settings, X, ChevronDown, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -246,15 +246,18 @@ export default function DatingProfileSetup() {
                   <button onClick={() => removePrompt(i)} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:scale-110 transition-transform">
                     <X className="w-3 h-3" />
                   </button>
-                  <select 
-                    value={p.prompt} 
-                    onChange={(e) => updatePrompt(i, 'prompt', e.target.value)}
-                    className="neo-input bg-slate-900 text-brand-purple font-bold border-transparent"
-                  >
-                    {PROMPTS.map(pr => (
-                      <option key={pr} value={pr}>{pr}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select 
+                      value={p.prompt} 
+                      onChange={(e) => updatePrompt(i, 'prompt', e.target.value)}
+                      className="neo-input pr-10 bg-slate-900 text-brand-purple font-bold border-transparent appearance-none cursor-pointer"
+                    >
+                      {PROMPTS.map(pr => (
+                        <option key={pr} value={pr} className="bg-slate-900 text-brand-purple">{pr}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                   <textarea 
                     value={p.answer}
                     onChange={(e) => updatePrompt(i, 'answer', e.target.value)}
@@ -294,15 +297,19 @@ export default function DatingProfileSetup() {
             
             <div className="flex flex-col gap-1 mb-6">
               <label className="text-sm font-medium text-secondary ml-1">Relationship Goals</label>
-              <select 
-                value={goal} 
-                onChange={(e) => setGoal(e.target.value)}
-                className="neo-input bg-slate-900 cursor-pointer"
-              >
-                {GOALS.map(g => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <Target className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+                <select 
+                  value={goal} 
+                  onChange={(e) => setGoal(e.target.value)}
+                  className="neo-input pl-11 pr-10 bg-slate-900 cursor-pointer appearance-none text-white"
+                >
+                  {GOALS.map(g => (
+                    <option key={g} value={g} className="bg-slate-900 text-white">{g}</option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
 
             <div className="flex flex-col gap-1">

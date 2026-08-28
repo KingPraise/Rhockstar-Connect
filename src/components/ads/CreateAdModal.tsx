@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { X, Megaphone, Loader2, Image as ImageIcon, ExternalLink, ShieldCheck, Upload } from "lucide-react";
+import { X, Megaphone, Loader2, Image as ImageIcon, ExternalLink, ShieldCheck, Upload, ChevronDown } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createAdvertisement } from "@/lib/services/ads";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -269,17 +269,20 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
               </div>
 
               {/* CTA Button Text */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Call-to-Action Button</label>
-                <select
-                  value={ctaText}
-                  onChange={(e) => setCtaText(e.target.value)}
-                  className="w-full neo-input py-2.5 text-xs text-white bg-slate-950"
-                >
-                  {CTA_OPTIONS.map((opt) => (
-                    <option key={opt} value={opt}>{opt}</option>
-                  ))}
-                </select>
+              <div className="space-y-1.5 text-left">
+                <label className="block text-xs font-semibold text-slate-400">Call-to-Action Button</label>
+                <div className="relative">
+                  <select
+                    value={ctaText}
+                    onChange={(e) => setCtaText(e.target.value)}
+                    className="w-full neo-input pr-10 py-2.5 text-xs text-white bg-slate-950 appearance-none cursor-pointer"
+                  >
+                    {CTA_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt} className="bg-slate-900 text-white">{opt}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
 
               {/* Destination URL */}
