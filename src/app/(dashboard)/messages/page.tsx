@@ -18,7 +18,7 @@ import {
 } from "@/lib/services/communities";
 import CreateCommunityModal from "@/components/chat/CreateCommunityModal";
 import { 
-  Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, 
+  Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, ChevronLeft, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, 
   Globe, Users, Compass, Plus, Sparkles, ShieldCheck, UserX, Crown, MessageSquare 
 } from "lucide-react";
 import { storage } from "@/lib/firebase";
@@ -987,10 +987,10 @@ export default function MessagesPage() {
           </div>
 
           {/* DM Message Feed */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
             {/* Replying banner */}
             {replyingTo && (
-              <div className="p-3 bg-slate-800/90 border border-brand/40 rounded-2xl flex items-center justify-between gap-3 text-xs mb-2">
+              <div className="p-3 bg-slate-800/95 border border-brand/40 rounded-2xl flex items-center justify-between gap-3 text-xs mb-2 shadow-lg backdrop-blur-md">
                 <div className="flex items-center gap-2 min-w-0">
                   <Reply className="w-4 h-4 text-brand shrink-0" />
                   <div className="min-w-0">
@@ -1006,6 +1006,8 @@ export default function MessagesPage() {
 
             {(() => {
               let dmLastDate: Date | null = null;
+              const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
+              const otherUser = users[otherUserId];
               
               return messages.map((msg) => {
                 const isMe = msg.senderId === profile.uid;
@@ -1032,123 +1034,132 @@ export default function MessagesPage() {
                 return (
                   <div key={msg.id} className="flex flex-col w-full">
                     {showDateHeader && (
-                      <div className="flex justify-center my-4">
-                        <span className="px-3 py-1 rounded-full bg-slate-800/80 border border-white/5 text-[10px] font-semibold text-slate-400">
+                      <div className="flex justify-center my-3">
+                        <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
                           {dateLabel}
                         </span>
                       </div>
                     )}
-                    <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-2`}>
-                      <div className={`flex items-start gap-2 group relative ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                      {/* Action Menu Trigger (Dropdown) */}
-                      {!msg.isDeleted && !isEditingThis && (
-                        <div className={`relative flex items-center gap-1 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                          <button
-                            onClick={() => setOpenMessageMenuId(isMenuOpen ? null : msg.id)}
-                            className="p-1 rounded-full text-slate-500 hover:bg-slate-800 hover:text-white transition-colors"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
+                    <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
+                      <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                        {!isMe && (
+                          <UserAvatar 
+                            src={otherUser?.avatar} 
+                            name={otherUser?.fullName || "Member"} 
+                            className="w-7 h-7 rounded-full shrink-0 mb-1" 
+                            textClassName="text-[10px] font-bold" 
+                          />
+                        )}
 
-                          {isMenuOpen && (
-                            <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
-                              <button
-                                onClick={() => { setReplyingTo(msg); setOpenMessageMenuId(null); }}
-                                className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
-                              >
-                                <Reply className="w-3.5 h-3.5" /> Reply
-                              </button>
-                              {isMe && (
-                                <button
-                                  onClick={() => {
-                                    setEditingMessageId(msg.id);
-                                    setEditingText(msg.text);
-                                    setOpenMessageMenuId(null);
-                                  }}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5" /> Edit
-                                </button>
-                              )}
-                              <button
-                                onClick={async () => {
-                                  if (confirm(isMe ? "Delete message for everyone?" : "Delete message for you?")) {
-                                    await deleteMessage(activeChat.id, msg.id, profile.uid, isMe ? 'forEveryone' : 'forMe');
-                                    toast.success("Message deleted");
-                                  }
-                                  setOpenMessageMenuId(null);
-                                }}
-                                className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-rose-400"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" /> Delete
-                              </button>
+                        <div className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}>
+                          {/* Reply preview */}
+                          {msg.replyToText && (
+                            <div className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-1.5 opacity-80">
+                              <span className="font-bold block text-[10px]">Replying to:</span>
+                              <span className="truncate block text-[11px]">{msg.replyToText}</span>
                             </div>
                           )}
-                        </div>
 
-                      )}
-
-                      <div className={`max-w-[75vw] sm:max-w-[75%] rounded-2xl p-3.5 space-y-1 relative shadow-md ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-tr-sm" : "bg-slate-800/90 text-white border border-white/5 rounded-tl-sm"}`}>
-                        {/* Reply preview */}
-                        {msg.replyToText && (
-                          <div className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-2 opacity-80">
-                            <span className="font-bold block text-[11px]">Replying to:</span>
-                            <span className="truncate block">{msg.replyToText}</span>
-                          </div>
-                        )}
-
-                        {/* Inline Editing view */}
-                        {isEditingThis ? (
-                          <div className="space-y-2">
-                            <input
-                              type="text"
-                              value={editingText}
-                              onChange={(e) => setEditingText(e.target.value)}
-                              className="w-full px-3 py-1.5 bg-slate-900 text-white text-xs rounded-xl border border-brand focus:outline-none"
-                            />
-                            <div className="flex justify-end gap-2 text-xs">
-                              <button
-                                onClick={() => setEditingMessageId(null)}
-                                className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (editingText.trim()) {
-                                    await editMessage(activeChat.id, msg.id, editingText.trim());
-                                    setEditingMessageId(null);
-                                    toast.success("Message updated");
-                                  }
-                                }}
-                                className="px-2.5 py-1 rounded-lg bg-slate-950 text-brand font-bold"
-                              >
-                                Save
-                              </button>
+                          {/* Inline Editing view */}
+                          {isEditingThis ? (
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                className="w-full px-3 py-1.5 bg-slate-900 text-white text-xs rounded-xl border border-brand focus:outline-none"
+                              />
+                              <div className="flex justify-end gap-2 text-xs">
+                                <button
+                                  onClick={() => setEditingMessageId(null)}
+                                  className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (editingText.trim()) {
+                                      await editMessage(activeChat.id, msg.id, editingText.trim());
+                                      setEditingMessageId(null);
+                                      toast.success("Message updated");
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-slate-950 text-brand font-bold"
+                                >
+                                  Save
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                        ) : msg.isDeleted ? (
-                          <p className="text-xs italic opacity-60 flex items-center gap-1">
-                            <Trash2 className="w-3 h-3" /> This message was deleted
-                          </p>
-                        ) : (
-                          <>
-                            {msg.type === 'image' && msg.mediaUrl && (
-                              <img src={msg.mediaUrl} alt="Shared" className="rounded-xl max-h-60 w-full object-cover mb-2" />
-                            )}
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                          </>
-                        )}
+                          ) : msg.isDeleted ? (
+                            <p className="text-xs italic opacity-60 flex items-center gap-1">
+                              <Trash2 className="w-3 h-3" /> This message was deleted
+                            </p>
+                          ) : (
+                            <>
+                              {msg.type === 'image' && msg.mediaUrl && (
+                                <img src={msg.mediaUrl} alt="Shared" className="rounded-xl max-h-60 w-full object-cover mb-2" />
+                              )}
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                            </>
+                          )}
 
-                        <div className="flex items-center justify-end gap-1.5 text-[10px] ">
-                          {msg.isEdited && !msg.isDeleted && <span className="italic font-normal">(edited)</span>}
-                          <span>{formatMessageTime(msg.createdAt)}</span>
+                          <div className={`flex items-center justify-end gap-1.5 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
+                            {msg.isEdited && !msg.isDeleted && <span className="italic font-normal">(edited)</span>}
+                            <span>{formatMessageTime(msg.createdAt)}</span>
+                          </div>
                         </div>
+
+                        {/* Action Menu Trigger (Dropdown) - Hidden by default, appears smoothly on hover or when open */}
+                        {!msg.isDeleted && !isEditingThis && (
+                          <div className={`relative flex items-center self-center transition-opacity ${isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                            <button
+                              onClick={() => setOpenMessageMenuId(isMenuOpen ? null : msg.id)}
+                              className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                              title="Message options"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+
+                            {isMenuOpen && (
+                              <div className={`absolute bottom-full ${isMe ? "right-0" : "left-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                                <button
+                                  onClick={() => { setReplyingTo(msg); setOpenMessageMenuId(null); }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                >
+                                  <Reply className="w-3.5 h-3.5" /> Reply
+                                </button>
+                                {isMe && (
+                                  <button
+                                    onClick={() => {
+                                      setEditingMessageId(msg.id);
+                                      setEditingText(msg.text);
+                                      setOpenMessageMenuId(null);
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" /> Edit
+                                  </button>
+                                )}
+                                <button
+                                  onClick={async () => {
+                                    if (confirm(isMe ? "Delete message for everyone?" : "Delete message for you?")) {
+                                      await deleteMessage(activeChat.id, msg.id, profile.uid, isMe ? 'forEveryone' : 'forMe');
+                                      toast.success("Message deleted");
+                                    }
+                                    setOpenMessageMenuId(null);
+                                  }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-rose-400"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
-                    </div>
-                  );
+                );
               });
             })()}
             <div ref={messagesEndRef} />
@@ -1223,7 +1234,7 @@ export default function MessagesPage() {
             
             {/* Group Chat Messages Stream */}
             <div className="flex-1 flex flex-col justify-between overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
                 {communityMessages.length > 0 ? (
                   (() => {
                   let commLastDate: Date | null = null;
@@ -1250,54 +1261,61 @@ export default function MessagesPage() {
                     return (
                       <div key={msg.id} className="flex flex-col w-full">
                         {showDateHeader && (
-                          <div className="flex justify-center my-4">
-                            <span className="px-3 py-1 rounded-full bg-slate-800/80 border border-white/5 text-[10px] font-semibold text-slate-400">
+                          <div className="flex justify-center my-3">
+                            <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
                               {dateLabel}
                             </span>
                           </div>
                         )}
-                        <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-2`}>
-                          <div className={`flex items-start gap-2 group relative ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                          {!isMe && (
-                            <UserAvatar src={msg.senderAvatar} name={msg.senderName} className="w-8 h-8 rounded-full shrink-0 mt-1" textClassName="text-xs font-bold" />
-                          )}
-                          <div className={`max-w-[80vw] sm:max-w-[70%] rounded-2xl p-3.5 space-y-1 relative shadow-md ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-tr-sm" : "bg-slate-800/90 text-white border border-white/5 rounded-tl-sm"}`}>
+                        <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
+                          <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                             {!isMe && (
-                              <div className="flex items-center justify-between gap-2 mb-1">
-                                <span className="text-xs font-bold text-brand truncate flex items-center gap-1">
-                                  {msg.senderName}
-                                  {isCreator && (
-                                    <span title="Creator">
-                                      <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
+                              <UserAvatar 
+                                src={msg.senderAvatar} 
+                                name={msg.senderName} 
+                                className="w-7 h-7 rounded-full shrink-0 mb-1" 
+                                textClassName="text-[10px] font-bold" 
+                              />
                             )}
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                            <div className="flex items-center justify-end gap-2 text-[10px] ">
-                              <span>{formatMessageTime(msg.createdAt)}</span>
-                              
-                              {/* Delete Message Button (For message owner or Community Creator) */}
-                              {(isMe || activeCommunity.creatorId === profile.uid) && !msg.isDeleted && (
+                            
+                            <div className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}>
+                              {!isMe && (
+                                <div className="flex items-center justify-between gap-2 mb-0.5">
+                                  <span className="text-xs font-bold text-brand truncate flex items-center gap-1">
+                                    {msg.senderName}
+                                    {isCreator && (
+                                      <span title="Creator">
+                                        <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                              )}
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                              <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
+                                <span>{formatMessageTime(msg.createdAt)}</span>
+                              </div>
+                            </div>
+
+                            {/* Delete Message Button (Appears on hover) */}
+                            {(isMe || activeCommunity.creatorId === profile.uid) && !msg.isDeleted && (
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity self-center">
                                 <button
                                   onClick={async () => {
                                     if (confirm("Delete this message?")) {
                                       await deleteCommunityMessage(activeCommunity.id, msg.id);
                                     }
                                   }}
-                                  className="text-rose-500 hover:text-rose-400 p-0.5 ml-1"
+                                  className="p-1.5 rounded-full text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors"
                                   title="Delete Message"
                                 >
-                                  <Trash2 className="w-3 h-3" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
-                      </div>
-
                     );
                   })
                 })()
@@ -1314,18 +1332,18 @@ export default function MessagesPage() {
               </div>
 
               {/* Group Message Input */}
-              <form onSubmit={handleSendCommunityMessage} className="p-4 border-t border-white/5 bg-slate-900/90 flex items-center gap-3">
+              <form onSubmit={handleSendCommunityMessage} className="p-3.5 sm:p-4 border-t border-white/5 bg-slate-900/95 backdrop-blur-md flex items-center gap-3">
                 <input
                   type="text"
                   placeholder={`Message ${activeCommunity.name}...`}
                   value={newCommunityMessageText}
                   onChange={(e) => setNewCommunityMessageText(e.target.value)}
-                  className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand"
+                  className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand shadow-inner"
                 />
                 <button
                   type="submit"
                   disabled={!newCommunityMessageText.trim() || sendingCommunityMsg}
-                  className="p-3 bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity shadow-md"
+                  className="p-3 bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity shadow-md shrink-0"
                 >
                   {sendingCommunityMsg ? (
                     <Loader2 className="w-5 h-5 animate-spin" />

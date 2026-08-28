@@ -59,6 +59,48 @@ export default function PostJobPage() {
     setLoading(false);
   };
 
+  if (!isEmployer) {
+    return (
+      <div className="flex-1 max-w-2xl mx-auto w-full p-4 lg:p-8 animate-fade-in flex flex-col justify-center min-h-[60vh]">
+        <div className="mb-6">
+          <Link href="/jobs" className="inline-flex items-center gap-2 text-slate-400 hover:text-white font-bold text-sm transition-colors bg-slate-900/60 px-4 py-2 rounded-xl border border-white/5">
+            <ChevronLeft className="w-4 h-4 text-brand" /> Back to Job Board
+          </Link>
+        </div>
+
+        <div className="neo-card p-8 bg-slate-900/80 backdrop-blur-xl border border-brand/30 rounded-3xl text-center shadow-2xl space-y-6">
+          <div className="w-16 h-16 rounded-3xl bg-brand/10 text-brand border border-brand/30 flex items-center justify-center mx-auto shadow-inner">
+            <Building2 className="h-8 w-8 text-brand" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight mb-2">Employer Account Required</h1>
+            <p className="text-slate-300 text-sm leading-relaxed max-w-md mx-auto">
+              Posting job listings and recruiting talent on Rhockstar Connect is reserved for verified <span className="text-brand font-bold">Employer Profiles</span>.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row justify-center gap-3">
+            <button
+              onClick={async () => {
+                if (!profile?.uid) return;
+                const { becomeEmployer } = await import('@/lib/services/users');
+                const res = await becomeEmployer(profile.uid);
+                if (res.success) {
+                  useAuthStore.getState().setProfile({ ...profile, role: 'employer', accountType: 'employer' } as any);
+                  toast.success("Successfully upgraded to Employer account!");
+                } else {
+                  toast.error("Failed to upgrade");
+                }
+              }}
+              className="neo-button-primary px-8 py-3.5 font-bold text-sm shadow-[0_0_20px_rgba(56,189,248,0.4)]"
+            >
+              Upgrade to Employer Account
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 max-w-4xl mx-auto w-full p-4 lg:p-8 animate-fade-in">
       <div className="mb-6">
@@ -66,36 +108,6 @@ export default function PostJobPage() {
           <ChevronLeft className="w-4 h-4 text-brand" /> Back to Job Board
         </Link>
       </div>
-
-      {!isEmployer && (
-        <div className="mb-8 p-6 neo-card bg-gradient-to-r from-blue-900/40 via-purple-900/30 to-slate-900 border border-brand/30 rounded-3xl flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
-          <div>
-            <h3 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-brand" />
-              Employer Profile Upgrade Recommended
-            </h3>
-            <p className="text-slate-300 text-sm">
-              Upgrade your profile to Employer status to manage applicants and build your company page.
-            </p>
-          </div>
-          <button
-            onClick={async () => {
-              if (!profile?.uid) return;
-              const { becomeEmployer } = await import('@/lib/services/users');
-              const res = await becomeEmployer(profile.uid);
-              if (res.success) {
-                useAuthStore.getState().setProfile({ ...profile, role: 'employer' } as any);
-                toast.success("Successfully upgraded to Employer!");
-              } else {
-                toast.error("Failed to upgrade");
-              }
-            }}
-            className="neo-button-primary whitespace-nowrap px-6 py-3 font-bold text-sm"
-          >
-            Become Employer Now
-          </button>
-        </div>
-      )}
 
       <div className="neo-card p-6 md:p-10 rounded-3xl bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand via-brand-purple to-emerald-500"></div>
