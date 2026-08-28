@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getJobs, JobListing, createJob } from "@/lib/services/jobs";
-import { Plus, Briefcase, Users, Activity, Eye, Trash2, Loader2, Crown, Sparkles, Building2 } from "lucide-react";
+import { Plus, Briefcase, Users, Activity, Eye, Trash2, Loader2, Crown, Sparkles, Building2, X, MapPin, DollarSign, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
 
@@ -225,96 +225,119 @@ export default function EmployerDashboardPage() {
 
       {/* Post Job Modal */}
       {showPostModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800 z-10">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Post a New Job</h2>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-3xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/5 bg-slate-900/90">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-brand/10 text-brand flex items-center justify-center font-bold text-lg border border-brand/20">
+                  <Briefcase className="w-5 h-5 text-brand" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-white">Post a New Job</h2>
+                  <p className="text-xs text-slate-400">Reach thousands of top talent across the network</p>
+                </div>
+              </div>
               <button 
                 onClick={() => setShowPostModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
               >
-                ×
+                <X className="w-5 h-5" />
               </button>
             </div>
             
-            <form onSubmit={handlePostJob} className="p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Job Title</label>
-                <input 
-                  type="text" 
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Senior Product Designer"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#6B8AFD] focus:border-transparent outline-none transition-all dark:text-white"
-                  required
-                />
-              </div>
+            <form onSubmit={handlePostJob} className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
+              <div className="space-y-4">
+                <div className="space-y-2 text-left">
+                  <label className="text-sm font-extrabold text-slate-200">Job Title <span className="text-rose-500">*</span></label>
                   <input 
                     type="text" 
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g. Remote, San Francisco"
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#6B8AFD] focus:border-transparent outline-none transition-all dark:text-white"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Senior Full-Stack Engineer"
+                    className="neo-input text-sm"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employment Type</label>
-                  <select 
-                    value={type}
-                    onChange={(e) => setType(e.target.value as any)}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#6B8AFD] focus:border-transparent outline-none transition-all dark:text-white"
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 text-left">
+                    <label className="text-sm font-extrabold text-slate-200">Employment Type <span className="text-rose-500">*</span></label>
+                    <div className="relative">
+                      <Briefcase className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+                      <select 
+                        value={type}
+                        onChange={(e) => setType(e.target.value as any)}
+                        className="neo-input pl-12 pr-10 text-sm cursor-pointer appearance-none"
+                      >
+                        <option value="Full-time">Full-time</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="Contract">Contract</option>
+                        <option value="Freelance">Freelance</option>
+                        <option value="Remote">Remote</option>
+                      </select>
+                      <ChevronDown className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 text-left">
+                    <label className="text-sm font-extrabold text-slate-200">Location <span className="text-rose-500">*</span></label>
+                    <div className="relative">
+                      <MapPin className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="text" 
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="e.g. Lagos or Remote"
+                        className="neo-input pl-12 text-sm"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 text-left">
+                  <label className="text-sm font-extrabold text-slate-200">Salary Range <span className="text-rose-500">*</span></label>
+                  <div className="relative">
+                    <DollarSign className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <input 
+                      type="text" 
+                      value={salary}
+                      onChange={(e) => setSalary(e.target.value)}
+                      placeholder="e.g. ?600k - ?1.2M / mo"
+                      className="neo-input pl-12 text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2 text-left">
+                  <label className="text-sm font-extrabold text-slate-200">Job Description & Requirements <span className="text-rose-500">*</span></label>
+                  <textarea 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Detail key responsibilities, qualifications, stack, and application guidelines..." 
+                    rows={6}
+                    className="neo-input text-sm resize-y"
                     required
-                  >
-                    <option value="Full-time">Full-time</option>
-                    <option value="Part-time">Part-time</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Remote">Remote</option>
-                    <option value="Internship">Internship</option>
-                  </select>
+                  ></textarea>
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Salary Range</label>
-                <input 
-                  type="text" 
-                  value={salary}
-                  onChange={(e) => setSalary(e.target.value)}
-                  placeholder="e.g. $120k - $150k"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#6B8AFD] focus:border-transparent outline-none transition-all dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Job Description</label>
-                <textarea 
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe the role, responsibilities, and requirements..."
-                  rows={6}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-[#6B8AFD] focus:border-transparent outline-none transition-all dark:text-white resize-none"
-                  required
-                ></textarea>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+              
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-white/5">
                 <button 
                   type="button"
                   onClick={() => setShowPostModal(false)}
-                  className="px-6 py-2.5 text-gray-600 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 rounded-full transition-colors"
+                  className="px-5 py-2.5 text-slate-400 font-bold hover:bg-slate-800 rounded-xl transition-colors text-sm"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
                   disabled={submitting}
-                  className="px-8 py-2.5 bg-[#6B8AFD] text-white font-medium rounded-full hover:bg-blue-600 transition-colors disabled:opacity-70"
+                  className="px-6 py-2.5 bg-brand text-white font-bold rounded-xl hover:scale-105 transition-transform disabled:opacity-70 text-sm flex items-center gap-2 shadow-[0_0_15px_rgba(56,189,248,0.4)]"
                 >
                   {submitting ? "Posting..." : "Post Job"}
                 </button>

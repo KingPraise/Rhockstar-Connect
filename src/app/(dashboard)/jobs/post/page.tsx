@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createJob } from "@/lib/services/jobs";
-import { Loader2, Briefcase, MapPin, DollarSign, Building2, ChevronLeft, Sparkles, CheckCircle2 } from "lucide-react";
+import { Loader2, Briefcase, MapPin, ChevronDown, DollarSign, Building2, ChevronLeft, Sparkles, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
 
@@ -143,11 +143,13 @@ export default function PostJobPage() {
               
               <div className="space-y-2 text-left">
                 <label className="text-sm font-extrabold text-slate-200">Employment Type <span className="text-rose-500">*</span></label>
-                <select 
+                <div className="relative">
+                  <Briefcase className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+                  <select 
                   name="type"
                   value={formData.type}
                   onChange={handleChange}
-                  className="neo-input text-sm cursor-pointer"
+                  className="neo-input pl-12 pr-10 text-sm cursor-pointer appearance-none"
                 >
                   <option value="Full-time">Full-time</option>
                   <option value="Part-time">Part-time</option>
@@ -155,6 +157,8 @@ export default function PostJobPage() {
                   <option value="Remote">Remote</option>
                   <option value="Internship">Internship</option>
                 </select>
+                  <ChevronDown className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
 
               <div className="space-y-2 text-left">
