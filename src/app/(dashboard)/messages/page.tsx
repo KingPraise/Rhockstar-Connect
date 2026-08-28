@@ -13,13 +13,20 @@ import {
   leaveCommunity, 
   deleteCommunityMessage, 
   removeMemberFromCommunity, 
+  requestToJoinCommunity,
+  cancelJoinRequest,
+  acceptJoinRequest,
+  declineJoinRequest,
+  updateCommunityAccess,
   Community, 
-  CommunityMessage 
+  CommunityMessage,
+  CommunityAccessType,
+  JoinRequestDetail
 } from "@/lib/services/communities";
 import CreateCommunityModal from "@/components/chat/CreateCommunityModal";
 import { 
   Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, ChevronLeft, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, 
-  Globe, Users, Compass, Plus, Sparkles, ShieldCheck, UserX, Crown, MessageSquare 
+  Globe, Users, Compass, Plus, Lock, Shield, Sparkles, ShieldCheck, UserX, Crown, MessageSquare 
 } from "lucide-react";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -349,12 +356,70 @@ export default function MessagesPage() {
       toast.error("Please log in to join communities");
       return;
     }
+    
+    if (comm.accessType === 'locked') {
+      toast.error("This community is locked and not accepting new members.");
+      return;
+    }
+
+    if (comm.accessType === 'private') {
+      const res = await requestToJoinCommunity(comm.id, {
+        uid: profile.uid,
+        fullName: profile.fullName,
+        username: profile.username,
+        avatar: profile.avatar,
+      });
+      if (res.success) {
+        toast.success("Join request sent to community admin! 🔒");
+      } else {
+        toast.error(res.error || "Failed to send request");
+      }
+      return;
+    }
+
     const res = await joinCommunity(comm.id, profile.uid);
     if (res.success) {
       toast.success(`Joined ${comm.name}! 🎉`);
       setActiveCommunity({ ...comm, members: [...comm.members, profile.uid], memberCount: comm.memberCount + 1 });
     } else {
       toast.error(res.error || "Failed to join community");
+    }
+  };
+
+  const handleCancelJoinRequest = async (comm: Community) => {
+    if (!profile?.uid) return;
+    const res = await cancelJoinRequest(comm.id, profile.uid);
+    if (res.success) {
+      toast.success("Join request cancelled");
+    } else {
+      toast.error("Failed to cancel request");
+    }
+  };
+
+  const handleAcceptRequest = async (comm: Community, req: JoinRequestDetail) => {
+    const res = await acceptJoinRequest(comm.id, req);
+    if (res.success) {
+      toast.success(`Accepted ${req.fullName || "User"} into ${comm.name}! 🎉`);
+    } else {
+      toast.error("Failed to accept request");
+    }
+  };
+
+  const handleDeclineRequest = async (comm: Community, userId: string) => {
+    const res = await declineJoinRequest(comm.id, userId);
+    if (res.success) {
+      toast.success("Join request declined");
+    } else {
+      toast.error("Failed to decline request");
+    }
+  };
+
+  const handleUpdateCommunityAccess = async (comm: Community, newAccess: CommunityAccessType) => {
+    const res = await updateCommunityAccess(comm.id, newAccess);
+    if (res.success) {
+      toast.success(`Community access updated to ${newAccess.toUpperCase()}`);
+    } else {
+      toast.error("Failed to update access settings");
     }
   };
 
@@ -845,24 +910,74 @@ export default function MessagesPage() {
                         </div>
                       </div>
 
-                      {/* Join / Joined Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isJoined) {
-                            setActiveCommunity(comm);
-                          } else {
-                            handleJoinCommunity(comm);
+                      {/* Join / Status Button */}
+                      {(() => {
+                        const hasRequested = comm.pendingRequests?.includes(profile.uid);
+                        const isLocked = comm.accessType === 'locked';
+                        const isPrivate = comm.accessType === 'private';
+
+                        if (isJoined) {
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveCommunity(comm);
+                              }}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 border border-white/10 transition-all shrink-0"
+                            >
+                              Open
+                            </button>
+                          );
+                        }
+
+                        if (isLocked) {
+                          return (
+                            <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-rose-950/60 text-rose-400 border border-rose-500/20 shrink-0 flex items-center gap-1">
+                              <Lock className="w-3 h-3" /> Locked
+                            </span>
+                          );
+                        }
+
+                        if (isPrivate) {
+                          if (hasRequested) {
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelJoinRequest(comm);
+                                }}
+                                className="px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/30 transition-all shrink-0"
+                                title="Click to cancel request"
+                              >
+                                ? Pending
+                              </button>
+                            );
                           }
-                        }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
-                          isJoined 
-                            ? 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-white/10' 
-                            : 'bg-gradient-to-r from-brand to-brand-purple text-slate-950 hover:opacity-90 shadow-md font-extrabold'
-                        }`}
-                      >
-                        {isJoined ? "Open" : "Join"}
-                      </button>
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleJoinCommunity(comm);
+                              }}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition-all shrink-0 flex items-center gap-1"
+                            >
+                              <Lock className="w-3 h-3" /> Request
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleJoinCommunity(comm);
+                            }}
+                            className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-brand to-brand-purple text-slate-950 hover:opacity-90 shadow-md transition-all shrink-0"
+                          >
+                            Join
+                          </button>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -1208,6 +1323,16 @@ export default function MessagesPage() {
                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-brand border border-brand/20 shrink-0">
                     {activeCommunity.category}
                   </span>
+                  {activeCommunity.accessType === 'private' && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-purple-950/80 text-purple-300 border border-purple-500/30 shrink-0 flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> Private
+                    </span>
+                  )}
+                  {activeCommunity.accessType === 'locked' && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-950/80 text-rose-300 border border-rose-500/30 shrink-0 flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> Locked
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-slate-400 flex items-center gap-1.5">
                   <Users className="w-3.5 h-3.5 text-brand" />
@@ -1219,7 +1344,7 @@ export default function MessagesPage() {
             {/* Info & Members Drawer Trigger */}
             <button
               onClick={() => setIsCommunityInfoOpen(!isCommunityInfoOpen)}
-              className={`p-2.5 rounded-xl border transition-all ${
+              className={`relative p-2.5 rounded-xl border transition-all ${
                 isCommunityInfoOpen 
                   ? 'bg-brand/20 text-brand border-brand/40' 
                   : 'bg-slate-800/80 text-slate-400 hover:text-white border-white/5'
@@ -1227,136 +1352,230 @@ export default function MessagesPage() {
               title="Community Members & Info"
             >
               <Users className="w-5 h-5" />
+              {(activeCommunity.creatorId === profile.uid || activeCommunity.admins?.includes(profile.uid)) && (activeCommunity.pendingRequests?.length || 0) > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center shadow-lg animate-pulse">
+                  {activeCommunity.pendingRequests?.length}
+                </span>
+              )}
             </button>
           </div>
 
           <div className="flex-1 flex overflow-hidden relative">
             
-            {/* Group Chat Messages Stream */}
-            <div className="flex-1 flex flex-col justify-between overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
-                {communityMessages.length > 0 ? (
-                  (() => {
-                  let commLastDate: Date | null = null;
-                  
-                  return communityMessages.map((msg) => {
-                    const isMe = msg.senderId === profile.uid;
-                    const isCreator = msg.senderId === activeCommunity.creatorId;
+            {/* Group Chat Messages Stream or Non-Member Gated View */}
+            {activeCommunity.members.includes(profile.uid) ? (
+              <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
+                  {communityMessages.length > 0 ? (
+                    (() => {
+                    let commLastDate: Date | null = null;
                     
-                    const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date((msg.createdAt as any) || Date.now());
-                    const now = new Date();
-                    const yesterday = new Date(now);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    
-                    const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-                    const showDateHeader = !commLastDate || !isSameDay(commLastDate, msgDate);
-                    if (showDateHeader) {
-                      commLastDate = msgDate;
-                    }
-                    
-                    let dateLabel = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                    if (isSameDay(msgDate, now)) dateLabel = 'Today';
-                    else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
+                    return communityMessages.map((msg) => {
+                      const isMe = msg.senderId === profile.uid;
+                      const isCreator = msg.senderId === activeCommunity.creatorId;
+                      
+                      const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date((msg.createdAt as any) || Date.now());
+                      const now = new Date();
+                      const yesterday = new Date(now);
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      
+                      const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+                      const showDateHeader = !commLastDate || !isSameDay(commLastDate, msgDate);
+                      if (showDateHeader) {
+                        commLastDate = msgDate;
+                      }
+                      
+                      let dateLabel = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                      if (isSameDay(msgDate, now)) dateLabel = 'Today';
+                      else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
 
-                    return (
-                      <div key={msg.id} className="flex flex-col w-full">
-                        {showDateHeader && (
-                          <div className="flex justify-center my-3">
-                            <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
-                              {dateLabel}
-                            </span>
-                          </div>
-                        )}
-                        <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
-                          <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                            {!isMe && (
-                              <UserAvatar 
-                                src={msg.senderAvatar} 
-                                name={msg.senderName} 
-                                className="w-7 h-7 rounded-full shrink-0 mb-1" 
-                                textClassName="text-[10px] font-bold" 
-                              />
-                            )}
-                            
-                            <div className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}>
+                      return (
+                        <div key={msg.id} className="flex flex-col w-full">
+                          {showDateHeader && (
+                            <div className="flex justify-center my-3">
+                              <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
+                                {dateLabel}
+                              </span>
+                            </div>
+                          )}
+                          <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
+                            <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                               {!isMe && (
-                                <div className="flex items-center justify-between gap-2 mb-0.5">
-                                  <span className="text-xs font-bold text-brand truncate flex items-center gap-1">
-                                    {msg.senderName}
-                                    {isCreator && (
-                                      <span title="Creator">
-                                        <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                      </span>
-                                    )}
-                                  </span>
+                                <UserAvatar 
+                                  src={msg.senderAvatar} 
+                                  name={msg.senderName} 
+                                  className="w-7 h-7 rounded-full shrink-0 mb-1" 
+                                  textClassName="text-[10px] font-bold" 
+                                />
+                              )}
+                              
+                              <div className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all ${
+                                isMe 
+                                  ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" 
+                                  : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"
+                              }`}>
+                                {!isMe && (
+                                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                                    <span className="text-xs font-bold text-brand truncate flex items-center gap-1">
+                                      {msg.senderName}
+                                      {isCreator && (
+                                        <span title="Creator">
+                                          <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
+                                  <span>{formatMessageTime(msg.createdAt)}</span>
+                                </div>
+                              </div>
+
+                              {/* Delete Message Button (Appears on hover) */}
+                              {(isMe || activeCommunity.creatorId === profile.uid) && !msg.isDeleted && (
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity self-center">
+                                  <button
+                                    onClick={async () => {
+                                      if (confirm("Delete this message?")) {
+                                        await deleteCommunityMessage(activeCommunity.id, msg.id);
+                                      }
+                                    }}
+                                    className="p-1.5 rounded-full text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                                    title="Delete Message"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
                               )}
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                              <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
-                                <span>{formatMessageTime(msg.createdAt)}</span>
-                              </div>
                             </div>
-
-                            {/* Delete Message Button (Appears on hover) */}
-                            {(isMe || activeCommunity.creatorId === profile.uid) && !msg.isDeleted && (
-                              <div className="opacity-0 group-hover:opacity-100 transition-opacity self-center">
-                                <button
-                                  onClick={async () => {
-                                    if (confirm("Delete this message?")) {
-                                      await deleteCommunityMessage(activeCommunity.id, msg.id);
-                                    }
-                                  }}
-                                  className="p-1.5 rounded-full text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors"
-                                  title="Delete Message"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </div>
+                      );
+                    })
+                  })()
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                      <EmptyState
+                        icon={MessageSquare}
+                        title="Welcome to the Community!"
+                        description="Be the first to post a message to this public room."
+                      />
+                    </div>
+                  )}
+                  <div ref={communityMessagesEndRef} />
+                </div>
+
+                {/* Group Message Input */}
+                <form onSubmit={handleSendCommunityMessage} className="p-3.5 sm:p-4 border-t border-white/5 bg-slate-900/95 backdrop-blur-md flex items-center gap-3">
+                  <input
+                    type="text"
+                    placeholder={`Message ${activeCommunity.name}...`}
+                    value={newCommunityMessageText}
+                    onChange={(e) => setNewCommunityMessageText(e.target.value)}
+                    className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand shadow-inner"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newCommunityMessageText.trim() || sendingCommunityMsg}
+                    className="p-3 bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity shadow-md shrink-0"
+                  >
+                    {sendingCommunityMsg ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              /* Non-Member Gated Access View */
+              <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 text-center max-w-lg mx-auto space-y-6">
+                <div className="w-20 h-20 rounded-3xl bg-slate-800/80 border border-white/10 flex items-center justify-center text-4xl shadow-xl">
+                  {activeCommunity.icon || "💬"}
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-extrabold text-white tracking-tight">{activeCommunity.name}</h3>
+                  <p className="text-slate-300 text-sm leading-relaxed">{activeCommunity.description}</p>
+                </div>
+
+                {(() => {
+                  const hasRequested = activeCommunity.pendingRequests?.includes(profile.uid);
+                  const isPrivate = activeCommunity.accessType === 'private';
+                  const isLocked = activeCommunity.accessType === 'locked';
+
+                  if (isLocked) {
+                    return (
+                      <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/20 text-rose-300 text-xs space-y-1 w-full max-w-sm">
+                        <p className="font-bold flex items-center justify-center gap-1.5 text-rose-400">
+                          <Lock className="w-4 h-4" /> Community Closed
+                        </p>
+                        <p className="text-slate-400">This community is currently locked by the administrator. New members are not accepted.</p>
                       </div>
                     );
-                  })
-                })()
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                    <EmptyState
-                      icon={MessageSquare}
-                      title="Welcome to the Community!"
-                      description="Be the first to post a message to this public room."
-                    />
-                  </div>
-                )}
-                <div ref={communityMessagesEndRef} />
-              </div>
+                  }
 
-              {/* Group Message Input */}
-              <form onSubmit={handleSendCommunityMessage} className="p-3.5 sm:p-4 border-t border-white/5 bg-slate-900/95 backdrop-blur-md flex items-center gap-3">
-                <input
-                  type="text"
-                  placeholder={`Message ${activeCommunity.name}...`}
-                  value={newCommunityMessageText}
-                  onChange={(e) => setNewCommunityMessageText(e.target.value)}
-                  className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand shadow-inner"
-                />
-                <button
-                  type="submit"
-                  disabled={!newCommunityMessageText.trim() || sendingCommunityMsg}
-                  className="p-3 bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity shadow-md shrink-0"
-                >
-                  {sendingCommunityMsg ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
-                  )}
-                </button>
-              </form>
-            </div>
+                  if (isPrivate) {
+                    if (hasRequested) {
+                      return (
+                        <div className="p-6 rounded-3xl bg-slate-800/60 border border-amber-500/30 text-center space-y-4 w-full max-w-sm shadow-xl">
+                          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto text-xl">
+                            ⏳
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-white text-base">Join Request Pending</h4>
+                            <p className="text-xs text-slate-400 mt-1">Your request is waiting for review by the community admin. You will gain access once approved.</p>
+                          </div>
+                          <button
+                            onClick={() => handleCancelJoinRequest(activeCommunity)}
+                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors border border-white/10"
+                          >
+                            Cancel Join Request
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="p-6 rounded-3xl bg-slate-800/60 border border-purple-500/30 text-center space-y-4 w-full max-w-sm shadow-xl">
+                        <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center mx-auto">
+                          <Lock className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white text-base">Private Community</h4>
+                          <p className="text-xs text-slate-400 mt-1">This community is exclusive. Submit a request to the community administrator to participate.</p>
+                        </div>
+                        <button
+                          onClick={() => handleJoinCommunity(activeCommunity)}
+                          className="w-full py-3 bg-gradient-to-r from-purple-600 to-brand text-white font-bold rounded-2xl text-xs shadow-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                        >
+                          <Lock className="w-4 h-4" /> Request to Join
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4 w-full max-w-sm">
+                      <div className="p-3 bg-brand/10 border border-brand/20 rounded-2xl text-xs text-brand">
+                        Public Community • {activeCommunity.memberCount} members already participating
+                      </div>
+                      <button
+                        onClick={() => handleJoinCommunity(activeCommunity)}
+                        className="w-full py-3 bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-extrabold rounded-2xl text-sm shadow-lg hover:opacity-90 transition-opacity"
+                      >
+                        Join Community Now
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Info & Members Side Panel Drawer */}
             {isCommunityInfoOpen && (
-              <div className="w-72 bg-slate-900 border-l border-white/5 p-5 flex flex-col gap-6 overflow-y-auto animate-in slide-in-from-right duration-200 z-20">
+              <div className="w-80 bg-slate-900 border-l border-white/5 p-5 flex flex-col gap-6 overflow-y-auto animate-in slide-in-from-right duration-200 z-20 custom-scrollbar">
                 <div className="flex items-center justify-between border-b border-white/5 pb-3">
                   <h3 className="font-bold text-white text-sm">Community Details</h3>
                   <button onClick={() => setIsCommunityInfoOpen(false)} className="text-slate-400 hover:text-white">
@@ -1371,12 +1590,136 @@ export default function MessagesPage() {
                   </div>
                   <h4 className="font-bold text-white text-base">{activeCommunity.name}</h4>
                   <p className="text-xs text-slate-400">{activeCommunity.description}</p>
+                  <div className="flex items-center justify-center gap-1.5 pt-1">
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-brand border border-brand/20">
+                      {activeCommunity.category}
+                    </span>
+                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md border flex items-center gap-1 ${
+                      activeCommunity.accessType === 'private'
+                        ? 'bg-purple-950/80 text-purple-300 border-purple-500/30'
+                        : activeCommunity.accessType === 'locked'
+                        ? 'bg-rose-950/80 text-rose-300 border-rose-500/30'
+                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/30'
+                    }`}>
+                      {activeCommunity.accessType === 'private' ? <><Lock className="w-2.5 h-2.5" /> Private</> :
+                       activeCommunity.accessType === 'locked' ? <><Lock className="w-2.5 h-2.5" /> Locked</> :
+                       <><Globe className="w-2.5 h-2.5" /> Public</>}
+                    </span>
+                  </div>
                 </div>
+
+                {/* ADMIN SETTINGS: ACCESS CONTROL (Creator & Admin only) */}
+                {(activeCommunity.creatorId === profile.uid || activeCommunity.admins?.includes(profile.uid)) && (
+                  <div className="p-3.5 bg-slate-800/40 rounded-2xl border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-brand" /> Access Control
+                      </h4>
+                      <span className="text-[10px] text-amber-400 font-bold">Admin</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <button
+                        onClick={() => handleUpdateCommunityAccess(activeCommunity, 'public')}
+                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${
+                          (activeCommunity.accessType || 'public') === 'public'
+                            ? 'bg-emerald-600 text-white shadow-md'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Public
+                      </button>
+                      <button
+                        onClick={() => handleUpdateCommunityAccess(activeCommunity, 'private')}
+                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${
+                          activeCommunity.accessType === 'private'
+                            ? 'bg-purple-600 text-white shadow-md'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Private
+                      </button>
+                      <button
+                        onClick={() => handleUpdateCommunityAccess(activeCommunity, 'locked')}
+                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${
+                          activeCommunity.accessType === 'locked'
+                            ? 'bg-rose-600 text-white shadow-md'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Locked
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-tight">
+                      {activeCommunity.accessType === 'private' ? 'New members must request and be approved.' :
+                       activeCommunity.accessType === 'locked' ? 'No new members can request or join.' :
+                       'Anyone can join with 1-click.'}
+                    </p>
+                  </div>
+                )}
+
+                {/* ADMIN SETTINGS: PENDING JOIN REQUESTS (Creator & Admin only) */}
+                {(activeCommunity.creatorId === profile.uid || activeCommunity.admins?.includes(profile.uid)) && (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>Join Requests</span>
+                        {(activeCommunity.pendingRequests?.length || 0) > 0 && (
+                          <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                            {activeCommunity.pendingRequests?.length}
+                          </span>
+                        )}
+                      </h4>
+                    </div>
+
+                    {(activeCommunity.pendingRequests?.length || 0) > 0 ? (
+                      <div className="space-y-2">
+                        {activeCommunity.pendingRequests?.map((reqUid) => {
+                          const reqUser = users[reqUid] || { uid: reqUid, fullName: "Member Applicant", avatar: "" };
+                          return (
+                            <div key={reqUid} className="p-2.5 bg-slate-800/60 rounded-xl border border-white/5 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <UserAvatar src={reqUser.avatar} name={reqUser.fullName} className="w-8 h-8 rounded-full shrink-0" textClassName="text-xs font-bold" />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-white truncate">{reqUser.fullName}</p>
+                                  {reqUser.username && (
+                                    <p className="text-[10px] text-slate-400 truncate">@{reqUser.username}</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  onClick={() => handleAcceptRequest(activeCommunity, { uid: reqUid, fullName: reqUser.fullName, username: reqUser.username, avatar: reqUser.avatar })}
+                                  className="p-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg transition-colors"
+                                  title="Accept Request"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeclineRequest(activeCommunity, reqUid)}
+                                  className="p-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg transition-colors"
+                                  title="Decline Request"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500 italic p-2 bg-slate-800/20 rounded-xl border border-white/5 text-center">
+                        No pending join requests
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {/* Member Status & Join/Leave */}
                 <div className="p-3 bg-slate-800/60 rounded-2xl border border-white/5 space-y-2 text-center">
                   <div className="text-xs text-slate-300 font-medium">
-                    {activeCommunity.members.length} Public Members
+                    {activeCommunity.members.length} Members
                   </div>
                   {activeCommunity.members.includes(profile.uid) ? (
                     <button
@@ -1390,7 +1733,7 @@ export default function MessagesPage() {
                       onClick={() => handleJoinCommunity(activeCommunity)}
                       className="w-full py-2 bg-brand text-slate-950 rounded-xl text-xs font-extrabold transition-opacity hover:opacity-90 shadow-md"
                     >
-                      Join Community
+                      {activeCommunity.accessType === 'private' ? 'Request to Join' : 'Join Community'}
                     </button>
                   )}
                 </div>

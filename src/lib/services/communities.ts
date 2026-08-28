@@ -13,6 +13,16 @@ import {
   increment
 } from 'firebase/firestore';
 
+export type CommunityAccessType = 'public' | 'private' | 'locked';
+
+export interface JoinRequestDetail {
+  uid: string;
+  fullName: string;
+  username?: string;
+  avatar?: string;
+  requestedAt?: unknown;
+}
+
 export interface Community {
   id: string;
   name: string;
@@ -25,6 +35,9 @@ export interface Community {
   memberCount: number;
   members: string[]; // List of user UIDs
   admins: string[];
+  accessType?: CommunityAccessType; // 'public' (free) | 'private' (requires approval) | 'locked' (no new members)
+  pendingRequests?: string[]; // Array of UIDs
+  pendingRequestDetails?: JoinRequestDetail[]; // Detailed requests for admin review
   lastMessage?: string;
   lastMessageTime?: unknown;
   createdAt?: unknown;
@@ -49,6 +62,7 @@ export const createCommunity = async (data: {
   description: string;
   category: string;
   icon?: string;
+  accessType?: CommunityAccessType;
   creatorId: string;
   creatorName: string;
   creatorAvatar?: string;
@@ -222,6 +236,100 @@ export const removeMemberFromCommunity = async (
     return { success: true };
   } catch (error: any) {
     console.error('Error removing member:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Request to join a private community
+export const requestToJoinCommunity = async (
+  communityId: string, 
+  user: { uid: string; fullName: string; username?: string; avatar?: string }
+) => {
+  try {
+    const communityRef = doc(db, 'communities', communityId);
+    const requestItem: JoinRequestDetail = {
+      uid: user.uid,
+      fullName: user.fullName,
+      username: user.username || '',
+      avatar: user.avatar || '',
+      requestedAt: new Date().toISOString(),
+    };
+
+    await updateDoc(communityRef, {
+      pendingRequests: arrayUnion(user.uid),
+      pendingRequestDetails: arrayUnion(requestItem),
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error requesting to join community:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Cancel a pending join request
+export const cancelJoinRequest = async (communityId: string, userId: string, requestDetail?: JoinRequestDetail) => {
+  try {
+    const communityRef = doc(db, 'communities', communityId);
+    const updates: any = {
+      pendingRequests: arrayRemove(userId),
+    };
+    if (requestDetail) {
+      updates.pendingRequestDetails = arrayRemove(requestDetail);
+    }
+    await updateDoc(communityRef, updates);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error canceling join request:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Accept a join request (Admin only)
+export const acceptJoinRequest = async (
+  communityId: string, 
+  requestUser: { uid: string; fullName?: string; username?: string; avatar?: string }
+) => {
+  try {
+    const communityRef = doc(db, 'communities', communityId);
+    
+    // Add to members and remove from pending
+    await updateDoc(communityRef, {
+      members: arrayUnion(requestUser.uid),
+      memberCount: increment(1),
+      pendingRequests: arrayRemove(requestUser.uid),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error accepting join request:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Decline a join request (Admin only)
+export const declineJoinRequest = async (communityId: string, userId: string) => {
+  try {
+    const communityRef = doc(db, 'communities', communityId);
+    await updateDoc(communityRef, {
+      pendingRequests: arrayRemove(userId),
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error declining join request:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Update community access settings (Public, Private, Locked)
+export const updateCommunityAccess = async (communityId: string, accessType: CommunityAccessType) => {
+  try {
+    const communityRef = doc(db, 'communities', communityId);
+    await updateDoc(communityRef, {
+      accessType,
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating community access:', error);
     return { success: false, error: error.message };
   }
 };

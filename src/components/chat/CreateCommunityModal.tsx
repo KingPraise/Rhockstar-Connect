@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { X, Users, Sparkles, MessageSquare, Loader2, Compass, ChevronDown, Tag } from "lucide-react";
+import { X, Users, Sparkles, MessageSquare, Loader2, Compass, ChevronDown, Tag, Lock, Globe, Shield } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { createCommunity } from "@/lib/services/communities";
+import { createCommunity, CommunityAccessType } from "@/lib/services/communities";
 import toast from "react-hot-toast";
 
 interface CreateCommunityModalProps {
@@ -21,6 +21,7 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("General");
   const [icon, setIcon] = useState("💬");
+  const [accessType, setAccessType] = useState<CommunityAccessType>("public");
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -43,6 +44,7 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
         description: description.trim(),
         category,
         icon,
+        accessType,
         creatorId: profile.uid,
         creatorName: profile.fullName,
         creatorAvatar: profile.avatar || "",
@@ -144,6 +146,43 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
             </div>
           </div>
 
+                    {/* Access Type Selector */}
+          <div className="space-y-2 text-left">
+            <label className="text-xs font-semibold text-slate-400">Membership Access Control</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => setAccessType("public")}
+                className={`p-3 rounded-2xl border text-left flex items-start gap-3 transition-all ${
+                  accessType === "public"
+                    ? "bg-brand/10 border-brand text-white shadow-md shadow-brand/10"
+                    : "bg-slate-800/60 border-white/5 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                }`}
+              >
+                <Globe className={`w-5 h-5 mt-0.5 shrink-0 ${accessType === "public" ? "text-brand" : "text-slate-400"}`} />
+                <div>
+                  <h4 className="text-xs font-bold text-white">Public / Open Access</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Anyone can join and chat instantly</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAccessType("private")}
+                className={`p-3 rounded-2xl border text-left flex items-start gap-3 transition-all ${
+                  accessType === "private"
+                    ? "bg-purple-500/10 border-purple-500 text-white shadow-md shadow-purple-500/10"
+                    : "bg-slate-800/60 border-white/5 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                }`}
+              >
+                <Lock className={`w-5 h-5 mt-0.5 shrink-0 ${accessType === "private" ? "text-purple-400" : "text-slate-400"}`} />
+                <div>
+                  <h4 className="text-xs font-bold text-white">Private / By Approval</h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5 leading-tight">Admin must approve each join request</p>
+                </div>
+              </button>
+            </div>
+          </div>
           {/* Description */}
           <div>
             <label className="block text-xs font-semibold text-slate-400 mb-1">Description</label>
