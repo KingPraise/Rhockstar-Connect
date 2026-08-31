@@ -163,11 +163,11 @@ export default function PostJobPage() {
                   onChange={handleChange}
                   className="neo-input pl-12 pr-10 text-sm cursor-pointer appearance-none"
                 >
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Contract">Contract</option>
-                  <option value="Remote">Remote</option>
-                  <option value="Internship">Internship</option>
+                  <option value="Full-time" className="bg-slate-900 text-white">Full-time</option>
+                  <option value="Part-time" className="bg-slate-900 text-white">Part-time</option>
+                  <option value="Contract" className="bg-slate-900 text-white">Contract</option>
+                  <option value="Remote" className="bg-slate-900 text-white">Remote</option>
+                  <option value="Internship" className="bg-slate-900 text-white">Internship</option>
                 </select>
                   <ChevronDown className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
