@@ -47,6 +47,14 @@ export interface UserProfile {
   referralCount?: number;
   referredFriends?: Array<{ uid: string; name: string; joinedAt: string }>;
   claimedRewards?: string[];
+  
+  // Gamification Fields
+  stardomXP?: number;
+  stardomRank?: string;
+  streakCount?: number;
+  longestStreak?: number;
+  lastActiveDate?: string;
+  specialRoles?: string[];
 }
 
 interface AuthState {

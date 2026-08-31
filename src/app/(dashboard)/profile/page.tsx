@@ -12,8 +12,9 @@ import { sendConnectionRequest } from "@/lib/services/connections";
 import { followUser, unfollowUser, listenToFollowState } from "@/lib/services/follows";
 import { calculateProfileProgress } from "@/lib/utils/profileProgress";
 import Link from "next/link";
-import { Briefcase } from "lucide-react";
 import toast from "react-hot-toast";
+import StardomBadge from "@/components/gamification/StardomBadge";
+import StreakBadge from "@/components/gamification/StreakBadge";
 
 import { getThemeClasses } from "@/lib/constants/themes";
 
@@ -298,7 +299,10 @@ export default function ProfilePage() {
         </div>
 
         {/* Right Column (Sidebar Content) */}
-        <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-6">
+          {/* Stardom Status Card */}
+          <StardomBadge xp={activeProfile?.stardomXP || 0} variant="full-card" />
+
           {isOwnProfile && (
             <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl">
               <div className="absolute top-0 left-0 w-1 h-full bg-brand"></div>

@@ -24,9 +24,15 @@ import {
   JoinRequestDetail
 } from "@/lib/services/communities";
 import CreateCommunityModal from "@/components/chat/CreateCommunityModal";
+import StardomBadge from "@/components/gamification/StardomBadge";
+import StreakBadge from "@/components/gamification/StreakBadge";
+import LevelUpModal from "@/components/gamification/LevelUpModal";
+import LeaderboardView from "@/components/gamification/LeaderboardView";
+import { awardUserXP, checkDailyStreak, StardomRank } from "@/lib/services/gamification";
+
 import { 
   Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, ChevronLeft, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, 
-  Globe, Users, Compass, Plus, Lock, Shield, Sparkles, ShieldCheck, UserX, Crown, MessageSquare 
+  Globe, Users, Compass, Plus, Lock, Shield, Sparkles, ShieldCheck, UserX, Crown, MessageSquare, Trophy, Flame 
 } from "lucide-react";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -44,6 +50,17 @@ export default function MessagesPage() {
   const searchParams = useSearchParams();
   const targetUserParam = searchParams.get('user') || searchParams.get('uid');
   
+  // Check and maintain daily streak on mount
+  useEffect(() => {
+    if (profile?.uid) {
+      checkDailyStreak(profile.uid).then((res) => {
+        if (res.isNewDay && res.streakCount > 1) {
+          toast.success(`🔥 ${res.streakCount} Day Streak Active! Keep chatting to level up!`, { icon: '🔥' });
+        }
+      });
+    }
+  }, [profile?.uid]);
+
   // DMs State
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
@@ -58,7 +75,8 @@ export default function MessagesPage() {
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
   // Communities State
-  const [messagesMode, setMessagesMode] = useState<'direct' | 'communities'>('direct');
+  const [messagesMode, setMessagesMode] = useState<'direct' | 'communities' | 'leaderboard'>('direct');
+  const [leveledUpRank, setLeveledUpRank] = useState<StardomRank | null>(null);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [activeCommunity, setActiveCommunity] = useState<Community | null>(null);
   const [communityMessages, setCommunityMessages] = useState<CommunityMessage[]>([]);
@@ -322,6 +340,13 @@ export default function MessagesPage() {
       replyingTo?.id,
       replyingTo?.text
     );
+
+    // Award message XP with smart rate-limiting
+    awardUserXP(profile.uid, 'send_message').then((res) => {
+      if (res.leveledUp && res.newRank) {
+        setLeveledUpRank(res.newRank);
+      }
+    });
   };
 
   // Send Community Message
@@ -342,6 +367,13 @@ export default function MessagesPage() {
         profile.avatar || "",
         'text'
       );
+
+      // Award community message XP
+      awardUserXP(profile.uid, 'send_message').then((res) => {
+        if (res.leveledUp && res.newRank) {
+          setLeveledUpRank(res.newRank);
+        }
+      });
     } catch (err: any) {
       console.error("Error sending community message:", err);
       toast.error("Failed to send message");
@@ -550,25 +582,42 @@ export default function MessagesPage() {
             )}
           </div>
 
-          {/* Mode Switcher: DMs vs Public Communities */}
+          {/* User Live Stardom Pill & Streak */}
+          <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-slate-950/80 border border-white/5">
+            <StardomBadge xp={profile.stardomXP || 0} variant="progress-pill" className="w-full" />
+            {profile.streakCount && profile.streakCount > 0 ? (
+              <StreakBadge streakCount={profile.streakCount} showMultiplier={true} size="sm" />
+            ) : null}
+          </div>
+
+          {/* Mode Switcher: DMs vs Public Communities vs Leaderboard */}
           <div className="flex bg-slate-950 p-1 rounded-2xl border border-white/10 gap-1">
             <button
               onClick={() => { setMessagesMode('direct'); setActiveCommunity(null); }}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
                 messagesMode === 'direct' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
-              Direct Chats
+              <MessageSquare className="w-3 h-3" />
+              Direct
             </button>
             <button
               onClick={() => { setMessagesMode('communities'); setActiveChat(null); }}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
                 messagesMode === 'communities' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Globe className="w-3.5 h-3.5" />
-              Communities 🌐
+              <Globe className="w-3 h-3" />
+              Rooms 🌐
+            </button>
+            <button
+              onClick={() => { setMessagesMode('leaderboard'); setActiveChat(null); setActiveCommunity(null); }}
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
+                messagesMode === 'leaderboard' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Trophy className="w-3 h-3" />
+              Ranks ⭐
             </button>
           </div>
 
@@ -1415,15 +1464,21 @@ export default function MessagesPage() {
                                   : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"
                               }`}>
                                 {!isMe && (
-                                  <div className="flex items-center justify-between gap-2 mb-0.5">
+                                  <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                                     <span className="text-xs font-bold text-brand truncate flex items-center gap-1">
                                       {msg.senderName}
                                       {isCreator && (
-                                        <span title="Creator">
+                                        <span title="Community Creator">
                                           <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
                                         </span>
                                       )}
                                     </span>
+                                    {users[msg.senderId]?.stardomXP !== undefined && (
+                                      <StardomBadge xp={users[msg.senderId]?.stardomXP || 0} variant="compact" />
+                                    )}
+                                    {users[msg.senderId]?.streakCount && (users[msg.senderId]?.streakCount || 0) > 0 ? (
+                                      <StreakBadge streakCount={users[msg.senderId]?.streakCount || 0} size="sm" />
+                                    ) : null}
                                   </div>
                                 )}
                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
@@ -1759,8 +1814,15 @@ export default function MessagesPage() {
         </div>
       )}
 
-      {/* VIEW 3: EMPTY STATE WHEN NO CHAT IS OPEN */}
-      {!activeChat && !activeCommunity && (
+      {/* VIEW 3: LEADERBOARD MODE */}
+      {messagesMode === 'leaderboard' && (
+        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+          <LeaderboardView />
+        </div>
+      )}
+
+      {/* VIEW 4: EMPTY STATE WHEN NO CHAT IS OPEN */}
+      {messagesMode !== 'leaderboard' && !activeChat && !activeCommunity && (
         <div className="hidden md:flex flex-1 flex-col items-center justify-center neo-card bg-slate-900/60 border border-white/5 rounded-3xl p-8 text-center shadow-2xl">
           <div className="w-20 h-20 rounded-3xl bg-brand/10 text-brand flex items-center justify-center mb-4 border border-brand/20 shadow-inner">
             <Globe className="w-10 h-10" />
@@ -1799,6 +1861,13 @@ export default function MessagesPage() {
         }}
       />
 
+
+      {/* Stardom Level Up Celebration Modal */}
+      <LevelUpModal
+        isOpen={!!leveledUpRank}
+        onClose={() => setLeveledUpRank(null)}
+        newRank={leveledUpRank || 'Explorer'}
+      />
     </div>
   );
 }

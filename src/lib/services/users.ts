@@ -37,6 +37,11 @@ export interface UserBasic {
   lastLogin?: any;
   role?: 'user' | 'admin' | 'employer';
   profileTheme?: string;
+  stardomXP?: number;
+  stardomRank?: string;
+  streakCount?: number;
+  longestStreak?: number;
+  lastActiveDate?: string;
 }
 
 export const getAllUsers = async (excludeAdmins = true): Promise<{ success: boolean; users?: UserBasic[]; error?: string }> => {
@@ -74,6 +79,10 @@ export const getAllUsers = async (excludeAdmins = true): Promise<{ success: bool
           connections: data.connections || 0,
           lastLogin: data.lastSeen || data.lastLogin,
           role: data.role,
+          stardomXP: Number(data.stardomXP || 0),
+          stardomRank: data.stardomRank || 'Explorer',
+          streakCount: Number(data.streakCount || 0),
+          longestStreak: Number(data.longestStreak || 0),
         });
       }
     });

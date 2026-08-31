@@ -9,6 +9,8 @@ import { Crown } from "lucide-react";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import { useLightboxStore } from "@/store/useLightboxStore";
 import toast from "react-hot-toast";
+import StardomBadge from "@/components/gamification/StardomBadge";
+import StreakBadge from "@/components/gamification/StreakBadge";
 
 import { getThemeClasses } from "@/lib/constants/themes";
 
@@ -216,6 +218,11 @@ export default function ProfileHeader({
                   <Crown className="w-3 h-3" /> Premium Verified
                 </span>
               </div>
+            )}
+
+            <StardomBadge xp={profile.stardomXP || 0} variant="badge" />
+            {profile.streakCount && profile.streakCount > 0 && (
+              <StreakBadge streakCount={profile.streakCount} size="sm" showMultiplier={true} />
             )}
           </div>
           
