@@ -14,6 +14,7 @@
     "date-fns": "^4.4.0",
     "firebase": "^12.16.0",
     "firebase-admin": "^14.2.0",
+    "flutterwave-react-v3": "^1.3.3",
     "lucide-react": "^1.24.0",
     "next": "16.2.10",
     "nextjs-toploader": "^3.9.17",

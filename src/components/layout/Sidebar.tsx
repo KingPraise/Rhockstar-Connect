@@ -46,7 +46,7 @@ export default function Sidebar() {
   };
 
   const primaryNavItems = [
-    { name: "Feed", href: "/feed", icon: Home },
+    { name: "Home", href: "/feed", icon: Home },
     { name: "Network", href: "/network", icon: Users },
     { name: "Jobs", href: "/jobs", icon: Briefcase },
     ...(isEmployer ? [{ name: "Employer Portal", href: "/employer", icon: Building2 }] : []),

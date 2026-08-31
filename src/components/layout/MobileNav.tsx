@@ -13,7 +13,7 @@ export default function MobileNav() {
   
 
   const navItems = [
-    { name: "Feed", href: "/feed", icon: Home },
+    { name: "Home", href: "/feed", icon: Home },
     { name: "Dating", href: "/dating", icon: Heart, isSpecial: true },
     { name: "Jobs", href: "/jobs", icon: Briefcase },
     { name: "Messages", href: "/messages", icon: MessageSquare },

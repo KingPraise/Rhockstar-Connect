@@ -97,7 +97,7 @@ export default function MobileHeader() {
 
   const socialLinks = [
     { name: "Search", href: "/search", icon: Search },
-    { name: "Feed", href: "/feed", icon: Home },
+    { name: "Home", href: "/feed", icon: Home },
     { name: "Network", href: "/network", icon: Users },
     { name: "Messages", href: "/messages", icon: MessageSquare },
     { name: "Dating", href: "/dating", icon: Heart },
