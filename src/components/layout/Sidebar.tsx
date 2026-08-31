@@ -130,6 +130,7 @@ export default function Sidebar() {
           onClick={() => setIsCreateOpen(true)}
           className={`w-full flex items-center ${isMinimized ? "justify-center px-0" : "gap-3 px-5"} py-3 mt-3 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg transition-all active:scale-95 group`}
           title="Create New Content"
+          id="tour-create-btn"
         >
           <div className="p-1 rounded-lg bg-white/20 text-white group-hover:scale-110 transition-transform">
             <Plus className="w-4 h-4" />

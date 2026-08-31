@@ -74,11 +74,31 @@ export default function OnboardingTour() {
         target: isMobile ? '#tour-mobile-messaging-nav' : '#tour-messaging-nav',
         content: (
           <div className="text-left space-y-1">
-            <h3 className="font-bold text-white">Direct Messaging</h3>
-            <p className="text-slate-300 text-sm">Send real-time messages, voice notes, and media to any professional or connection on Rhockstar Connect.</p>
+            <h3 className="font-bold text-white">Communities & Direct Messaging</h3>
+            <p className="text-slate-300 text-sm">Send real-time messages, join public community rooms, and connect with peers across the globe.</p>
           </div>
         ),
         placement: isMobile ? 'top' : 'right',
+      },
+      {
+        target: isMobile ? '#tour-mobile-messaging-nav' : '#tour-messaging-nav',
+        content: (
+          <div className="text-left space-y-1">
+            <h3 className="font-bold text-white">Stardom Ranks & Streaks ⭐</h3>
+            <p className="text-slate-300 text-sm">Earn XP by participating in chats, build your daily streak 🔥, and climb the Leaderboard to become a Rhockstar!</p>
+          </div>
+        ),
+        placement: isMobile ? 'top' : 'right',
+      },
+      {
+        target: isMobile ? '#tour-mobile-create-btn' : '#tour-create-btn',
+        content: (
+          <div className="text-left space-y-1">
+            <h3 className="font-bold text-white">Quick Create Menu</h3>
+            <p className="text-slate-300 text-sm">Instantly publish posts, launch new chat communities, or post job listings (Employers) from anywhere.</p>
+          </div>
+        ),
+        placement: isMobile ? 'bottom' : 'right',
       },
       {
         target: isMobile ? '#tour-mobile-dating-nav' : '#tour-dating-nav',
@@ -102,9 +122,13 @@ export default function OnboardingTour() {
       },
     ]);
 
+    // Get the latest auth state to check if user is brand new (e.g. less than 1 hour old or has 0 XP)
+    // Actually, setting local storage ON START is safer to prevent endless reloading loops.
     if (!hasCompletedTour && pathname !== '/login' && pathname !== '/register' && pathname !== '/') {
       const timer = setTimeout(() => {
         setRun(true);
+        // Persist immediately when the tour is launched
+        localStorage.setItem('rhockstar_onboarding_completed', 'true');
         sessionStorage.setItem('rhockstar_onboarding_dismissed', 'true');
       }, 1000);
       return () => clearTimeout(timer);
