@@ -65,7 +65,7 @@ const PaymentButton = ({ tier, profile, currency, formatPrice, onSuccess, disabl
 
 export default function PremiumPage() {
   const { profile, setProfile } = useAuthStore();
-  const { formatPrice } = useCurrencyStore();
+  const { formatPrice, currency } = useCurrencyStore();
   const [processingTier, setProcessingTier] = useState<'pro' | 'elite' | null>(null);
 
   const handleSubscribe = async (tier: 'pro' | 'elite') => {
