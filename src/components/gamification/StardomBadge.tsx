@@ -2,7 +2,9 @@
 
 import React from "react";
 import { StardomRank, calculateStardom, STARDOM_TIERS } from "@/lib/services/gamification";
-import { Sparkles, Crown, Zap, Compass, Link as LinkIcon, Megaphone, Rocket, Star } from "lucide-react";
+import { Sparkles, Crown, Zap, Compass, Link as LinkIcon, Megaphone, Rocket, Star, HelpCircle } from "lucide-react";
+import { useState } from "react";
+import StardomInfoModal from "./StardomInfoModal";
 
 interface StardomBadgeProps {
   xp?: number;
@@ -44,6 +46,7 @@ export default function StardomBadge({
   showIcon = true,
   showPercent = true,
 }: StardomBadgeProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const stardom = calculateStardom(xp);
   const activeTier = rank 
     ? STARDOM_TIERS.find((t) => t.rank === rank) || stardom.currentTier
@@ -90,7 +93,16 @@ export default function StardomBadge({
         {/* Glow effect */}
         <div className={`absolute -right-10 -top-10 w-36 h-36 rounded-full bg-gradient-to-br ${activeTier.bgGradient} opacity-15 blur-2xl pointer-events-none`} />
 
+        <StardomInfoModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+
         <div className="flex items-start justify-between">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="absolute top-3 right-3 p-1.5 text-slate-400 hover:text-white rounded-full hover:bg-slate-800 transition-colors z-10"
+            title="How XP works"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
           <div className="flex items-center gap-3">
             <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${activeTier.bgGradient} flex items-center justify-center text-white text-xl shadow-lg border border-white/20`}>
               <StardomIcon rank={activeTier.rank} className="w-6 h-6" />

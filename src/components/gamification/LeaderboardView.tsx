@@ -5,11 +5,13 @@ import { subscribeToLeaderboard, LeaderboardUser } from "@/lib/services/gamifica
 import StardomBadge from "./StardomBadge";
 import StreakBadge from "./StreakBadge";
 import UserAvatar from "@/components/ui/UserAvatar";
-import { Trophy, Crown, Medal, Sparkles, Loader2 } from "lucide-react";
+import { Trophy, Crown, Medal, Sparkles, Loader2, HelpCircle } from "lucide-react";
+import StardomInfoModal from "./StardomInfoModal";
 
 export default function LeaderboardView() {
   const [leaders, setLeaders] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeToLeaderboard((list) => {
@@ -43,6 +45,12 @@ export default function LeaderboardView() {
           <p className="text-xs text-slate-300 max-w-md leading-relaxed">
             The most active, impactful, and engaged members across all Rhockstar-Connect communities.
           </p>
+          <button 
+            onClick={() => setIsInfoOpen(true)}
+            className="mt-3 px-4 py-1.5 bg-brand/20 hover:bg-brand/30 text-brand border border-brand/30 rounded-full text-xs font-bold transition-colors flex items-center gap-2 w-fit mx-auto sm:mx-0"
+          >
+            <HelpCircle className="w-3.5 h-3.5" /> How XP Works
+          </button>
         </div>
 
         <div className="w-16 h-16 rounded-3xl bg-brand/10 border border-brand/30 flex items-center justify-center text-3xl shadow-inner shrink-0">
@@ -133,6 +141,7 @@ export default function LeaderboardView() {
           ))}
         </div>
       )}
+      <StardomInfoModal isOpen={isInfoOpen} onClose={() => setIsInfoOpen(false)} />
     </div>
   );
 }
