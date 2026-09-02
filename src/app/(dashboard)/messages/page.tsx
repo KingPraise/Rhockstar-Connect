@@ -610,7 +610,7 @@ export default function MessagesPage() {
               }`}
             >
               <Globe className="w-3 h-3" />
-              Communities 🌐
+              Community 🌐
             </button>
             <button
               onClick={() => { setMessagesMode('leaderboard'); setActiveChat(null); setActiveCommunity(null); }}
@@ -1377,11 +1377,11 @@ export default function MessagesPage() {
         </div>
       )}
 
-      {/* VIEW 2: ACTIVE PUBLIC COMMUNITY CHAT ROOM */}
+      {/* VIEW 2: ACTIVE PUBLIC COMMUNITY CHAT */}
       {messagesMode === 'communities' && activeCommunity && (
         <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
           
-          {/* Community Room Header */}
+          {/* Community Header */}
           <div className="p-4 sm:p-5 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <button 

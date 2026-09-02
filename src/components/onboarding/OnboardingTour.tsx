@@ -75,7 +75,7 @@ export default function OnboardingTour() {
         content: (
           <div className="text-left space-y-1">
             <h3 className="font-bold text-white">Communities & Direct Messaging</h3>
-            <p className="text-slate-300 text-sm">Send real-time messages, join public community rooms, and connect with peers across the globe.</p>
+            <p className="text-slate-300 text-sm">Send real-time messages, join public communities, and connect with peers across the globe.</p>
           </div>
         ),
         placement: isMobile ? 'top' : 'right',
