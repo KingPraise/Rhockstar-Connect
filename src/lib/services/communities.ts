@@ -8,6 +8,7 @@ import {
   serverTimestamp,
   doc,
   updateDoc,
+  deleteDoc,
   arrayUnion,
   arrayRemove,
   increment

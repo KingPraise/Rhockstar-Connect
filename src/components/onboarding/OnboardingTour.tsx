@@ -71,7 +71,7 @@ export default function OnboardingTour() {
         placement: isMobile ? 'top' : 'right',
       },
       {
-        target: isMobile ? '#tour-mobile-messaging-nav' : '#tour-messaging-nav',
+        target: isMobile ? '#tour-mobile-messages-nav' : '#tour-messages-nav',
         content: (
           <div className="text-left space-y-1">
             <h3 className="font-bold text-white">Communities & Direct Messaging</h3>
@@ -81,7 +81,7 @@ export default function OnboardingTour() {
         placement: isMobile ? 'top' : 'right',
       },
       {
-        target: isMobile ? '#tour-mobile-messaging-nav' : '#tour-messaging-nav',
+        target: isMobile ? '#tour-mobile-messages-nav' : '#tour-messages-nav',
         content: (
           <div className="text-left space-y-1">
             <h3 className="font-bold text-white">Stardom Ranks & Streaks ⭐</h3>
