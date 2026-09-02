@@ -21,7 +21,9 @@ import {
   Community, 
   CommunityMessage,
   CommunityAccessType,
-  JoinRequestDetail
+  JoinRequestDetail,
+  deleteCommunity,
+  updateCommunity
 } from "@/lib/services/communities";
 import CreateCommunityModal from "@/components/chat/CreateCommunityModal";
 import StardomBadge from "@/components/gamification/StardomBadge";
@@ -608,7 +610,7 @@ export default function MessagesPage() {
               }`}
             >
               <Globe className="w-3 h-3" />
-              Rooms 🌐
+              Communities 🌐
             </button>
             <button
               onClick={() => { setMessagesMode('leaderboard'); setActiveChat(null); setActiveCommunity(null); }}
@@ -1215,7 +1217,9 @@ export default function MessagesPage() {
                           />
                         )}
 
-                        <div className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}>
+                        <div 
+  onClick={() => !isEditingThis && !msg.isDeleted && setOpenMessageMenuId(isMenuOpen ? null : msg.id)}
+  className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}>
                           {/* Reply preview */}
                           {msg.replyToText && (
                             <div className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-1.5 opacity-80">
@@ -1305,8 +1309,20 @@ export default function MessagesPage() {
                                   </button>
                                 )}
                                 <button
+                                  onClick={() => { navigator.clipboard.writeText(msg.text); toast.success("Copied to clipboard"); setOpenMessageMenuId(null); }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copy
+                                </button>
+                                <button
+                                  onClick={() => { toast.success("Forwarding coming soon!"); setOpenMessageMenuId(null); }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg> Forward
+                                </button>
+                                <button
                                   onClick={async () => {
-                                    if (confirm(isMe ? "Delete message for everyone?" : "Delete message for you?")) {
+                                    if (window.confirm(isMe ? "Delete message for everyone?" : "Delete message for you?")) {
                                       await deleteMessage(activeChat.id, msg.id, profile.uid, isMe ? 'forEveryone' : 'forMe');
                                       toast.success("Message deleted");
                                     }
@@ -1331,12 +1347,24 @@ export default function MessagesPage() {
 
           {/* DM Input Bar */}
           <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-slate-900/90 flex items-center gap-3">
-            <input
-              type="text"
+            <textarea
+              rows={1}
               placeholder="Write a message..."
               value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand"
+              onChange={(e) => {
+                 setNewMessage(e.target.value);
+                 e.target.style.height = 'auto';
+                 e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                 if (!e.target.value) e.target.style.height = 'auto';
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  handleSendMessage(e as any);
+                  e.currentTarget.style.height = 'auto';
+                }
+              }}
+              className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand resize-none min-h-[46px] max-h-[150px] overflow-y-auto"
             />
             <button
               type="submit"
@@ -1514,7 +1542,7 @@ export default function MessagesPage() {
                       <EmptyState
                         icon={MessageSquare}
                         title="Welcome to the Community!"
-                        description="Be the first to post a message to this public room."
+                        description="Be the first to post a message to this public community."
                       />
                     </div>
                   )}
@@ -1523,12 +1551,24 @@ export default function MessagesPage() {
 
                 {/* Group Message Input */}
                 <form onSubmit={handleSendCommunityMessage} className="p-3.5 sm:p-4 border-t border-white/5 bg-slate-900/95 backdrop-blur-md flex items-center gap-3">
-                  <input
-                    type="text"
+                  <textarea
+                    rows={1}
                     placeholder={`Message ${activeCommunity.name}...`}
                     value={newCommunityMessageText}
-                    onChange={(e) => setNewCommunityMessageText(e.target.value)}
-                    className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand shadow-inner"
+                    onChange={(e) => {
+                       setNewCommunityMessageText(e.target.value);
+                       e.target.style.height = 'auto';
+                       e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                       if (!e.target.value) e.target.style.height = 'auto';
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        handleSendCommunityMessage(e as any);
+                        e.currentTarget.style.height = 'auto';
+                      }
+                    }}
+                    className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand shadow-inner resize-none min-h-[46px] max-h-[150px] overflow-y-auto"
                   />
                   <button
                     type="submit"

@@ -333,3 +333,28 @@ export const updateCommunityAccess = async (communityId: string, accessType: Com
     return { success: false, error: error.message };
   }
 };
+
+
+// Update community details (Admin only)
+export const updateCommunity = async (communityId: string, updates: Partial<Community>) => {
+  try {
+    const communityRef = doc(db, 'communities', communityId);
+    await updateDoc(communityRef, updates);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error updating community:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Delete community (Admin only)
+export const deleteCommunity = async (communityId: string) => {
+  try {
+    const communityRef = doc(db, 'communities', communityId);
+    await deleteDoc(communityRef);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Error deleting community:', error);
+    return { success: false, error: error.message };
+  }
+};

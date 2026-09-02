@@ -71,7 +71,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
     <>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-md max-h-[80vh] sm:max-h-[85vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 custom-scrollbar">
+          <div className="relative w-full max-w-3xl max-h-[80vh] sm:max-h-[85vh] overflow-y-auto bg-slate-900 border border-slate-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 custom-scrollbar">
             {/* Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 pb-4 bg-slate-900/95 backdrop-blur-md -mx-4 sm:-mx-6 px-4 sm:px-6 -mt-4 sm:-mt-6 pt-4 sm:pt-6 rounded-t-3xl">
               <div className="flex items-center gap-2.5">
@@ -156,7 +156,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
                 </div>
                 <div>
                   <h4 className="font-bold text-white text-sm group-hover:text-amber-300">Create Community</h4>
-                  <p className="text-xs text-slate-400">Launch a public chat room inside the Messages page</p>
+                  <p className="text-xs text-slate-400">Launch a public community inside the Messages page</p>
                 </div>
               </button>
 

@@ -136,7 +136,7 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-5xl md:max-w-[90vw] bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-white/5 bg-slate-900/90">
