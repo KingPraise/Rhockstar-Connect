@@ -1395,8 +1395,8 @@ export default function MessagesPage() {
                 {activeCommunity.icon || "💬"}
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base sm:text-lg font-bold text-white truncate">{activeCommunity.name}</h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm sm:text-base font-bold text-white">{activeCommunity.name}</h2>
                   <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-brand border border-brand/20 shrink-0">
                     {activeCommunity.category}
                   </span>
