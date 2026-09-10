@@ -38,7 +38,7 @@ export default function Home() {
         </div>
       </header>
         
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 pt-40 pb-20">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 pt-48 sm:pt-56 pb-20">
         {/* ================= HOME ================= */}
         <section id="home" className="grid lg:grid-cols-2 gap-16 items-center">
           <div className="space-y-8 relative">
