@@ -13,7 +13,6 @@ import {
   Bell, 
   Settings, 
   Heart,
-  LogOut,
   Sparkles,
   TrendingUp,
   ChevronLeft,
@@ -26,7 +25,6 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
-import { logoutUser } from "@/lib/auth";
 import QuickCreateModal from "@/components/layout/QuickCreateModal";
 
 export default function Sidebar() {
@@ -39,11 +37,6 @@ export default function Sidebar() {
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
   const isEmployer = (profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (profile?.subscriptionTier === 'elite' || profile?.role === 'admin');
 
-  const handleLogout = async () => {
-    await logoutUser();
-    logout();
-    window.location.href = '/login';
-  };
 
   const primaryNavItems = [
     { name: "Home", href: "/feed", icon: Home },
@@ -261,15 +254,6 @@ export default function Sidebar() {
           </Link>
         )}
 
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className={`w-full p-3 rounded-xl flex items-center ${isMinimized ? "justify-center" : "gap-3"} text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors border border-transparent hover:border-red-500/20`}
-          title={isMinimized ? "Log Out" : undefined}
-        >
-          <LogOut className="w-5 h-5 text-red-400 shrink-0" />
-          {!isMinimized && <span className="font-semibold text-sm">Log Out</span>}
-        </button>
       </div>
 
       {/* Quick Create Action Modal */}
