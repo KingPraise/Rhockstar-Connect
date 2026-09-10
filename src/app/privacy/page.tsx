@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Lock, ShieldCheck } from "lucide-react";
 
@@ -20,7 +20,7 @@ export default function PrivacyPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-36 sm:pt-40 pb-20">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-48 sm:pt-56 pb-20">
         {/* Page Header */}
         <div className="neo-card p-6 sm:p-10 mb-10 bg-slate-900/40 border-white/5 backdrop-blur-md relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-brand to-brand-purple" />
