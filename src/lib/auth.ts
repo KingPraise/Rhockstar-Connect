@@ -130,36 +130,41 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
 
       return { user: userCredential.user, error: null };
     } catch (authErr: any) {
-      // Check if user recently reset password directly in Firestore
-      const usersRef = collection(db, "users");
-      let q = query(usersRef, where("email", "==", emailToUse.toLowerCase()));
-      let snapshot = await getDocs(q);
+      try {
+        // Check if user recently reset password directly in Firestore
+        const usersRef = collection(db, "users");
+        let q = query(usersRef, where("email", "==", emailToUse.toLowerCase()));
+        let snapshot = await getDocs(q);
 
-      if (snapshot.empty) {
-        q = query(usersRef, where("username", "==", inputClean.toLowerCase().replace('@', '')));
-        snapshot = await getDocs(q);
-      }
-
-      if (!snapshot.empty) {
-        const userDoc = snapshot.docs[0];
-        const userData = userDoc.data();
-
-        if (userData.updatedPasswordHint && userData.updatedPasswordHint === password) {
-          const fakeUser: any = {
-            uid: userDoc.id,
-            email: userData.email,
-            displayName: userData.fullName
-          };
-
-          const updateData: any = { lastLogin: serverTimestamp() };
-          if (userData.email?.toLowerCase() === "elijah@rhockstarconnect.com") {
-            updateData.role = "admin";
-          }
-          await setDoc(doc(db, "users", userDoc.id), updateData, { merge: true });
-          await syncAuthStore(userDoc.id, fakeUser);
-
-          return { user: fakeUser, error: null };
+        if (snapshot.empty) {
+          q = query(usersRef, where("username", "==", inputClean.toLowerCase().replace('@', '')));
+          snapshot = await getDocs(q);
         }
+
+        if (!snapshot.empty) {
+          const userDoc = snapshot.docs[0];
+          const userData = userDoc.data();
+
+          if (userData.updatedPasswordHint && userData.updatedPasswordHint === password) {
+            const fakeUser: any = {
+              uid: userDoc.id,
+              email: userData.email,
+              displayName: userData.fullName
+            };
+
+            const updateData: any = { lastLogin: serverTimestamp() };
+            if (userData.email?.toLowerCase() === "elijah@rhockstarconnect.com") {
+              updateData.role = "admin";
+            }
+            await setDoc(doc(db, "users", userDoc.id), updateData, { merge: true });
+            await syncAuthStore(userDoc.id, fakeUser);
+
+            return { user: fakeUser, error: null };
+          }
+        }
+      } catch (firestoreErr) {
+        // Ignore firestore permission errors so we can throw the original auth error
+        console.warn("Could not check fallback password hint:", firestoreErr);
       }
 
       throw authErr;
