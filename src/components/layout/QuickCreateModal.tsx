@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, FileText, Image as ImageIcon, Briefcase, Users, BarChart2, Sparkles, Lock, Megaphone } from "lucide-react";
 import { useRouter } from "next/navigation";
 import CreateCommunityModal from "@/components/chat/CreateCommunityModal";
@@ -18,9 +19,15 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
   const { profile } = useAuthStore();
   const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
   const [isAdModalOpen, setIsAdModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
 
+  if (!mounted) return null;
   if (!isOpen && !isCommunityModalOpen && !isAdModalOpen) return null;
 
   const handleAction = (action: string) => {
@@ -67,7 +74,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
     }
   };
 
-  return (
+  return createPortal(
     <>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
@@ -207,6 +214,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
         isOpen={isAdModalOpen}
         onClose={() => setIsAdModalOpen(false)}
       />
-    </>
+    </>,
+    document.body
   );
 }
