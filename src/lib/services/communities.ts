@@ -55,6 +55,9 @@ export interface CommunityMessage {
   mediaUrl?: string;
   createdAt: unknown;
   isDeleted?: boolean;
+  replyToId?: string;
+  replyToText?: string;
+  replyToSenderName?: string;
 }
 
 // Create a new public community
@@ -159,11 +162,14 @@ export const sendCommunityMessage = async (
   senderName: string,
   senderAvatar?: string,
   type: 'text' | 'image' | 'audio' | 'document' = 'text',
-  mediaUrl?: string
+  mediaUrl?: string,
+  replyToId?: string,
+  replyToText?: string,
+  replyToSenderName?: string
 ) => {
   try {
     const messagesRef = collection(db, 'communities', communityId, 'messages');
-    await addDoc(messagesRef, {
+    const messageData: any = {
       communityId,
       senderId,
       senderName,
@@ -172,7 +178,17 @@ export const sendCommunityMessage = async (
       type,
       mediaUrl: mediaUrl || '',
       createdAt: serverTimestamp(),
-    });
+    };
+    if (replyToId) {
+      messageData.replyToId = replyToId;
+    }
+    if (replyToText) {
+      messageData.replyToText = replyToText;
+    }
+    if (replyToSenderName) {
+      messageData.replyToSenderName = replyToSenderName;
+    }
+    await addDoc(messagesRef, messageData);
 
     // Update community last message
     const communityRef = doc(db, 'communities', communityId);

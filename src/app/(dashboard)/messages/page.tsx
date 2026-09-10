@@ -87,6 +87,7 @@ export default function MessagesPage() {
   const [isCreateCommunityOpen, setIsCreateCommunityOpen] = useState(false);
   const [isCommunityInfoOpen, setIsCommunityInfoOpen] = useState(false);
   const [sendingCommunityMsg, setSendingCommunityMsg] = useState(false);
+  const [communityReplyingTo, setCommunityReplyingTo] = useState<CommunityMessage | null>(null);
 
   // Media upload & editing state
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -361,7 +362,11 @@ export default function MessagesPage() {
     try {
       setSendingCommunityMsg(true);
       const text = newCommunityMessageText.trim();
+      const replyId = communityReplyingTo?.id;
+      const replyText = communityReplyingTo?.text;
+      const replySenderName = communityReplyingTo?.senderName;
       setNewCommunityMessageText("");
+      setCommunityReplyingTo(null);
 
       await sendCommunityMessage(
         activeCommunity.id,
@@ -369,7 +374,11 @@ export default function MessagesPage() {
         text,
         profile.fullName,
         profile.avatar || "",
-        'text'
+        'text',
+        undefined,
+        replyId,
+        replyText,
+        replySenderName
       );
 
       // Award community message XP
@@ -1512,6 +1521,12 @@ export default function MessagesPage() {
                                     ) : null}
                                   </div>
                                 )}
+                                {msg.replyToText && (
+                                  <div className={`p-2 rounded-xl ${isMe ? 'bg-black/20' : 'bg-slate-700/50'} border-l-2 border-brand text-xs mb-1.5`}>
+                                    <span className="font-bold block text-[10px] text-brand">{msg.replyToSenderName || 'User'}</span>
+                                    <span className="truncate block text-[11px] opacity-80">{msg.replyToText}</span>
+                                  </div>
+                                )}
                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                                 <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
                                   <span>{formatMessageTime(msg.createdAt)}</span>
@@ -1531,6 +1546,12 @@ export default function MessagesPage() {
 
                                   {openMessageMenuId === msg.id && (
                                     <div className={`absolute bottom-full ${isMe ? "right-0" : "left-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                                      <button
+                                        onClick={() => { setCommunityReplyingTo(msg); setOpenMessageMenuId(null); }}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                      >
+                                        <Reply className="w-3.5 h-3.5" /> Reply
+                                      </button>
                                       <button
                                         onClick={() => { navigator.clipboard.writeText(msg.text); toast.success("Copied to clipboard"); setOpenMessageMenuId(null); }}
                                         className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
@@ -1578,6 +1599,23 @@ export default function MessagesPage() {
                   )}
                   <div ref={communityMessagesEndRef} />
                 </div>
+
+                {/* Community Reply Banner */}
+                {communityReplyingTo && (
+                  <div className="px-4 pt-3 pb-1 bg-slate-900/95 border-t border-white/5 animate-in slide-in-from-bottom duration-150">
+                    <div className="flex items-center gap-3 p-2.5 bg-slate-800/80 rounded-xl border-l-4 border-brand">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-bold text-brand block">
+                          {communityReplyingTo.senderId === profile.uid ? 'You' : (communityReplyingTo.senderName || 'User')}
+                        </span>
+                        <span className="text-xs text-slate-300 truncate block">{communityReplyingTo.text}</span>
+                      </div>
+                      <button onClick={() => setCommunityReplyingTo(null)} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors shrink-0">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Group Message Input */}
                 <form onSubmit={handleSendCommunityMessage} className="p-3.5 sm:p-4 border-t border-white/5 bg-slate-900/95 backdrop-blur-md flex items-center gap-3">
