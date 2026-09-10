@@ -255,6 +255,11 @@ export default function SettingsPage() {
                     </div>
                     <button 
                       onClick={async () => {
+                        if (profile?.subscriptionTier !== 'elite') {
+                          toast.error("Only Elite members can become Employers! Upgrade your plan.", { icon: "👑" });
+                          router.push('/premium');
+                          return;
+                        }
                         if (!profile?.uid) return;
                         const { becomeEmployer } = await import('@/lib/services/users');
                         const res = await becomeEmployer(profile.uid);
