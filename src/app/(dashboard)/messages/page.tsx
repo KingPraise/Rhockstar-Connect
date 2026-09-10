@@ -1193,7 +1193,7 @@ export default function MessagesPage() {
                 else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
 
                 return (
-                  <div key={msg.id} className="flex flex-col w-full">
+                  <div key={msg.id} id={msg.id} className="flex flex-col w-full">
                     {showDateHeader && (
                       <div className="flex justify-center my-3">
                         <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
@@ -1217,7 +1217,20 @@ export default function MessagesPage() {
   className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}>
                           {/* Reply preview */}
                           {msg.replyToText && (
-                            <div className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-1.5 opacity-80">
+                            <div 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (msg.replyToId) {
+                                  const el = document.getElementById(msg.replyToId);
+                                  if (el) {
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    el.classList.add('animate-pulse', 'bg-brand/20');
+                                    setTimeout(() => el.classList.remove('animate-pulse', 'bg-brand/20'), 2000);
+                                  }
+                                }
+                              }}
+                              className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-1.5 opacity-80 cursor-pointer hover:opacity-100 transition-opacity"
+                            >
                               <span className="font-bold block text-[10px]">Replying to:</span>
                               <span className="truncate block text-[11px]">{msg.replyToText}</span>
                             </div>
@@ -1479,7 +1492,7 @@ export default function MessagesPage() {
                       else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
 
                       return (
-                        <div key={msg.id} className="flex flex-col w-full">
+                        <div key={msg.id} id={msg.id} className="flex flex-col w-full">
                           {showDateHeader && (
                             <div className="flex justify-center my-3">
                               <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
@@ -1488,24 +1501,23 @@ export default function MessagesPage() {
                             </div>
                           )}
                           <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
-                            <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                            <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[75%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                               {!isMe && (
                                 <UserAvatar 
                                   src={msg.senderAvatar} 
                                   name={msg.senderName} 
-                                  className="w-7 h-7 rounded-full shrink-0 mb-1" 
+                                  className="w-8 h-8 rounded-full shrink-0 mb-1" 
                                   textClassName="text-[10px] font-bold" 
                                 />
                               )}
                               
-                              <div className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all ${
-                                isMe 
-                                  ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" 
-                                  : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"
-                              }`}>
+                              <div 
+                                onClick={() => !msg.isDeleted && setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}
+                                className={`rounded-2xl px-4 py-2.5 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}
+                              >
                                 {!isMe && (
-                                  <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                                    <span className="text-xs font-bold text-brand truncate flex items-center gap-1">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <span className="text-[11px] font-bold text-brand flex items-center gap-1">
                                       {msg.senderName}
                                       {isCreator && (
                                         <span title="Community Creator">
@@ -1522,9 +1534,22 @@ export default function MessagesPage() {
                                   </div>
                                 )}
                                 {msg.replyToText && (
-                                  <div className={`p-2 rounded-xl ${isMe ? 'bg-black/20' : 'bg-slate-700/50'} border-l-2 border-brand text-xs mb-1.5`}>
+                                  <div 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (msg.replyToId) {
+                                        const el = document.getElementById(msg.replyToId);
+                                        if (el) {
+                                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                          el.classList.add('animate-pulse', 'bg-brand/20');
+                                          setTimeout(() => el.classList.remove('animate-pulse', 'bg-brand/20'), 2000);
+                                        }
+                                      }
+                                    }}
+                                    className={`p-2 rounded-xl ${isMe ? 'bg-black/20' : 'bg-slate-700/50'} border-l-2 border-brand text-xs mb-1.5 cursor-pointer hover:opacity-100 transition-opacity opacity-80`}
+                                  >
                                     <span className="font-bold block text-[10px] text-brand">{msg.replyToSenderName || 'User'}</span>
-                                    <span className="truncate block text-[11px] opacity-80">{msg.replyToText}</span>
+                                    <span className="truncate block text-[11px]">{msg.replyToText}</span>
                                   </div>
                                 )}
                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>

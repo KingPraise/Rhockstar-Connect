@@ -17,7 +17,7 @@ export default function AdminSidebar() {
   const handleLogout = async () => {
     await logoutUser();
     logout();
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   const navItems = [

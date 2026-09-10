@@ -25,7 +25,7 @@ export default function LogoutConfirmModal({ isOpen, onClose }: LogoutConfirmMod
       await logoutUser();
       logout();
       toast.success("Successfully logged out");
-      router.push("/login");
+      window.location.href = "/login";
     } catch (error) {
       toast.error("Failed to log out");
     }

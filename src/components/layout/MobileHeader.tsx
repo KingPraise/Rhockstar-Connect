@@ -92,7 +92,7 @@ export default function MobileHeader() {
     setIsOpen(false);
     await logoutUser();
     logout();
-    router.push('/login');
+    window.location.href = '/login';
   };
 
   const socialLinks = [

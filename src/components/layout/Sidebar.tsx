@@ -42,7 +42,7 @@ export default function Sidebar() {
   const handleLogout = async () => {
     await logoutUser();
     logout();
-    router.push('/login');
+    window.location.href = '/login';
   };
 
   const primaryNavItems = [
