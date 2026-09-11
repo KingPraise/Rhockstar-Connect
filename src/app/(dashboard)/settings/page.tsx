@@ -55,7 +55,7 @@ const handlePasswordChange = async () => {
           ...(profile as any).notificationSettings,
           [key]: newValue
         }
-      });
+      } as any);
       
       if (res.success) {
         setProfile({
