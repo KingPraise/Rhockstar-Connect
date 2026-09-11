@@ -14,7 +14,68 @@ import { logoutUser } from "@/lib/auth";
 import LogoutConfirmModal from "@/components/auth/LogoutConfirmModal";
 import { AlertTriangle, Trash2, X, ChevronDown } from "lucide-react";
 
+
+  const handlePasswordChange = async () => {
+    if (!currentPassword || !newPassword) {
+      toast.error("Please enter both current and new password");
+      return;
+    }
+    setIsUpdatingPassword(true);
+    try {
+      // Need EmailAuthProvider, EmailAuthProvider.credential, reauthenticateWithCredential, updatePassword
+      const { auth } = await import('@/lib/firebase');
+      const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = await import('firebase/auth');
+      
+      const user = auth.currentUser;
+      if (user && user.email) {
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, newPassword);
+        toast.success("Password updated successfully!");
+        setCurrentPassword('');
+        setNewPassword('');
+      } else {
+        toast.error("User not found or email missing.");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update password");
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+
+  const handleTogglePref = async (key: string, currentValue: boolean) => {
+    try {
+      const newValue = !currentValue;
+      if (!profile) return;
+      
+      const res = await updateUserProfile(profile.uid, {
+        notificationSettings: {
+          ...(profile as any).notificationSettings,
+          [key]: newValue
+        }
+      });
+      
+      if (res.success) {
+        setProfile({
+          ...profile,
+          notificationSettings: {
+            ...(profile as any).notificationSettings,
+            [key]: newValue
+          }
+        } as any);
+        toast.success("Preference saved!");
+      }
+    } catch (err) {
+      toast.error("Failed to save preference.");
+    }
+  };
+
 export default function SettingsPage() {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const { user, profile, logout, aiWidgetVisible, setAiWidgetVisible } = useAuthStore();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
@@ -109,193 +170,33 @@ export default function SettingsPage() {
                   }
                 }}
               >
-                <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">Full Name</label>
-                  <input type="text" name="fullName" defaultValue={profile?.fullName || ""} className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors" />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">Email Address</label>
-                  <input type="email" disabled defaultValue={user?.email || "user@example.com"} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors opacity-70 cursor-not-allowed" />
-                  <p className="text-xs text-slate-500 mt-1">Email cannot be changed directly.</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-slate-300 mb-2">Username</label>
-                  <div className="flex bg-slate-800 border border-white/10 rounded-xl overflow-hidden focus-within:border-brand focus-within:ring-1 focus-within:ring-brand transition-colors">
-                    <span className="bg-slate-900 px-4 py-3 text-slate-500 font-bold">@</span>
-                    <input type="text" name="username" defaultValue={profile?.username || ""} className="w-full bg-transparent px-4 py-3 text-white focus:outline-none" />
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <button type="submit" className="bg-brand hover:bg-brand-dark text-white font-bold py-3 px-8 rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.4)] transition-colors">
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-
-              <div className="pt-8 border-t border-white/10 space-y-6">
-                <h3 className="text-xl font-bold text-white">Preferences</h3>
-                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
-                  <div>
-                    <h4 className="font-bold text-white flex items-center gap-2">
-                      <Zap className="w-4 h-4 text-brand" />
-                      AI Assistant Widget
-                    </h4>
-                    <p className="text-sm text-slate-400">Show the floating AI assistant on your dashboard.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      className="sr-only peer" 
-                      checked={aiWidgetVisible}
-                      onChange={(e) => {
-                        setAiWidgetVisible(e.target.checked);
-                        if (e.target.checked) {
-                          localStorage.removeItem('aiWidgetHidden');
-                        } else {
-                          localStorage.setItem('aiWidgetHidden', 'true');
-                        }
-                      }}
-                    />
-                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
-                  </label>
-                </div>
-
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-slate-800/50 border border-white/5 rounded-xl mt-4">
-                  <div>
-                    <h4 className="font-bold text-white flex items-center gap-2">
-                      <Crown className="w-4 h-4 text-emerald-400" />
-                      Premium Profile Theme
-                    </h4>
-                    <p className="text-sm text-slate-400">Choose a custom color theme for your public profile.</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && profile?.role !== 'admin' && (
-                      <span className="text-xs text-amber-500 font-bold px-2 py-1 bg-amber-500/10 rounded-md">PRO+</span>
-                    )}
-                    <select 
-                      className="bg-slate-900 border border-white/10 text-white text-sm rounded-lg focus:ring-brand focus:border-brand block p-2.5 disabled:opacity-50 cursor-pointer"
-                      disabled={profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && profile?.role !== 'admin'}
-                      value={(profile as any)?.profileTheme || 'default'}
-                      onChange={async (e) => {
-                        const newTheme = e.target.value;
-                        if (profile?.uid) {
-                          const { updateUserProfile } = await import('@/lib/services/users');
-                          const res = await updateUserProfile(profile.uid, { profileTheme: newTheme });
-                          if (res.success) {
-                            useAuthStore.getState().setProfile({ ...profile, profileTheme: newTheme } as any);
-                            toast.success(`Profile background theme updated to ${newTheme.toUpperCase()}!`);
-                          } else {
-                            toast.error('Failed to update theme');
-                          }
-                        }
-                      }}
-                    >
-                      <option value="default">Default (Neon Purple / Cyan Glow)</option>
-                      <option value="purple">Neon Purple (Cyberpunk Violet 🪩)</option>
-                      <option value="ocean">Ocean Blue</option>
-                      <option value="emerald">Emerald Green</option>
-                      <option value="rose">Rose Pink</option>
-                      <option value="amber">Amber Gold</option>
-                    </select>
-                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-slate-800/50 border border-white/5 rounded-xl mt-4">
-                  <div>
-                    <h4 className="font-bold text-white flex items-center gap-2">
-                      <Play className="w-4 h-4 text-brand" />
-                      Platform Tour
-                    </h4>
-                    <p className="text-sm text-slate-400">Replay the introductory walkthrough tour of Rhockstar Connect.</p>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      localStorage.removeItem('rhockstar_onboarding_completed');
-                      window.dispatchEvent(new Event('replay-tour'));
-                      toast.success("Tour restarted!");
-                    }}
-                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
-                  >
-                    Replay Tour
-                  </button>
-                </div>
-              </div>
-
-              {/* Employer Status */}
-              {(profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (
-                <div className="pt-8 border-t border-white/10 space-y-4">
-                  <h3 className="text-xl font-bold text-white">Employer Account</h3>
-                  <div className="bg-gradient-to-r from-emerald-900/40 to-slate-800 p-6 rounded-2xl border border-emerald-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div>
-                      <h4 className="font-bold text-white mb-1">You are an Employer!</h4>
-                      <p className="text-sm text-slate-400">You have access to the Employer Dashboard to post jobs and manage applications.</p>
-                    </div>
-                    <a 
-                      href="/employer"
-                      className="whitespace-nowrap px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex items-center gap-2"
-                    >
-                      <Briefcase className="w-5 h-5" />
-                      Go to Dashboard
-                    </a>
-                  </div>
-                </div>
-              )}
-
-              {/* Employer Upgrade */}
-              {profile?.accountType !== 'employer' && profile?.role !== 'admin' && (profile as any)?.role !== 'employer' && (
-                <div className="pt-8 border-t border-white/10 space-y-4">
-                  <h3 className="text-xl font-bold text-white">Employer Account</h3>
-                  <div className="bg-gradient-to-r from-blue-900/40 to-slate-800 p-6 rounded-2xl border border-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div>
-                      <h4 className="font-bold text-white mb-1">Looking to hire talent?</h4>
-                      <p className="text-sm text-slate-400">Upgrade your account to Employer status to post jobs and manage applicants.</p>
-                    </div>
-                    <button 
-                      onClick={async () => {
-                        if (profile?.subscriptionTier !== 'elite') {
-                          toast.error("Only Elite members can become Employers! Upgrade your plan.", { icon: "👑" });
-                          router.push('/premium');
-                          return;
-                        }
-                        if (!profile?.uid) return;
-                        const { becomeEmployer } = await import('@/lib/services/users');
-                        const res = await becomeEmployer(profile.uid);
-                        if (res.success) {
-                          useAuthStore.getState().setProfile({ ...profile, role: 'employer' } as any);
-                          toast.success("Successfully upgraded to Employer!");
-                        } else {
-                          toast.error("Failed to upgrade account");
-                        }
-                      }}
-                      className="whitespace-nowrap px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors"
-                    >
-                      Become an Employer
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "security" && (
-            <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in">
-              <h2 className="text-2xl font-bold text-white border-b border-white/10 pb-4">Security Settings</h2>
-              
-              <div className="space-y-8">
-                {/* Password Change */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-white">Change Password</h3>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-300 mb-2">Current Password</label>
-                    <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-300 mb-2">New Password</label>
-                    <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
-                  </div>
+                                      <div>
+                        <label className="block text-sm font-bold text-slate-300 mb-2">Current Password</label>
+                        <input 
+                          type="password" 
+                          placeholder="••••••••" 
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-300 mb-2">New Password</label>
+                        <input 
+                          type="password" 
+                          placeholder="••••••••" 
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" 
+                        />
+                      </div>
+                      <button 
+                        onClick={handlePasswordChange}
+                        disabled={isUpdatingPassword || !currentPassword || !newPassword}
+                        className="px-6 py-3 bg-brand hover:bg-brand/90 text-white font-bold rounded-xl transition-all disabled:opacity-50 mt-4"
+                      >
+                        {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                      </button>
                 </div>
 
                 {/* Verification */}
@@ -545,7 +446,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-slate-400">Get notified when someone sends or accepts a connection request.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Connection alert preference saved!")} />
+                    <input type="checkbox" defaultChecked className="sr-only peer" checked={(profile as any)?.notificationSettings?.connectionAlerts ?? true} onChange={() => handleTogglePref('connectionAlerts', (profile as any)?.notificationSettings?.connectionAlerts ?? true)} />
                     <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
                   </label>
                 </div>
@@ -556,7 +457,7 @@ export default function SettingsPage() {
                     <p className="text-xs text-slate-400">Get notified when users like or comment on your community posts.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Post interaction preference saved!")} />
+                    <input type="checkbox" defaultChecked className="sr-only peer" checked={(profile as any)?.notificationSettings?.postInteractions ?? true} onChange={() => handleTogglePref('postInteractions', (profile as any)?.notificationSettings?.postInteractions ?? true)} />
                     <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
                   </label>
                 </div>

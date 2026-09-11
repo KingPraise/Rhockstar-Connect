@@ -32,10 +32,7 @@ import LevelUpModal from "@/components/gamification/LevelUpModal";
 import LeaderboardView from "@/components/gamification/LeaderboardView";
 import { awardUserXP, checkDailyStreak, StardomRank } from "@/lib/services/gamification";
 
-import { 
-  Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, ChevronLeft, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, 
-  Globe, Users, Compass, Plus, Lock, Shield, Sparkles, ShieldCheck, UserX, Crown, MessageSquare, Trophy, Flame 
-} from "lucide-react";
+import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, ChevronLeft, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, Globe, Users, Compass, Plus, Lock, Shield, Sparkles, ShieldCheck, UserX, Crown, MessageSquare, Trophy, Flame, Paperclip } from "lucide-react";
 import { storage } from "@/lib/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import toast from "react-hot-toast";
@@ -1371,6 +1368,27 @@ export default function MessagesPage() {
           )}
           {/* DM Input Bar */}
           <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-slate-900/90 flex items-center gap-3">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx"
+            />
+            <button 
+              type="button" 
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors shrink-0"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+            <button 
+              type="button" 
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`p-2.5 rounded-xl transition-colors shrink-0 ${isRecording ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30 animate-pulse' : 'text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700'}`}
+            >
+              {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
             <textarea
               ref={textareaRef}
               rows={1}

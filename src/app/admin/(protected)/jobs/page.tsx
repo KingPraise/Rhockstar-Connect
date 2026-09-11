@@ -6,6 +6,20 @@ import { Plus, Briefcase, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "react-hot-toast";
 
+
+  const handleDeleteJob = async (jobId: string) => {
+    if (!window.confirm("Are you sure you want to delete this job?")) return;
+    try {
+      const { doc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      await deleteDoc(doc(db, 'jobs', jobId));
+      setJobs(jobs.filter(j => j.id !== jobId));
+      toast.success("Job deleted");
+    } catch (err) {
+      toast.error("Failed to delete job");
+    }
+  };
+
 export default function AdminJobsPage() {
   const { profile } = useAuthStore();
   const [jobs, setJobs] = useState<JobListing[]>([]);
@@ -113,7 +127,7 @@ export default function AdminJobsPage() {
                   </div>
                 </div>
                 
-                <button className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                <button onClick={() => handleDeleteJob(job.id)} className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
                   <Trash2 className="h-5 w-5" />
                 </button>
               </div>

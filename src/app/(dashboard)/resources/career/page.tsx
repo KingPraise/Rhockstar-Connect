@@ -65,7 +65,7 @@ export default function CareerHubPage() {
       </div>
 
       {/* Featured Video */}
-      <div className="neo-card p-6 bg-slate-900/40 rounded-3xl border border-white/5 group cursor-pointer hover:border-brand/30 transition-all">
+      <div onClick={(e) => { e.preventDefault(); import("react-hot-toast").then(m => m.toast.success("Opening Masterclass...")); }} className="neo-card p-6 bg-slate-900/40 rounded-3xl border border-white/5 group cursor-pointer hover:border-brand/30 transition-all">
         <div className="aspect-video w-full bg-slate-800 rounded-2xl relative overflow-hidden flex items-center justify-center border border-white/5 shadow-inner mb-4">
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent z-0" />
           <PlayCircle className="w-16 h-16 text-white/50 group-hover:text-brand group-hover:scale-110 transition-all z-10 relative" />
