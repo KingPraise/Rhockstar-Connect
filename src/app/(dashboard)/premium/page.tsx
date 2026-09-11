@@ -42,7 +42,7 @@ const PaymentButton = ({ tier, profile, currency, formatPrice, onSuccess, disabl
     handleFlutterPayment({
       callback: (response) => {
         if (response.status === 'successful' || response.status === 'completed') {
-          onSuccess(tier);
+          onSuccess(tier, response.transaction_id);
         } else {
           setIsProcessing(false);
           toast.error("Payment was not successful.");

@@ -25,6 +25,85 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+
+const AdPaymentButton = ({ ad, profile, onComplete }: any) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const config = {
+    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-78ba9038855272bdb48441ac8989d5aa-X',
+    tx_ref: `rhockstar_ad_${ad.id}_${Date.now()}`,
+    amount: ad.price || 15000,
+    currency: 'NGN',
+    payment_options: 'card,mobilemoney,ussd',
+    customer: {
+      email: profile?.email || 'user@rhockstar.com',
+      phone_number: profile?.phone || '',
+      name: profile?.fullName || profile?.username || 'Rhockstar User',
+    },
+    customizations: {
+      title: `Rhockstar Ad Payment`,
+      description: `Payment for Ad "${ad.title}"`,
+      logo: typeof window !== 'undefined' ? `${window.location.origin}/icon.png` : '',
+    },
+  };
+
+  const handleFlutterPayment = useFlutterwave(config);
+
+  const handlePayment = () => {
+    setIsProcessing(true);
+    handleFlutterPayment({
+      callback: async (response) => {
+        if (response.status === 'successful' || response.status === 'completed') {
+          try {
+            const { auth } = await import('@/lib/firebase');
+            const token = await auth.currentUser?.getIdToken();
+            const res = await fetch('/api/payments/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ transaction_id: response.transaction_id, type: 'ad', adId: ad.id })
+            });
+            const data = await res.json();
+            if (data.success) {
+              toast.success(`Payment confirmed! Advert "${ad.title}" is now LIVE!`);
+              onComplete();
+            } else {
+              toast.error(data.error || "Payment verification failed.");
+            }
+          } catch (err) {
+            toast.error("Error verifying payment.");
+          }
+        } else {
+          toast.error("Payment failed or was cancelled.");
+        }
+        setIsProcessing(false);
+        closePaymentModal();
+      },
+      onClose: () => {
+        setIsProcessing(false);
+      },
+    });
+  };
+
+  return (
+    <button
+      onClick={handlePayment}
+      disabled={isProcessing}
+      className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-2 border border-blue-500/30 disabled:opacity-50"
+    >
+      {isProcessing ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <>
+          <CreditCard className="w-4 h-4" />
+          Pay ₦{(ad.price || 15000).toLocaleString()} to Activate
+        </>
+      )}
+    </button>
+  );
+};
+
 export default function EmployerAdsPage() {
   const { profile } = useAuthStore();
   const [ads, setAds] = useState<Advertisement[]>([]);
@@ -220,23 +299,10 @@ export default function EmployerAdsPage() {
                 {/* Card Action Controls */}
                 <div className="pt-3 border-t border-white/5 flex items-center justify-between gap-3">
                   
-                  {/* Status specific actions */}
-                  {ad.status === 'approved' && (
-                    <button
-                      onClick={() => handleSimulatePayment(ad)}
-                      disabled={payingAdId === ad.id}
-                      className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-2 border border-blue-500/30 disabled:opacity-50"
-                    >
-                      {payingAdId === ad.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <>
-                          <CreditCard className="w-4 h-4" />
-                          Pay ₦{(ad.price || 15000).toLocaleString()} to Activate
-                        </>
-                      )}
-                    </button>
-                  )}
+                                      {/* Status specific actions */}
+                    {ad.status === 'approved' && (
+                      <AdPaymentButton ad={ad} profile={profile} onComplete={() => setPayingAdId(null)} />
+                    )}
 
                   {ad.status === 'active' && (
                     <button
