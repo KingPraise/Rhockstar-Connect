@@ -174,7 +174,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-bold text-slate-300 mb-2">Current Password</label>
                         <input 
                           type="password" 
-                          placeholder="••••••••" 
+                          placeholder="********" 
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
                           className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" 
@@ -184,7 +184,7 @@ export default function SettingsPage() {
                         <label className="block text-sm font-bold text-slate-300 mb-2">New Password</label>
                         <input 
                           type="password" 
-                          placeholder="••••••••" 
+                          placeholder="********" 
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
                           className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" 
@@ -287,7 +287,7 @@ export default function SettingsPage() {
                     type="text"
                     value={deleteConfirmText}
                     onChange={(e) => setDeleteConfirmText(e.target.value)}
-                    placeholder="DELETE MY ACCOUNT"
+                    placeholder="********"
                     className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-rose-500 font-mono"
                   />
                 </div>
