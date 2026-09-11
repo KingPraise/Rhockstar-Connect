@@ -1,4 +1,4 @@
-"use client";
+﻿new_ats = """"use client";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -198,3 +198,7 @@ export default function ATSDashboard() {
     </div>
   );
 }
+"""
+
+with open("src/app/(dashboard)/company/[username]/ats/page.tsx", "w", encoding="utf-8") as f:
+    f.write(new_ats)

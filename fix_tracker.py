@@ -1,4 +1,7 @@
-"use client";
+﻿with open("src/components/jobs/ApplicationTracker.tsx", "r", encoding="utf-8") as f:
+    content = f.read()
+
+new_comp = """"use client";
 
 import { useEffect, useState } from "react";
 import { getUserApplications, JobApplication } from "@/lib/services/jobs";
@@ -95,3 +98,16 @@ export default function ApplicationTracker() {
     </div>
   );
 }
+"""
+
+with open("src/components/jobs/ApplicationTracker.tsx", "w", encoding="utf-8") as f:
+    f.write(new_comp)
+
+# Fix jobs/page.tsx
+with open("src/app/(dashboard)/jobs/page.tsx", "r", encoding="utf-8") as f:
+    page_content = f.read()
+    
+page_content = page_content.replace("<ApplicationTracker appliedJobs={appliedJobsList} />", "<ApplicationTracker />")
+
+with open("src/app/(dashboard)/jobs/page.tsx", "w", encoding="utf-8") as f:
+    f.write(page_content)

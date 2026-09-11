@@ -229,7 +229,7 @@ export const updateUserProfile = async (
 };
 
 export const becomeEmployer = async (uid: string) => {
-  return updateUserProfile(uid, { role: 'employer' });
+  return updateUserProfile(uid, { role: 'employer', accountType: 'employer' as any });
 };
 
 export const trackProfileView = async (viewedUid: string, viewerUid?: string) => {

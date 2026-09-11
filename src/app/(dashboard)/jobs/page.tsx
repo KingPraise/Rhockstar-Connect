@@ -98,7 +98,7 @@ export default function JobsPage() {
     if (!profile || !applyModalJob) return;
 
     setIsApplying(applyModalJob.id);
-    const res = await applyForJob(applyModalJob.id, profile.uid, { coverLetter });
+    const res = await applyForJob(applyModalJob, profile.uid, { coverLetter });
     
     if (res.success) {
       setAppliedJobIds(prev => {
@@ -227,7 +227,7 @@ export default function JobsPage() {
 
         {/* CONTENT AREA */}
         {activeTab === 'applications' ? (
-          <ApplicationTracker appliedJobs={appliedJobsList} />
+          <ApplicationTracker />
         ) : (
           <>
             {loading && jobs.length === 0 ? (
@@ -339,7 +339,7 @@ export default function JobsPage() {
                             )}
                             
                             <button 
-                              onClick={() => toast.success(`Viewing details for ${job.title}`)}
+                              onClick={() => setApplyModalJob(job)}
                               className="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors border border-white/5 text-xs font-semibold"
                             >
                               <ExternalLink className="w-4 h-4" />
