@@ -221,7 +221,7 @@ export const applyForJob = async (job: JobListing, applicantId: string, applicat
     await setDoc(newAppRef, app);
     
     // Increment the applicantsCount on the job listing
-    const jobRef = doc(db, "jobs", jobId);
+    const jobRef = doc(db, "jobs", job.id);
     await updateDoc(jobRef, {
       applicantsCount: increment(1)
     });
