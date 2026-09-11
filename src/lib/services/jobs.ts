@@ -294,7 +294,7 @@ export const updateApplicationStatus = async (applicationId: string, status: Job
         userId: data.applicantId,
         type: 'job',
         title: 'Application Update',
-        body: `Your application for ${data.jobTitle} has been updated to: ${status}.`,
+        message: `Your application for ${data.jobTitle} has been updated to: ${status}.`,
         link: '/jobs'
       });
       
