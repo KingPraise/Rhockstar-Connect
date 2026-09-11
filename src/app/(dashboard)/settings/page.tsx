@@ -47,6 +47,7 @@ const handlePasswordChange = async () => {
   const handleTogglePref = async (key: string, currentValue: boolean) => {
     try {
       const newValue = !currentValue;
+      const { updateUserProfile } = await import('@/lib/services/users');
       if (!profile) return;
       
       const res = await updateUserProfile(profile.uid, {
