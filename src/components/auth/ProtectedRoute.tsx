@@ -37,7 +37,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     pathname.startsWith("/profile") || 
     pathname.startsWith("/company") || 
     pathname === "/jobs" || 
-    pathname === "/terms";
+    pathname === "/terms" ||
+    pathname === "/privacy";
 
   useEffect(() => {
     const checkExpiration = async () => {

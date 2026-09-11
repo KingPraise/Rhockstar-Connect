@@ -50,7 +50,7 @@ const CATEGORY_FILTERS = ["All", "Sports", "Tech & Career", "Hobbies", "Campus",
 export default function MessagesPage() {
   const { profile } = useAuthStore();
   const searchParams = useSearchParams();
-  const targetUserParam = searchParams.get('user') || searchParams.get('uid');
+  const targetUserParam = searchParams.get('chatId') || searchParams.get('user') || searchParams.get('uid');
   
   // Check and maintain daily streak on mount
   useEffect(() => {

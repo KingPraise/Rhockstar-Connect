@@ -180,7 +180,7 @@ export default function DatingProfileSetup() {
               ))}
               {newPhotos.map((file, i) => (
                 <div key={`new-${i}`} className="relative aspect-[3/4] rounded-2xl overflow-hidden group/photo">
-                  <img src={URL.createObjectURL(file)} alt="New Dating Photo" className="w-full h-full object-cover" />
+                  <ObjectUrlImage file={file} alt="New Dating Photo" className="w-full h-full object-cover" />
                   <button onClick={() => removeNewPhoto(i)} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -214,7 +214,7 @@ export default function DatingProfileSetup() {
               {voiceIntroFile && (
                 <div className="p-4 rounded-xl bg-brand-purple/10 border border-brand-purple/20">
                   <p className="text-brand-purple font-medium mb-2 text-sm">New recording ready to save:</p>
-                  <audio controls src={URL.createObjectURL(voiceIntroFile)} className="w-full" />
+                  <ObjectUrlAudio file={voiceIntroFile} className="w-full" />
                 </div>
               )}
 

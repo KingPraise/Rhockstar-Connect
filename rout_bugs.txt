@@ -1,0 +1,150 @@
+### Category 5: Frontend Routing, Auth Guards & Hydration (ROUT)
+
+#### ROUT-01: Public Company Profile Blocked by Protected Route Guard
+- **Severity**: **Critical**
+- **Component**: Routing & Auth Guard
+- **File & Lines**: `src/components/auth/ProtectedRoute.tsx:35-39`
+- **User Flow / Scenario**: An unauthenticated guest or search engine bot accesses a company profile (e.g. `https://rhockstarconnect.com/company/paystack`).
+- **Suspected Root Cause**: `isPublicRoute` allows unauthenticated access to `/feed`, `/profile`, `/jobs`, and `/terms`, but omits `/company/`. Unauthenticated visitors are immediately redirected to `/login`.
+- **Evidence Snippet**:
+  ```tsx
+  // src/components/auth/ProtectedRoute.tsx:35-39
+  const isPublicRoute = 
+    pathname === "/feed" || 
+    pathname.startsWith("/profile") || 
+    pathname === "/jobs" || 
+    pathname === "/terms";
+  ```
+- **Recommended Fix**:
+  Add `pathname.startsWith("/company")` and `pathname === "/privacy"` to `isPublicRoute`.
+
+---
+
+#### ROUT-02: Notification Link Query Parameter Mismatch Breaks DM Navigation
+- **Severity**: **High**
+- **Component**: Notifications & Direct Messaging Navigation
+- **File & Lines**: `src/app/(dashboard)/notifications/page.tsx:58`, `src/app/(dashboard)/messages/page.tsx:53`
+- **User Flow / Scenario**: A user receives a direct message notification, goes to `/notifications`, and clicks the notification item.
+- **Suspected Root Cause**: `notifications/page.tsx` routes to `/messages?chatId=...`, but `messages/page.tsx` only reads `searchParams.get('user') || searchParams.get('uid')`. The `chatId` query parameter is ignored, leaving the user on an empty chat state.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/notifications/page.tsx:58
+  router.push(`/messages?chatId=${notification.targetId || notification.senderId}`);
+
+  // src/app/(dashboard)/messages/page.tsx:53
+  const targetUserParam = searchParams.get('user') || searchParams.get('uid');
+  ```
+- **Recommended Fix**:
+  Update `messages/page.tsx` line 53 to check `searchParams.get('chatId') || searchParams.get('user') || searchParams.get('uid')`.
+
+---
+
+#### ROUT-03: Global Error Boundary Hardcoded Specifically for Feed Route
+- **Severity**: **Medium**
+- **Component**: Global Error Handling
+- **File & Lines**: `src/app/error.tsx:23-40`
+- **User Flow / Scenario**: A runtime exception occurs on any non-feed page (e.g. `/settings`, `/dating`, `/employer/ads`).
+- **Suspected Root Cause**: Root `error.tsx` renders feed-specific text: "Connecting to Feed...", "Syncing your session with Rhockstar Connect", and button "Reload Feed".
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/error.tsx:23-40
+  <h2 className="text-2xl font-extrabold mb-2">Connecting to Feed...</h2>
+  <p className="text-slate-400 max-w-sm text-sm mb-6">
+    Syncing your session with Rhockstar Connect.
+  </p>
+  <button onClick={() => ...}>
+    <RefreshCw className="w-4 h-4" />
+    <span>Reload Feed</span>
+  </button>
+  ```
+- **Recommended Fix**:
+  Replace feed-specific copy with generic application error copy ("Something went wrong") and a "Try Again" / "Go to Feed" action.
+
+---
+
+#### ROUT-04: Next.js Image Optimization Fatal Crash on Firebase Storage URLs
+- **Severity**: **High**
+- **Component**: Next.js Configuration / Layout Media
+- **File & Lines**: `next.config.ts:15-20`, `src/components/layout/AdminSidebar.tsx:111`, `src/app/(dashboard)/employer/[jobId]/page.tsx:210`, `src/app/admin/(protected)/users/page.tsx:217`
+- **User Flow / Scenario**: A user or admin with a Firebase Storage custom avatar visits any page rendering their avatar with Next.js `<Image>`.
+- **Suspected Root Cause**: `next.config.ts` configures `images.remotePatterns` with only `images.unsplash.com`. When Next.js encounters `firebasestorage.googleapis.com` or `lh3.googleusercontent.com`, it crashes with `Invalid src prop on next/image, hostname is not configured under images in your next.config.js`.
+- **Evidence Snippet**:
+  ```ts
+  // next.config.ts:14-21
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      }
+    ],
+  },
+  ```
+- **Recommended Fix**:
+  Add `firebasestorage.googleapis.com` and `lh3.googleusercontent.com` to `remotePatterns` in `next.config.ts`.
+
+---
+
+#### ROUT-05: Missing `/icon.png` Causes 404 Network Errors on Every Page Load
+- **Severity**: **High**
+- **Component**: Public Assets & Layout Images
+- **File & Lines**: `src/components/layout/Sidebar.tsx:71, 75`, `src/components/layout/MobileHeader.tsx:125`, `public/firebase-messaging-sw.js:20`, `src/app/(dashboard)/premium/page.tsx:34`
+- **User Flow / Scenario**: Visiting any page inside the application loads broken images and triggers 404 network errors for `/icon.png`.
+- **Suspected Root Cause**: Components reference `/icon.png`, but `public/` contains only `icon-192x192.png` and `icon-512x512.png`.
+- **Evidence Snippet**:
+  ```tsx
+  // src/components/layout/Sidebar.tsx:71
+  <Image src="/icon.png" alt="Rhockstar Connect" width={40} height={40} className="rounded-xl" />
+  ```
+- **Recommended Fix**:
+  Copy `public/icon-192x192.png` to `public/icon.png`.
+
+---
+
+#### ROUT-06: Nested Interactive Anchor Tags in Global Search Results Trigger Hydration Mismatch
+- **Severity**: **Medium**
+- **Component**: Search Page / DOM Validation
+- **File & Lines**: `src/app/(dashboard)/search/page.tsx:224-226`, `src/components/feed/PostCard.tsx:236`
+- **User Flow / Scenario**: A user opens `/search?q=rhockstar` and views posts in the search tab.
+- **Suspected Root Cause**: `search/page.tsx` wraps `<PostCard />` in a `<Link>` tag. Inside `PostCard.tsx`, the author avatar and name are also wrapped in `<Link>`. In HTML5 and React 19, nested `<a>` elements are invalid, triggering React hydration warnings and breaking navigation event propagation.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/search/page.tsx:224-226
+  <Link key={post.id} href={`/feed?postId=${post.id}#post-${post.id}`} className="block hover:opacity-95 transition-opacity">
+    <PostCard post={post} />
+  </Link>
+  ```
+- **Recommended Fix**:
+  Remove the outer `<Link>` wrapper from `search/page.tsx` and allow `PostCard` to manage internal link clicks.
+
+---
+
+#### ROUT-07: Profile Join Calculation Evaluates Current Date on Every Render
+- **Severity**: **Medium**
+- **Component**: Profile Header
+- **File & Lines**: `src/components/profile/ProfileHeader.tsx:252`
+- **User Flow / Scenario**: A user views any user profile (`/profile?uid=...`).
+- **Suspected Root Cause**: Line 252 evaluates `Joined {format(new Date(), "MMMM yyyy")}` rather than reading `profile.createdAt`. Every user displays "Joined September 2026" (current month), and server/client timezone differences trigger hydration mismatches.
+- **Evidence Snippet**:
+  ```tsx
+  // src/components/profile/ProfileHeader.tsx:250-253
+  <div className="flex items-center gap-1.5 text-slate-400 py-1 px-2 md:py-1.5 md:px-4 rounded-full">
+    <Calendar className="w-3.5 h-3.5 shrink-0" />
+    <span>Joined {format(new Date(), "MMMM yyyy")}</span>
+  </div>
+  ```
+- **Recommended Fix**:
+  Format `profile.createdAt` or fall back to "Recently" if undefined.
+
+---
+
+#### ROUT-08: Memory Leak & Re-render Object URL Creation in Dating Profile
+- **Severity**: **Medium**
+- **Component**: Dating Profile Photo Upload
+- **File & Lines**: `src/app/(dashboard)/dating/profile/page.tsx:183`
+- **User Flow / Scenario**: A user selects new photos on `/dating/profile` and types in bio or interests fields.
+- **Suspected Root Cause**: `URL.createObjectURL(file)` is called directly inside JSX during rendering on every keystroke, allocating uncollected object URLs and causing memory bloat.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/dating/profile/page.tsx:181-183
+  {newPhotos.map((file, i) => (
