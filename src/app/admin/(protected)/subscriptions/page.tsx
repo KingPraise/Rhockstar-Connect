@@ -45,8 +45,8 @@ export default function AdminSubscriptionsPage() {
   const proCount = users.filter(u => u.subscriptionTier === "pro" && u.subscriptionStatus === "active").length;
   const eliteCount = users.filter(u => u.subscriptionTier === "elite" && u.subscriptionStatus === "active").length;
   const totalPaid = proCount + eliteCount;
-  // Estimated revenue calculation ($9.99/mo Pro, $19.99/mo Elite)
-  const estRevenue = (proCount * 9.99) + (eliteCount * 19.99);
+  // Estimated revenue calculation ($2/mo Pro, $5/mo Elite)
+  const estRevenue = (proCount * 2) + (eliteCount * 5);
 
   const subscribers = users.filter(u => {
     if (filterTier === "pro") return u.subscriptionTier === "pro";

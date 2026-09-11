@@ -40,6 +40,29 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     pathname === "/terms";
 
   useEffect(() => {
+    const checkExpiration = async () => {
+      if (!isLoading && profile && profile.premiumUntil && profile.subscriptionTier && profile.subscriptionTier !== 'free') {
+        const expirationDate = new Date(profile.premiumUntil);
+        if (expirationDate < new Date()) {
+          import('firebase/firestore').then(async ({ doc, updateDoc }) => {
+            const { db } = await import('@/lib/firebase');
+            await updateDoc(doc(db, 'users', profile.uid), {
+              subscriptionTier: 'free',
+              subscriptionStatus: 'inactive'
+            });
+            import('react-hot-toast').then(({ toast }) => {
+              toast.error("Your Premium subscription has expired.");
+            });
+            // Update local state to avoid infinite loops
+            useAuthStore.getState().setProfile({ ...profile, subscriptionTier: 'free', subscriptionStatus: 'inactive' } as any);
+          });
+        }
+      }
+    };
+    checkExpiration();
+  }, [profile, isLoading]);
+
+  useEffect(() => {
     if (!isLoading && profile?.isBanned) {
       import('react-hot-toast').then(({ toast }) => {
         toast.error("Your account has been banned due to policy violations.");

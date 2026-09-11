@@ -1,0 +1,102 @@
+### Category 2: Payments, Billing & Monetization (PAY)
+
+#### PAY-01: Client-Side Payment Verification & Free Lifetime Tier Upgrade Tampering
+- **Severity**: **Critical**
+- **Component**: Billing & Subscription Flow
+- **File & Lines**: `src/app/(dashboard)/premium/page.tsx:42-55, 71-89`
+- **User Flow / Scenario**: A user opens `/premium`, selects "Elite", and closes the Flutterwave modal or executes `updateUserProfile(profile.uid, { subscriptionTier: 'elite', subscriptionStatus: 'active' })` in the console.
+- **Suspected Root Cause**: Subscription tier updates are performed on the client within the `handleFlutterPayment` success callback. There is no server API route verifying transaction IDs, amounts, or signatures against Flutterwave's API. Additionally, no `premiumUntil` expiration date is written, conferring lifetime access for free.
+- **Evidence Snippet**:
+  ```ts
+  // src/app/(dashboard)/premium/page.tsx:43-45, 75-79
+  if (response.status === 'successful' || response.status === 'completed') {
+    onSuccess(tier);
+  }
+  ...
+  const res = await updateUserProfile(profile.uid, {
+    subscriptionTier: tier,
+    subscriptionStatus: 'active'
+  });
+  ```
+- **Recommended Fix**:
+  1. Create a server endpoint `POST /api/payments/verify` that verifies the `transaction_id` directly with Flutterwave's API (`GET https://api.flutterwave.com/v3/transactions/:id/verify`) using the secret key.
+  2. Implement an authenticated webhook endpoint with signature verification (`verif-hash`).
+  3. Mutate `subscriptionTier` and `premiumUntil` (`Date.now() + 30 days`) exclusively via `adminDb` on the server.
+
+---
+
+#### PAY-02: Mock Ad Payment Simulation Button Bypasses Payment Processor
+- **Severity**: **High**
+- **Component**: Employer Advertisements / Monetization
+- **File & Lines**: `src/app/(dashboard)/employer/ads/page.tsx:45-60, 224-239`, `src/lib/services/ads.ts:262-278`
+- **User Flow / Scenario**: An advertiser submits a campaign that gets approved by an admin with a fee of ₦15,000. The advertiser clicks "Pay ₦15,000 to Activate" and the ad goes live immediately without any real payment.
+- **Suspected Root Cause**: The payment button triggers `handleSimulatePayment`, which calls `confirmAdPayment(ad.id)` directly in Firestore. Furthermore, `firestore.rules:30` permits the ad owner to update their own document, allowing arbitrary status changes.
+- **Evidence Snippet**:
+  ```ts
+  // src/app/(dashboard)/employer/ads/page.tsx:45-51
+  const handleSimulatePayment = async (ad: Advertisement) => {
+    try {
+      setPayingAdId(ad.id);
+      // Simulate Paystack / Flutterwave success callback
+      const res = await confirmAdPayment(ad.id);
+      if (res.success) {
+        toast.success(`Payment confirmed! Advert "${ad.title}" is now LIVE in the Feed! 🚀`);
+  ```
+- **Recommended Fix**:
+  Integrate real Flutterwave/Paystack modal or standard checkout for ad activation, and confirm payment server-side before updating `status: 'active'`. Disallow client updates to `status` in `firestore.rules`.
+
+---
+
+#### PAY-03: Hardcoded Flutterwave Test Key Fallback & Missing Secret Gateway Keys
+- **Severity**: **High**
+- **Component**: Payment Gateway Configuration
+- **File & Lines**: `src/app/(dashboard)/premium/page.tsx:21`, `.env.local`
+- **User Flow / Scenario**: A production user initiates payment on `/premium`.
+- **Suspected Root Cause**: `NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY` is undefined in `.env.local`. The application falls back to a hardcoded test key (`FLWPUBK_TEST-78ba9038855272bdb48441ac8989d5aa-X`), meaning transactions run in sandbox mode.
+- **Evidence Snippet**:
+  ```ts
+  // src/app/(dashboard)/premium/page.tsx:21
+  public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-78ba9038855272bdb48441ac8989d5aa-X',
+  ```
+- **Recommended Fix**:
+  Define `NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY` and server-side `FLUTTERWAVE_SECRET_KEY` in `.env.local` and Netlify settings, and validate them in `src/lib/env.ts`.
+
+---
+
+#### PAY-04: Unenforced Subscription Expirations Result in Infinite Access
+- **Severity**: **Medium**
+- **Component**: Subscription Lifecycle
+- **File & Lines**: `src/lib/services/admin.ts:125`, `src/lib/services/referrals.ts:155`, `src/app/admin/(protected)/subscriptions/page.tsx:211`
+- **User Flow / Scenario**: An admin grants a user 30 days of Pro membership, or a user earns 7 days via referrals. After 30 days elapse, the user continues to retain full Pro privileges.
+- **Suspected Root Cause**: `premiumUntil` is saved as a timestamp, but nowhere in `AuthProvider.tsx`, middleware, or API routes is `Date.now() > new Date(profile.premiumUntil)` evaluated to downgrade expired users.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/admin/(protected)/subscriptions/page.tsx:211
+  {sub.premiumUntil ? new Date(sub.premiumUntil).toLocaleDateString() : "Lifetime"}
+  ```
+- **Recommended Fix**:
+  In `AuthProvider.tsx` or on user login, compare `profile.premiumUntil` against the current time. If expired, automatically update `subscriptionTier: 'free'` and `subscriptionStatus: 'inactive'`.
+
+---
+
+#### PAY-05: Pricing Model Discrepancy Between Checkout and Admin Analytics
+- **Severity**: **Medium**
+- **Component**: Analytics & Financial Reporting
+- **File & Lines**: `src/app/(dashboard)/premium/page.tsx:16` vs `src/app/admin/(protected)/subscriptions/page.tsx:48-49`
+- **User Flow / Scenario**: Users are charged $2/month (Pro) and $5/month (Elite) at checkout. In the Admin Portal, estimated monthly recurring revenue is calculated as `(proCount * 9.99) + (eliteCount * 19.99)`.
+- **Suspected Root Cause**: Discrepancy caused by lack of a centralized pricing constants file.
+- **Evidence Snippet**:
+  ```ts
+  // src/app/(dashboard)/premium/page.tsx:16
+  const baseUSD = tier === 'pro' ? 2 : 5;
+
+  // src/app/admin/(protected)/subscriptions/page.tsx:48-49
+  // Estimated revenue calculation ($9.99/mo Pro, $19.99/mo Elite)
+  const estRevenue = (proCount * 9.99) + (eliteCount * 19.99);
+  ```
+- **Recommended Fix**:
+  Define a centralized `src/lib/constants/pricing.ts` exporting single sources of truth for tier prices.
+
+---
+
+### Category 3: Database Architecture & Firestore Security Rules (DATA)
