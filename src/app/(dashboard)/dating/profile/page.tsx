@@ -26,6 +26,27 @@ const GOALS = [
   "Not sure yet"
 ];
 
+
+const ObjectUrlImage = ({ file, alt, className }: { file: File, alt: string, className: string }) => {
+  const [url, setUrl] = useState<string>('');
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+  return url ? <img src={url} alt={alt} className={className} /> : null;
+};
+
+const ObjectUrlAudio = ({ file, className }: { file: File, className: string }) => {
+  const [url, setUrl] = useState<string>('');
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+  return url ? <audio controls src={url} className={className} /> : null;
+};
+
 export default function DatingProfileSetup() {
   const { profile, setProfile } = useAuthStore();
   const router = useRouter();
