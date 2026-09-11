@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuthStore();
+  const { user, profile, isLoading, logout } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
@@ -35,8 +35,19 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const isPublicRoute = 
     pathname === "/feed" || 
     pathname.startsWith("/profile") || 
+    pathname.startsWith("/company") || 
     pathname === "/jobs" || 
     pathname === "/terms";
+
+  useEffect(() => {
+    if (!isLoading && profile?.isBanned) {
+      import('react-hot-toast').then(({ toast }) => {
+        toast.error("Your account has been banned due to policy violations.");
+      });
+      logout();
+      router.replace("/login");
+    }
+  }, [profile, isLoading, logout, router]);
 
   useEffect(() => {
     if (!isLoading && !user && !isPublicRoute) {

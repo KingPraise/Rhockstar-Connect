@@ -38,7 +38,7 @@ export default function EmployerJobApplicantsPage() {
 
   const loadApplications = async () => {
     setLoading(true);
-    const res = await getApplicationsForJob(jobId);
+    const res = await getApplicationsForJob(jobId, profile?.role === 'admin' ? undefined : profile?.uid);
     if (res.success && res.applications) {
       setApplications(res.applications);
     }
