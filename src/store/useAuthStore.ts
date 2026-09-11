@@ -33,6 +33,7 @@ export interface UserProfile {
   visibility?: 'public' | 'connections' | 'private';
   role?: 'admin' | 'user';
   accountType?: 'standard' | 'employer';
+  isBanned?: boolean;
   
   // Employer Fields
   companySize?: string;
