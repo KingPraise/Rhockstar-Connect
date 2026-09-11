@@ -15,7 +15,8 @@ import LogoutConfirmModal from "@/components/auth/LogoutConfirmModal";
 import { AlertTriangle, Trash2, X, ChevronDown } from "lucide-react";
 
 
-  const handlePasswordChange = async () => {
+  export default function SettingsPage() {
+const handlePasswordChange = async () => {
     if (!currentPassword || !newPassword) {
       toast.error("Please enter both current and new password");
       return;
@@ -70,7 +71,7 @@ import { AlertTriangle, Trash2, X, ChevronDown } from "lucide-react";
     }
   };
 
-export default function SettingsPage() {
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
