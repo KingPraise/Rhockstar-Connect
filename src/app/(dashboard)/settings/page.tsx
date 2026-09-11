@@ -162,7 +162,7 @@ const handlePasswordChange = async () => {
                     const { updateUserProfile } = await import('@/lib/services/users');
                     const res = await updateUserProfile(profile.uid, { fullName, username });
                     if (res.success) {
-                      useAuthStore.getState().useAuthStore.getState().setProfile({ ...profile, fullName, username } as any);
+                      useAuthStore.getState().setProfile({ ...profile, fullName, username } as any);
                       toast.success('Profile updated successfully!');
                     } else {
                       toast.error('Failed to update profile');
@@ -246,7 +246,7 @@ const handlePasswordChange = async () => {
                           const { updateUserProfile } = await import('@/lib/services/users');
                           const res = await updateUserProfile(profile.uid, { profileTheme: newTheme });
                           if (res.success) {
-                            useAuthStore.getState().useAuthStore.getState().setProfile({ ...profile, profileTheme: newTheme } as any);
+                            useAuthStore.getState().setProfile({ ...profile, profileTheme: newTheme } as any);
                             toast.success(`Profile background theme updated to ${newTheme.toUpperCase()}!`);
                           } else {
                             toast.error('Failed to update theme');
@@ -325,7 +325,7 @@ const handlePasswordChange = async () => {
                         const { becomeEmployer } = await import('@/lib/services/users');
                         const res = await becomeEmployer(profile.uid);
                         if (res.success) {
-                          useAuthStore.getState().useAuthStore.getState().setProfile({ ...profile, role: 'employer' } as any);
+                          useAuthStore.getState().setProfile({ ...profile, role: 'employer' } as any);
                           toast.success("Successfully upgraded to Employer!");
                         } else {
                           toast.error("Failed to upgrade account");
