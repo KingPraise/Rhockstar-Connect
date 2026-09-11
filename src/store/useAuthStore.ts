@@ -42,6 +42,7 @@ export interface UserProfile {
 
   subscriptionTier?: 'free' | 'pro' | 'elite';
   subscriptionStatus?: 'active' | 'inactive';
+  premiumUntil?: string;
   savedPosts?: string[];
   referralCode?: string;
   referralCount?: number;

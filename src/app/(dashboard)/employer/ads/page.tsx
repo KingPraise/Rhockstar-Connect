@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { 
   Advertisement, 
   subscribeToCompanyAds, 
