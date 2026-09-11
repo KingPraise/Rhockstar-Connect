@@ -183,32 +183,8 @@ export const updateUserProfile = async (
           count++;
         }
       });
+        // Note: Client-side cascade updates for comments have been removed due to batch limits and security rules.
 
-      // 2. Update Comments left by user on ANY post
-      const allPostsQuery = query(collection(db, 'posts'));
-      const allPostsSnap = await getDocs(allPostsQuery);
-      allPostsSnap.docs.forEach(postDoc => {
-        const postData = postDoc.data();
-        if (postData.comments && Array.isArray(postData.comments)) {
-          let updated = false;
-          const newComments = postData.comments.map((comment: any) => {
-            if (comment.userId === userId) {
-              updated = true;
-              return {
-                ...comment,
-                userName: data.fullName !== undefined ? data.fullName : comment.userName,
-                userAvatar: data.avatar !== undefined ? data.avatar : comment.userAvatar,
-              };
-            }
-            return comment;
-          });
-          
-          if (updated) {
-            batch.update(postDoc.ref, { comments: newComments });
-            count++;
-          }
-        }
-      });
 
       // 3. Update Jobs posted by user
       const jobsQuery = query(collection(db, 'jobs'), where('companyId', '==', userId));
