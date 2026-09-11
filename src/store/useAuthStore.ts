@@ -34,6 +34,7 @@ export interface UserProfile {
   role?: 'admin' | 'user';
   accountType?: 'standard' | 'employer';
   isBanned?: boolean;
+  notificationSettings?: { connectionAlerts?: boolean; postInteractions?: boolean; };
   
   // Employer Fields
   companySize?: string;
