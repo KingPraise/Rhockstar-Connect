@@ -7,7 +7,8 @@ import {
   ConnectionRequest, 
   getUserConnections, 
   sendConnectionRequest, 
-  updateConnectionStatus 
+  updateConnectionStatus,
+  removeConnection
 } from "@/lib/services/connections";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -110,6 +111,18 @@ export default function NetworkPage() {
       toast.error(res.error || "Failed to send request");
     }
     setActionLoading(prev => prev.filter(id => id !== toUserId));
+  };
+
+  const handleRemoveRequest = async (connectionId: string) => {
+    setActionLoading(prev => [...prev, connectionId]);
+    const res = await removeConnection(connectionId);
+    if (res.success) {
+      toast.success("Request cancelled");
+      await fetchData();
+    } else {
+      toast.error(res.error || "Failed to cancel request");
+    }
+    setActionLoading(prev => prev.filter(id => id !== connectionId));
   };
 
   const handleRespond = async (connectionId: string, status: 'accepted' | 'rejected') => {
@@ -382,8 +395,16 @@ export default function NetworkPage() {
                   )}
 
                   {status === 'sent' && (
-                    <button disabled className="w-full py-2 rounded-xl bg-slate-800/50 text-slate-500 font-bold flex items-center justify-center gap-2 cursor-not-allowed text-xs border border-white/5">
-                      Request Pending
+                    <button 
+                      onClick={() => {
+                        const sentConn = connections.find(c => c.fromUserId === profile?.uid && c.toUserId === user.uid && c.status === 'pending');
+                        if (sentConn) handleRemoveRequest(sentConn.id);
+                      }}
+                      disabled={actionLoading.some(id => connections.find(c => c.id === id && c.toUserId === user.uid))}
+                      className="w-full py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 font-bold transition-all flex items-center justify-center gap-2 text-xs border border-red-500/20"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Cancel Request
                     </button>
                   )}
 
