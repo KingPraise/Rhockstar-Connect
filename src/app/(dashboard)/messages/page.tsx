@@ -585,7 +585,7 @@ export default function MessagesPage() {
 
   if (!profile) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-100px)]">
+      <div className="flex-1 flex items-center justify-center min-h-full min-h-[calc(100vh-12rem)]">
         <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
@@ -607,7 +607,7 @@ export default function MessagesPage() {
   });
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100vh-100px)] gap-2 md:gap-4 p-2 md:p-4 lg:p-6 lg:gap-6">
+    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-full min-h-[calc(100vh-12rem)] gap-2 md:gap-4 p-2 md:p-4 lg:p-6 lg:gap-6">
       
       {/* SIDEBAR */}
       <div className={`${(activeChat || activeCommunity) ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl`}>
