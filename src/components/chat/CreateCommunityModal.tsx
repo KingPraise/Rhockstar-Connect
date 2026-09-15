@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Users, Sparkles, MessageSquare, Loader2, Compass, ChevronDown, Tag, Lock, Globe, Shield } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createCommunity, CommunityAccessType } from "@/lib/services/communities";
