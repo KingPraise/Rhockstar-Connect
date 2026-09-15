@@ -12,7 +12,13 @@ interface StardomInfoModalProps {
 export default function StardomInfoModal({ isOpen, onClose }: StardomInfoModalProps) {
   if (!isOpen) return null;
 
-  return (
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-2xl bg-slate-900 border border-brand/30 p-6 md:p-8 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.15)] relative overflow-hidden flex flex-col max-h-[90vh]">
         
@@ -160,5 +166,5 @@ export default function StardomInfoModal({ isOpen, onClose }: StardomInfoModalPr
         </div>
       </div>
     </div>
-  );
+  , document.body);
 }
