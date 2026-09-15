@@ -60,7 +60,7 @@ export default function NetworkPage() {
       toast.success("Filter cleared", { icon: "🧹", style: { background: '#334155', color: '#fff' } });
     } else {
       setActivePremiumFilter(filterId);
-      toast.success(`Filtered by: ${PREMIUM_FILTERS.find(f => f.id === filterId)?.label}`, { icon: "🎯", style: { background: '#334155', color: '#fff' } });
+      toast.success(`Filtered by: ${PREMIUM_FILTERS.find(f => f.id === filterId)?.label}`, { icon: "✨", style: { background: '#334155', color: '#fff' } });
     }
   };
 
@@ -317,7 +317,7 @@ export default function NetworkPage() {
                 )}
                 <span>{f.label}</span>
                 {isActive && (
-                  <span className="ml-1 text-[10px] bg-slate-950/20 px-1.5 py-0.2 rounded-full">✕</span>
+                    <span className="ml-1 text-[10px] bg-slate-950/20 px-1.5 py-0.5 rounded-full">🔒</span>
                 )}
               </button>
             );
