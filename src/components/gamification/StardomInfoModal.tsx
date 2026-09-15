@@ -1,5 +1,7 @@
 
 "use client";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 import { Trophy, Star, Shield, Zap, TrendingUp, HelpCircle, X, CheckCircle2, AlertCircle } from "lucide-react";
 import { STARDOM_TIERS } from "@/lib/services/gamification";
