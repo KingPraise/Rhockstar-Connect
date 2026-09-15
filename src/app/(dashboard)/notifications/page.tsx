@@ -153,7 +153,7 @@ export default function NotificationsPage() {
               
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start mb-1">
-                  <h3 className={`font-bold text-lg truncate ${notification.read ? "text-slate-200" : "text-white"}`}>
+                  <h3 className={`font-bold text-base leading-snug break-words pr-2 ${notification.read ? "text-slate-200" : "text-white"}`}>
                     {notification.title}
                   </h3>
                   <span className="text-xs font-medium text-slate-500 whitespace-nowrap ml-4">{timeString}</span>
