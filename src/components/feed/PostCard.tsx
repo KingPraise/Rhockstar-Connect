@@ -58,7 +58,7 @@ export default function PostCard({ post }: PostCardProps) {
       if (!blocked.includes(post.userId)) {
         await updateUserProfile(profile.uid, {
           blockedUsers: [...blocked, post.userId]
-        });
+        } as any);
       }
     }
   };
