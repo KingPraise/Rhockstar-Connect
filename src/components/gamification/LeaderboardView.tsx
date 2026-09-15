@@ -111,7 +111,7 @@ export default function LeaderboardView() {
         </div>
       )}
 
-      {/* Ranks List 4 - 15 */}
+      {/* Ranks List 4 - 20 */}
       {rest.length > 0 && (
         <div className="p-4 rounded-3xl bg-slate-900/80 border border-white/5 space-y-2 shadow-xl">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 py-1">

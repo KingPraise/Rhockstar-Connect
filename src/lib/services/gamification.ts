@@ -383,7 +383,7 @@ export interface LeaderboardUser {
 
 export function subscribeToLeaderboard(callback: (users: LeaderboardUser[]) => void) {
   const usersRef = collection(db, 'users');
-  const q = query(usersRef, orderBy('stardomXP', 'desc'), limit(15));
+  const q = query(usersRef, orderBy('stardomXP', 'desc'), limit(20));
 
   return onSnapshot(q, (snapshot) => {
     const list: LeaderboardUser[] = [];
