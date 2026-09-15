@@ -1,5 +1,4 @@
-﻿"use client";
-import { createPortal } from "react-dom";
+"use client";
 
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -55,7 +54,7 @@ export default function MessagesPage() {
     if (profile?.uid) {
       checkDailyStreak(profile.uid).then((res) => {
         if (res.isNewDay && res.streakCount > 1) {
-          toast.success(`ðŸ”¥ ${res.streakCount} Day Streak Active! Keep chatting to level up!`, { icon: 'ðŸ”¥' });
+          toast.success(`🔥 ${res.streakCount} Day Streak Active! Keep chatting to level up!`, { icon: '🔥' });
         }
       });
     }
@@ -414,7 +413,7 @@ export default function MessagesPage() {
         avatar: profile.avatar,
       });
       if (res.success) {
-        toast.success("Join request sent to community admin! ðŸ”’");
+        toast.success("Join request sent to community admin! 🔒");
       } else {
         toast.error(res.error || "Failed to send request");
       }
@@ -423,7 +422,7 @@ export default function MessagesPage() {
 
     const res = await joinCommunity(comm.id, profile.uid);
     if (res.success) {
-      toast.success(`Joined ${comm.name}! ðŸŽ‰`);
+      toast.success(`Joined ${comm.name}! 🎉`);
       setActiveCommunity({ ...comm, members: [...comm.members, profile.uid], memberCount: comm.memberCount + 1 });
     } else {
       toast.error(res.error || "Failed to join community");
@@ -443,7 +442,7 @@ export default function MessagesPage() {
   const handleAcceptRequest = async (comm: Community, req: JoinRequestDetail) => {
     const res = await acceptJoinRequest(comm.id, req);
     if (res.success) {
-      toast.success(`Accepted ${req.fullName || "User"} into ${comm.name}! ðŸŽ‰`);
+      toast.success(`Accepted ${req.fullName || "User"} into ${comm.name}! 🎉`);
     } else {
       toast.error("Failed to accept request");
     }
@@ -586,7 +585,7 @@ export default function MessagesPage() {
 
   if (!profile) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-full min-h-[calc(100vh-12rem)]">
+      <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-100px)]">
         <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
@@ -608,7 +607,7 @@ export default function MessagesPage() {
   });
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-full min-h-[calc(100vh-12rem)] gap-0 sm:gap-2 md:gap-4 p-0 sm:p-2 md:p-4 lg:p-6 lg:gap-6">
+    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100vh-100px)] gap-2 md:gap-4 p-2 md:p-4 lg:p-6 lg:gap-6">
       
       {/* SIDEBAR */}
       <div className={`${(activeChat || activeCommunity) ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl`}>
@@ -664,7 +663,7 @@ export default function MessagesPage() {
               }`}
             >
               <Globe className="w-3 h-3" />
-              Community ðŸŒ
+              Community 🌐
             </button>
             <button
               onClick={() => { setMessagesMode('leaderboard'); setActiveChat(null); setActiveCommunity(null); }}
@@ -673,7 +672,7 @@ export default function MessagesPage() {
               }`}
             >
               <Trophy className="w-3 h-3" />
-              Ranks â­
+              Ranks ⭐
             </button>
           </div>
 
@@ -993,7 +992,7 @@ export default function MessagesPage() {
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-12 h-12 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
-                          {comm.icon || "ðŸ’¬"}
+                          {comm.icon || "💬"}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
@@ -1008,7 +1007,7 @@ export default function MessagesPage() {
                             <span>{comm.memberCount} members</span>
                             {comm.creatorId === profile.uid && (
                               <span className="text-amber-400 font-bold flex items-center gap-0.5">
-                                â€¢ Creator
+                                • Creator
                               </span>
                             )}
                           </div>
@@ -1120,7 +1119,7 @@ export default function MessagesPage() {
                 className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
                 onClick={() => setActiveChat(null)}
               >
-                â† Back
+                ← Back
               </button>
               
               {(() => {
@@ -1213,8 +1212,7 @@ export default function MessagesPage() {
               const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
               const otherUser = users[otherUserId];
               
-              return messages.map((msg, index) => {
-                  const verticalPosition = index < 3 ? 'top-full mt-1' : 'bottom-full mb-1';
+              return messages.map((msg) => {
                 const isMe = msg.senderId === profile.uid;
                 const isEditingThis = editingMessageId === msg.id;
                 const isMenuOpen = openMessageMenuId === msg.id;
@@ -1341,7 +1339,7 @@ export default function MessagesPage() {
                             </button>
 
                             {isMenuOpen && (
-                              <div className={`absolute ${verticalPosition} ${isMe ? "left-0" : "right-0"} w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                              <div className={`absolute bottom-full ${isMe ? "left-0" : "right-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
                                 <button
                                   onClick={() => { setReplyingTo(msg); setOpenMessageMenuId(null); setTimeout(() => textareaRef.current?.focus(), 0); }}
                                   className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
@@ -1478,11 +1476,11 @@ export default function MessagesPage() {
                 className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
                 onClick={() => setActiveCommunity(null)}
               >
-                â† Back
+                ← Back
               </button>
               
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
-                {activeCommunity.icon || "ðŸ’¬"}
+                {activeCommunity.icon || "💬"}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1537,8 +1535,7 @@ export default function MessagesPage() {
                     (() => {
                     let commLastDate: Date | null = null;
                     
-                    return communityMessages.map((msg, index) => {
-                        const verticalPosition = index < 3 ? 'top-full mt-1' : 'bottom-full mb-1';
+                    return communityMessages.map((msg) => {
                       const isMe = msg.senderId === profile.uid;
                       const isCreator = msg.senderId === activeCommunity.creatorId;
                       
@@ -1636,7 +1633,7 @@ export default function MessagesPage() {
                                   </button>
 
                                   {openMessageMenuId === msg.id && (
-                                    <div className={`absolute ${verticalPosition} ${isMe ? "left-0" : "right-0"} w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                                    <div className={`absolute bottom-full ${isMe ? "left-0" : "right-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
                                       <button
                                         onClick={() => { setCommunityReplyingTo(msg); setOpenMessageMenuId(null); }}
                                         className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
@@ -1746,7 +1743,7 @@ export default function MessagesPage() {
               /* Non-Member Gated Access View */
               <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 text-center max-w-lg mx-auto space-y-6">
                 <div className="w-20 h-20 rounded-3xl bg-slate-800/80 border border-white/10 flex items-center justify-center text-4xl shadow-xl">
-                  {activeCommunity.icon || "ðŸ’¬"}
+                  {activeCommunity.icon || "💬"}
                 </div>
 
                 <div className="space-y-2">
@@ -1775,7 +1772,7 @@ export default function MessagesPage() {
                       return (
                         <div className="p-6 rounded-3xl bg-slate-800/60 border border-amber-500/30 text-center space-y-4 w-full max-w-sm shadow-xl">
                           <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto text-xl">
-                            â³
+                            ⏳
                           </div>
                           <div>
                             <h4 className="font-bold text-white text-base">Join Request Pending</h4>
@@ -1813,7 +1810,7 @@ export default function MessagesPage() {
                   return (
                     <div className="space-y-4 w-full max-w-sm">
                       <div className="p-3 bg-brand/10 border border-brand/20 rounded-2xl text-xs text-brand">
-                        Public Community â€¢ {activeCommunity.memberCount} members already participating
+                        Public Community • {activeCommunity.memberCount} members already participating
                       </div>
                       <button
                         onClick={() => handleJoinCommunity(activeCommunity)}
@@ -1840,7 +1837,7 @@ export default function MessagesPage() {
                 {/* Info Card */}
                 <div className="text-center space-y-2">
                   <div className="w-16 h-16 rounded-3xl bg-brand/10 text-3xl flex items-center justify-center mx-auto border border-brand/20 shadow-inner">
-                    {activeCommunity.icon || "ðŸ’¬"}
+                    {activeCommunity.icon || "💬"}
                   </div>
                   <h4 className="font-bold text-white text-base">{activeCommunity.name}</h4>
                   <p className="text-xs text-slate-400">{activeCommunity.description}</p>
@@ -2015,14 +2012,14 @@ export default function MessagesPage() {
 
       {/* VIEW 3: LEADERBOARD MODE */}
       {messagesMode === 'leaderboard' && (
-        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border-y sm:border border-white/5 rounded-none sm:rounded-3xl overflow-hidden shadow-2xl">
+        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
           <LeaderboardView />
         </div>
       )}
 
       {/* VIEW 4: EMPTY STATE WHEN NO CHAT IS OPEN */}
       {messagesMode !== 'leaderboard' && !activeChat && !activeCommunity && (
-        <div className="hidden md:flex flex-1 flex-col items-center justify-center neo-card bg-slate-900/60 border border-white/5 rounded-none sm:rounded-3xl p-8 text-center shadow-2xl">
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center neo-card bg-slate-900/60 border border-white/5 rounded-3xl p-8 text-center shadow-2xl">
           <div className="w-20 h-20 rounded-3xl bg-brand/10 text-brand flex items-center justify-center mb-4 border border-brand/20 shadow-inner">
             <Globe className="w-10 h-10" />
           </div>
@@ -2069,7 +2066,7 @@ export default function MessagesPage() {
       />
 
       {/* Forward Message Modal */}
-      {forwardingMessage && typeof window !== 'undefined' && createPortal(
+      {forwardingMessage && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
           <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
             <div className="flex items-center justify-between p-4 border-b border-white/5">
@@ -2094,7 +2091,7 @@ export default function MessagesPage() {
                       await sendMessage(
                         chat.id,
                         profile.uid,
-                        `â†©ï¸ Forwarded: ${forwardingMessage.text}`,
+                        `↩️ Forwarded: ${forwardingMessage.text}`,
                         'text'
                       );
                       toast.success(`Forwarded to ${otherUser?.fullName || 'chat'}`);
@@ -2121,9 +2118,8 @@ export default function MessagesPage() {
             </div>
           </div>
         </div>
-      , document.body)}
+      )}
     </div>
   );
 }
-
 
