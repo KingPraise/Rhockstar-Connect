@@ -7,7 +7,8 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "react-hot-toast";
 
 
-  const handleDeleteJob = async (jobId: string) => {
+  export default function AdminJobsPage() {
+const handleDeleteJob = async (jobId: string) => {
     if (!window.confirm("Are you sure you want to delete this job?")) return;
     try {
       const { doc, deleteDoc } = await import('firebase/firestore');
@@ -20,7 +21,7 @@ import { toast } from "react-hot-toast";
     }
   };
 
-export default function AdminJobsPage() {
+
   const { profile } = useAuthStore();
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
