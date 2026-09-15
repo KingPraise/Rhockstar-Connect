@@ -608,7 +608,7 @@ export default function MessagesPage() {
   });
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-full min-h-[calc(100vh-12rem)] gap-2 md:gap-4 p-2 md:p-4 lg:p-6 lg:gap-6">
+    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-full min-h-[calc(100vh-12rem)] gap-0 sm:gap-2 md:gap-4 p-0 sm:p-2 md:p-4 lg:p-6 lg:gap-6">
       
       {/* SIDEBAR */}
       <div className={`${(activeChat || activeCommunity) ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl`}>
@@ -2015,14 +2015,14 @@ export default function MessagesPage() {
 
       {/* VIEW 3: LEADERBOARD MODE */}
       {messagesMode === 'leaderboard' && (
-        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border-y sm:border border-white/5 rounded-none sm:rounded-3xl overflow-hidden shadow-2xl">
           <LeaderboardView />
         </div>
       )}
 
       {/* VIEW 4: EMPTY STATE WHEN NO CHAT IS OPEN */}
       {messagesMode !== 'leaderboard' && !activeChat && !activeCommunity && (
-        <div className="hidden md:flex flex-1 flex-col items-center justify-center neo-card bg-slate-900/60 border border-white/5 rounded-3xl p-8 text-center shadow-2xl">
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center neo-card bg-slate-900/60 border border-white/5 rounded-none sm:rounded-3xl p-8 text-center shadow-2xl">
           <div className="w-20 h-20 rounded-3xl bg-brand/10 text-brand flex items-center justify-center mb-4 border border-brand/20 shadow-inner">
             <Globe className="w-10 h-10" />
           </div>

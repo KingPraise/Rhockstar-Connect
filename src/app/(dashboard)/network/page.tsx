@@ -154,7 +154,7 @@ export default function NetworkPage() {
 
   if (!profile || loading) {
     return (
-      <div className="flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 flex gap-8">
+      <div className="flex-1 max-w-[1600px] mx-auto w-full p-0 sm:p-4 lg:p-8 flex gap-4 sm:gap-8">
         {/* Skeleton Sidebar */}
         <div className="hidden lg:block w-64 shrink-0 space-y-4">
           <Skeleton className="h-12 w-full rounded-2xl" />
@@ -239,7 +239,7 @@ export default function NetworkPage() {
   ];
 
   return (
-    <div className="flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 flex flex-col lg:flex-row gap-8">
+    <div className="flex-1 max-w-[1600px] mx-auto w-full p-0 sm:p-4 lg:p-8 flex flex-col lg:flex-row gap-4 sm:gap-8">
       
       {/* SIDEBAR (Desktop) & SCROLLABLE BAR (Mobile) */}
       <div className="w-full lg:w-72 shrink-0">
@@ -353,7 +353,7 @@ export default function NetworkPage() {
             const receivedConn = connections.find(c => c.fromUserId === user.uid && c.toUserId === profile.uid && c.status === 'pending');
             
             return (
-              <div key={user.uid} className="neo-card p-5 rounded-2xl bg-slate-900/60 border border-white/5 flex flex-col group hover:-translate-y-1 transition-all duration-300">
+              <div key={user.uid} className="neo-card p-5 rounded-none sm:rounded-2xl bg-slate-900/60 border-y sm:border border-white/5 flex flex-col group hover:-translate-y-1 transition-all duration-300">
                 <Link href={`/profile?uid=${user.uid}`} className="flex items-start gap-4 w-full group/profile mb-4">
                   <UserAvatar 
                     src={user.avatar} 

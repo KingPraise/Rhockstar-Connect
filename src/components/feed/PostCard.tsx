@@ -262,7 +262,7 @@ export default function PostCard({ post }: PostCardProps) {
   }, [post.id, searchParams]);
 
   return (
-    <div id={`post-${post.id}`} className="neo-card p-3.5 sm:p-4 mb-3.5 border border-white/5 bg-slate-900/60 rounded-2xl hover:border-white/10 transition-all duration-300">
+    <div id={`post-${post.id}`} className="neo-card p-4 sm:p-4 mb-2 sm:mb-3.5 border-y sm:border border-white/5 bg-slate-900/60 rounded-none sm:rounded-2xl hover:border-white/10 transition-all duration-300">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <Link href={`/profile?uid=${post.userId}`} className="flex items-center gap-3 group min-w-0">

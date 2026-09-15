@@ -37,9 +37,9 @@ export default function LeaderboardView() {
   const rest = leaders.slice(3);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
+    <div className="flex-1 overflow-y-auto p-0 sm:p-6 space-y-4 sm:space-y-6 custom-scrollbar">
       {/* Header Banner */}
-      <div className="p-6 rounded-3xl bg-gradient-to-r from-brand/20 via-purple-600/20 to-slate-900 border border-brand/20 relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+      <div className="p-4 sm:p-6 rounded-none sm:rounded-3xl bg-gradient-to-r from-brand/20 via-purple-600/20 to-slate-900 border-y sm:border border-brand/20 relative overflow-hidden flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
         <div className="space-y-1 text-center sm:text-left z-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand/10 border border-brand/30 text-brand text-xs font-black uppercase tracking-wider mb-1">
             <Trophy className="w-3.5 h-3.5" />
@@ -67,7 +67,7 @@ export default function LeaderboardView() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 items-end pt-4">
           {/* 2nd Place */}
           {top3[1] && (
-            <div className="order-2 sm:order-1 p-5 rounded-3xl bg-slate-900/90 border border-slate-700/60 flex flex-col items-center text-center relative shadow-xl transform hover:-translate-y-1 transition-transform">
+            <div className="order-2 sm:order-1 p-4 sm:p-5 rounded-none sm:rounded-3xl bg-slate-900/90 border-y sm:border border-slate-700/60 flex flex-col items-center text-center relative shadow-xl transform hover:-translate-y-1 transition-transform">
               <div className="absolute -top-3 px-3 py-0.5 rounded-full bg-slate-800 border border-slate-600 text-xs font-black text-slate-300 shadow-md flex items-center gap-1">
                 <Medal className="w-3 h-3 text-slate-400" /> #2
               </div>
@@ -83,7 +83,7 @@ export default function LeaderboardView() {
 
           {/* 1st Place Champion */}
           {top3[0] && (
-            <div className="order-1 sm:order-2 p-6 rounded-3xl bg-gradient-to-b from-amber-500/20 to-slate-900 border-2 border-amber-500/40 flex flex-col items-center text-center relative shadow-2xl transform hover:-translate-y-1 transition-transform">
+            <div className="order-1 sm:order-2 p-5 sm:p-6 rounded-none sm:rounded-3xl bg-gradient-to-b from-amber-500/20 to-slate-900 border-y-2 sm:border-2 border-amber-500/40 flex flex-col items-center text-center relative shadow-2xl transform hover:-translate-y-1 transition-transform">
               <div className="absolute -top-4 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 text-xs font-black shadow-lg flex items-center gap-1">
                 <Crown className="w-3.5 h-3.5 fill-slate-950" /> #1 Champion
               </div>
@@ -99,7 +99,7 @@ export default function LeaderboardView() {
 
           {/* 3rd Place */}
           {top3[2] && (
-            <div className="order-3 p-5 rounded-3xl bg-slate-900/90 border border-amber-800/40 flex flex-col items-center text-center relative shadow-xl transform hover:-translate-y-1 transition-transform">
+            <div className="order-3 p-4 sm:p-5 rounded-none sm:rounded-3xl bg-slate-900/90 border-y sm:border border-amber-800/40 flex flex-col items-center text-center relative shadow-xl transform hover:-translate-y-1 transition-transform">
               <div className="absolute -top-3 px-3 py-0.5 rounded-full bg-slate-800 border border-amber-700/60 text-xs font-black text-amber-500 shadow-md flex items-center gap-1">
                 <Medal className="w-3 h-3 text-amber-600" /> #3
               </div>
@@ -117,7 +117,7 @@ export default function LeaderboardView() {
 
       {/* Ranks List 4 - 20 */}
       {rest.length > 0 && (
-        <div className="p-4 rounded-3xl bg-slate-900/80 border border-white/5 space-y-2 shadow-xl">
+        <div className="p-2 sm:p-4 rounded-none sm:rounded-3xl bg-slate-900/80 border-y sm:border border-white/5 space-y-2 shadow-xl">
           <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
             Top Ranked Members
           </h4>
