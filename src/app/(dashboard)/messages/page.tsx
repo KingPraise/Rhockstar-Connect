@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { createPortal } from "react-dom";
 
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -54,7 +55,7 @@ export default function MessagesPage() {
     if (profile?.uid) {
       checkDailyStreak(profile.uid).then((res) => {
         if (res.isNewDay && res.streakCount > 1) {
-          toast.success(`🔥 ${res.streakCount} Day Streak Active! Keep chatting to level up!`, { icon: '🔥' });
+          toast.success(`ðŸ”¥ ${res.streakCount} Day Streak Active! Keep chatting to level up!`, { icon: 'ðŸ”¥' });
         }
       });
     }
@@ -413,7 +414,7 @@ export default function MessagesPage() {
         avatar: profile.avatar,
       });
       if (res.success) {
-        toast.success("Join request sent to community admin! 🔒");
+        toast.success("Join request sent to community admin! ðŸ”’");
       } else {
         toast.error(res.error || "Failed to send request");
       }
@@ -422,7 +423,7 @@ export default function MessagesPage() {
 
     const res = await joinCommunity(comm.id, profile.uid);
     if (res.success) {
-      toast.success(`Joined ${comm.name}! 🎉`);
+      toast.success(`Joined ${comm.name}! ðŸŽ‰`);
       setActiveCommunity({ ...comm, members: [...comm.members, profile.uid], memberCount: comm.memberCount + 1 });
     } else {
       toast.error(res.error || "Failed to join community");
@@ -442,7 +443,7 @@ export default function MessagesPage() {
   const handleAcceptRequest = async (comm: Community, req: JoinRequestDetail) => {
     const res = await acceptJoinRequest(comm.id, req);
     if (res.success) {
-      toast.success(`Accepted ${req.fullName || "User"} into ${comm.name}! 🎉`);
+      toast.success(`Accepted ${req.fullName || "User"} into ${comm.name}! ðŸŽ‰`);
     } else {
       toast.error("Failed to accept request");
     }
@@ -663,7 +664,7 @@ export default function MessagesPage() {
               }`}
             >
               <Globe className="w-3 h-3" />
-              Community 🌐
+              Community ðŸŒ
             </button>
             <button
               onClick={() => { setMessagesMode('leaderboard'); setActiveChat(null); setActiveCommunity(null); }}
@@ -672,7 +673,7 @@ export default function MessagesPage() {
               }`}
             >
               <Trophy className="w-3 h-3" />
-              Ranks ⭐
+              Ranks â­
             </button>
           </div>
 
@@ -992,7 +993,7 @@ export default function MessagesPage() {
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="w-12 h-12 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
-                          {comm.icon || "💬"}
+                          {comm.icon || "ðŸ’¬"}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
@@ -1007,7 +1008,7 @@ export default function MessagesPage() {
                             <span>{comm.memberCount} members</span>
                             {comm.creatorId === profile.uid && (
                               <span className="text-amber-400 font-bold flex items-center gap-0.5">
-                                • Creator
+                                â€¢ Creator
                               </span>
                             )}
                           </div>
@@ -1119,7 +1120,7 @@ export default function MessagesPage() {
                 className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
                 onClick={() => setActiveChat(null)}
               >
-                ← Back
+                â† Back
               </button>
               
               {(() => {
@@ -1477,11 +1478,11 @@ export default function MessagesPage() {
                 className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
                 onClick={() => setActiveCommunity(null)}
               >
-                ← Back
+                â† Back
               </button>
               
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
-                {activeCommunity.icon || "💬"}
+                {activeCommunity.icon || "ðŸ’¬"}
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1745,7 +1746,7 @@ export default function MessagesPage() {
               /* Non-Member Gated Access View */
               <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 text-center max-w-lg mx-auto space-y-6">
                 <div className="w-20 h-20 rounded-3xl bg-slate-800/80 border border-white/10 flex items-center justify-center text-4xl shadow-xl">
-                  {activeCommunity.icon || "💬"}
+                  {activeCommunity.icon || "ðŸ’¬"}
                 </div>
 
                 <div className="space-y-2">
@@ -1774,7 +1775,7 @@ export default function MessagesPage() {
                       return (
                         <div className="p-6 rounded-3xl bg-slate-800/60 border border-amber-500/30 text-center space-y-4 w-full max-w-sm shadow-xl">
                           <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto text-xl">
-                            ⏳
+                            â³
                           </div>
                           <div>
                             <h4 className="font-bold text-white text-base">Join Request Pending</h4>
@@ -1812,7 +1813,7 @@ export default function MessagesPage() {
                   return (
                     <div className="space-y-4 w-full max-w-sm">
                       <div className="p-3 bg-brand/10 border border-brand/20 rounded-2xl text-xs text-brand">
-                        Public Community • {activeCommunity.memberCount} members already participating
+                        Public Community â€¢ {activeCommunity.memberCount} members already participating
                       </div>
                       <button
                         onClick={() => handleJoinCommunity(activeCommunity)}
@@ -1839,7 +1840,7 @@ export default function MessagesPage() {
                 {/* Info Card */}
                 <div className="text-center space-y-2">
                   <div className="w-16 h-16 rounded-3xl bg-brand/10 text-3xl flex items-center justify-center mx-auto border border-brand/20 shadow-inner">
-                    {activeCommunity.icon || "💬"}
+                    {activeCommunity.icon || "ðŸ’¬"}
                   </div>
                   <h4 className="font-bold text-white text-base">{activeCommunity.name}</h4>
                   <p className="text-xs text-slate-400">{activeCommunity.description}</p>
@@ -2093,7 +2094,7 @@ export default function MessagesPage() {
                       await sendMessage(
                         chat.id,
                         profile.uid,
-                        `↩️ Forwarded: ${forwardingMessage.text}`,
+                        `â†©ï¸ Forwarded: ${forwardingMessage.text}`,
                         'text'
                       );
                       toast.success(`Forwarded to ${otherUser?.fullName || 'chat'}`);
@@ -2124,4 +2125,5 @@ export default function MessagesPage() {
     </div>
   );
 }
+
 
