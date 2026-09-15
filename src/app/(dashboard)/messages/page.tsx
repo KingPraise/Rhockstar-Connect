@@ -1212,7 +1212,8 @@ export default function MessagesPage() {
               const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
               const otherUser = users[otherUserId];
               
-              return messages.map((msg) => {
+              return messages.map((msg, index) => {
+                  const verticalPosition = index < 3 ? 'top-full mt-1' : 'bottom-full mb-1';
                 const isMe = msg.senderId === profile.uid;
                 const isEditingThis = editingMessageId === msg.id;
                 const isMenuOpen = openMessageMenuId === msg.id;
@@ -1339,7 +1340,7 @@ export default function MessagesPage() {
                             </button>
 
                             {isMenuOpen && (
-                              <div className={`absolute bottom-full ${isMe ? "left-0" : "right-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                              <div className={`absolute ${verticalPosition} ${isMe ? "left-0" : "right-0"} w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
                                 <button
                                   onClick={() => { setReplyingTo(msg); setOpenMessageMenuId(null); setTimeout(() => textareaRef.current?.focus(), 0); }}
                                   className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
@@ -1535,7 +1536,8 @@ export default function MessagesPage() {
                     (() => {
                     let commLastDate: Date | null = null;
                     
-                    return communityMessages.map((msg) => {
+                    return communityMessages.map((msg, index) => {
+                        const verticalPosition = index < 3 ? 'top-full mt-1' : 'bottom-full mb-1';
                       const isMe = msg.senderId === profile.uid;
                       const isCreator = msg.senderId === activeCommunity.creatorId;
                       
@@ -1633,7 +1635,7 @@ export default function MessagesPage() {
                                   </button>
 
                                   {openMessageMenuId === msg.id && (
-                                    <div className={`absolute bottom-full ${isMe ? "left-0" : "right-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                                    <div className={`absolute ${verticalPosition} ${isMe ? "left-0" : "right-0"} w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
                                       <button
                                         onClick={() => { setCommunityReplyingTo(msg); setOpenMessageMenuId(null); }}
                                         className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
