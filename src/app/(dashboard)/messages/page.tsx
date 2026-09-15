@@ -1339,7 +1339,7 @@ export default function MessagesPage() {
                             </button>
 
                             {isMenuOpen && (
-                              <div className={`absolute bottom-full ${isMe ? "right-0" : "left-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                              <div className={`absolute bottom-full ${isMe ? "left-0" : "right-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
                                 <button
                                   onClick={() => { setReplyingTo(msg); setOpenMessageMenuId(null); setTimeout(() => textareaRef.current?.focus(), 0); }}
                                   className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
@@ -1633,7 +1633,7 @@ export default function MessagesPage() {
                                   </button>
 
                                   {openMessageMenuId === msg.id && (
-                                    <div className={`absolute bottom-full ${isMe ? "right-0" : "left-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                                    <div className={`absolute bottom-full ${isMe ? "left-0" : "right-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
                                       <button
                                         onClick={() => { setCommunityReplyingTo(msg); setOpenMessageMenuId(null); }}
                                         className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
