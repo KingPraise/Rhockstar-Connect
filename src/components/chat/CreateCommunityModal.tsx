@@ -70,7 +70,14 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
     }
   };
 
-  return (
+  
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
@@ -225,5 +232,5 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
         </form>
       </div>
     </div>
-  );
+  , document.body);
 }
