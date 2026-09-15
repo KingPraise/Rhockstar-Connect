@@ -15,7 +15,11 @@ export default function LeaderboardView() {
 
   useEffect(() => {
     const unsub = subscribeToLeaderboard((list) => {
-      setLeaders(list);
+      const padded = [...list];
+      while(padded.length < 20) {
+        padded.push({ uid: "empty-"+padded.length, fullName: "Unranked Member", username: "", avatar: "", stardomXP: 0, stardomRank: "Explorer", streakCount: 0 });
+      }
+      setLeaders(padded);
       setLoading(false);
     });
     return () => unsub();
