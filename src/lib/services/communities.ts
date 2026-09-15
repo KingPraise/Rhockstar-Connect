@@ -78,6 +78,7 @@ export const createCommunity = async (data: {
       description: data.description,
       category: data.category || 'General',
       icon: data.icon || '💬',
+      accessType: data.accessType || 'public',
       creatorId: data.creatorId,
       creatorName: data.creatorName,
       creatorAvatar: data.creatorAvatar || '',
