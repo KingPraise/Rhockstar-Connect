@@ -37,6 +37,7 @@ export interface Message {
   type?: 'text' | 'image' | 'audio' | 'document';
   mediaUrl?: string;
   status?: 'sent' | 'delivered' | 'read';
+  readAt?: unknown;
   createdAt: unknown;
   replyToId?: string;
   replyToText?: string;
@@ -188,7 +189,10 @@ export const markMessagesAsRead = async (chatId: string, currentUserId: string) 
     const updatePromises: Promise<void>[] = [];
     snapshot.forEach((docSnap) => {
       if (docSnap.data().status !== 'read') {
-        updatePromises.push(updateDoc(doc(db, `chats/${chatId}/messages`, docSnap.id), { status: 'read' }));
+        updatePromises.push(updateDoc(doc(db, `chats/${chatId}/messages`, docSnap.id), { 
+          status: 'read',
+          readAt: serverTimestamp()
+        }));
       }
     });
 

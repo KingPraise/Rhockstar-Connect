@@ -120,7 +120,7 @@ export const requestNotificationPermission = async (userId: string) => {
     if (permission === 'granted') {
       const messaging = getMessaging();
       const token = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
       });
 
       if (token) {

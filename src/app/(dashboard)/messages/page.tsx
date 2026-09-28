@@ -158,10 +158,15 @@ export default function MessagesPage() {
     setSwipeOffset(0);
   };
 
-  // Helper for last seen status
-  const getUserStatus = (lastLogin: any) => {
-    if (!lastLogin) return { isOnline: false, text: "Offline" };
-    const date = (lastLogin as any)?.toDate ? (lastLogin as any).toDate() : new Date(lastLogin as any);
+  // Helper for last seen status — checks real-time isOnline flag from PresenceHeartbeat
+  const getUserStatus = (user: any) => {
+    // First check the real-time isOnline boolean (set by PresenceHeartbeat every 60s)
+    if (user?.isOnline === true) return { isOnline: true, text: "Online" };
+
+    // Fall back to timestamp-based detection using lastSeen or lastLogin
+    const lastSeen = user?.lastSeen || user?.lastLogin;
+    if (!lastSeen) return { isOnline: false, text: "Offline" };
+    const date = (lastSeen as any)?.toDate ? (lastSeen as any).toDate() : new Date(lastSeen as any);
     const diffInMinutes = (new Date().getTime() - date.getTime()) / (1000 * 60);
     if (diffInMinutes < 3) return { isOnline: true, text: "Online" };
     return { isOnline: false, text: `Last seen ${formatDistanceToNow(date, { addSuffix: true })}` };
@@ -876,7 +881,7 @@ export default function MessagesPage() {
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className="relative shrink-0">
                             <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className={`w-12 h-12 transition-transform ${isActive ? 'scale-105 ring-2 ring-brand' : ''}`} textClassName="text-lg font-bold" />
-                            {getUserStatus(otherUser.lastLogin).isOnline && (
+                            {getUserStatus(otherUser).isOnline && (
                               <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
                             )}
                           </div>
@@ -1130,14 +1135,14 @@ export default function MessagesPage() {
                   <Link href={`/profile?uid=${otherUserId}`} className="flex items-center gap-4 group cursor-pointer">
                     <div className="relative">
                       <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className="w-12 h-12 group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow" textClassName="text-lg font-bold" />
-                      {getUserStatus(otherUser.lastLogin).isOnline && (
+                      {getUserStatus(otherUser).isOnline && (
                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
                       )}
                     </div>
                     <div>
                       <h2 className="text-lg font-bold text-white leading-tight group-hover:text-brand transition-colors">{otherUser.fullName}</h2>
-                      <p className={`text-xs font-medium ${getUserStatus(otherUser.lastLogin).isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
-                        {getUserStatus(otherUser.lastLogin).text}
+                      <p className={`text-xs font-medium ${getUserStatus(otherUser).isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {getUserStatus(otherUser).text}
                       </p>
                     </div>
                   </Link>
@@ -1324,6 +1329,15 @@ export default function MessagesPage() {
                           <div className={`flex items-center justify-end gap-1.5 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
                             {msg.isEdited && !msg.isDeleted && <span className="italic font-normal">(edited)</span>}
                             <span>{formatMessageTime(msg.createdAt)}</span>
+                            {isMe && !msg.isDeleted && (
+                              <div className="flex items-center ml-0.5">
+                                {msg.status === 'read' ? (
+                                  <CheckCheck className="w-3.5 h-3.5 text-blue-600" title={`Read at ${formatMessageTime(msg.readAt || msg.createdAt)}`} />
+                                ) : (
+                                  <Check className="w-3 h-3 text-slate-950/60" />
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
 

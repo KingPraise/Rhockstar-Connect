@@ -35,6 +35,8 @@ export interface UserBasic {
   subscriptionStatus?: string;
   connections: number;
   lastLogin?: any;
+  isOnline?: boolean;
+  lastSeen?: any;
   role?: 'user' | 'admin' | 'employer';
   profileTheme?: string;
   stardomXP?: number;
@@ -78,6 +80,8 @@ export const getAllUsers = async (excludeAdmins = true): Promise<{ success: bool
           subscriptionStatus: data.subscriptionStatus,
           connections: data.connections || 0,
           lastLogin: data.lastSeen || data.lastLogin,
+          isOnline: data.isOnline || false,
+          lastSeen: data.lastSeen || data.lastLogin,
           role: data.role,
           stardomXP: Number(data.stardomXP || 0),
           stardomRank: data.stardomRank || 'Explorer',
