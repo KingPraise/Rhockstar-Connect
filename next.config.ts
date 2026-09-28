@@ -12,9 +12,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   reactCompiler: true,
   allowedDevOrigins: ['rhockstar-dev-999.loca.lt', 'localhost:3000'],
   images: {
