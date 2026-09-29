@@ -6,9 +6,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { createAdvertisement } from "@/lib/services/ads";
 import UserAvatar from "@/components/ui/UserAvatar";
 import toast from "react-hot-toast";
-import { storage } from "@/lib/firebase";
-import { uploadBytes, ref, getDownloadURL } from "firebase/storage";
-
+import { uploadMediaToCloudinary } from "@/lib/services/cloudinary";
 interface CreateAdModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -88,16 +86,12 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
 
       let finalLogoUrl = companyLogoPreview; // Fallback to current preview/avatar
       if (logoFile) {
-        const logoRef = ref(storage, `ads/${profile.uid}/logo_${Date.now()}_${logoFile.name}`);
-        await uploadBytes(logoRef, logoFile);
-        finalLogoUrl = await getDownloadURL(logoRef);
+        finalLogoUrl = await uploadMediaToCloudinary(logoFile, 'ads_logos', 'image');
       }
 
       let finalMediaUrl = "";
       if (mediaFile) {
-        const mediaRef = ref(storage, `ads/${profile.uid}/media_${Date.now()}_${mediaFile.name}`);
-        await uploadBytes(mediaRef, mediaFile);
-        finalMediaUrl = await getDownloadURL(mediaRef);
+        finalMediaUrl = await uploadMediaToCloudinary(mediaFile, 'ads_media', 'auto');
       }
 
       const res = await createAdvertisement({

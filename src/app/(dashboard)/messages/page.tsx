@@ -33,8 +33,7 @@ import LeaderboardView from "@/components/gamification/LeaderboardView";
 import { awardUserXP, checkDailyStreak, StardomRank } from "@/lib/services/gamification";
 
 import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, ChevronLeft, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, Globe, Users, Compass, Plus, Lock, Shield, Sparkles, ShieldCheck, UserX, Crown, MessageSquare, Trophy, Flame, Paperclip } from "lucide-react";
-import { storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { uploadMediaToCloudinary } from "@/lib/services/cloudinary";
 import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -328,10 +327,7 @@ export default function MessagesPage() {
     if (file) {
       try {
         setIsUploadingImage(true);
-        const timestamp = Date.now();
-        const storageRef = ref(storage, `chats/${activeChat.id}/${timestamp}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        uploadedMediaUrl = await getDownloadURL(storageRef);
+        uploadedMediaUrl = await uploadMediaToCloudinary(file, `chats_${activeChat.id}`, file.type.startsWith('image/') ? 'image' : 'auto');
         type = file.type.startsWith('image/') ? 'image' : 'document';
         if (!finalMsgText) {
           finalMsgText = type === 'image' ? "Sent an image" : file.name;
@@ -1350,7 +1346,9 @@ export default function MessagesPage() {
                             {isMe && !msg.isDeleted && (
                               <div className="flex items-center ml-0.5">
                                 {msg.status === 'read' ? (
-                                  <CheckCheck className="w-3.5 h-3.5 text-blue-600" title={`Read at ${formatMessageTime(msg.readAt || msg.createdAt)}`} />
+                                  <span title={`Read at ${formatMessageTime(msg.readAt || msg.createdAt)}`}>
+                                    <CheckCheck className="w-3.5 h-3.5 text-blue-600" />
+                                  </span>
                                 ) : (
                                   <Check className="w-3 h-3 text-slate-950/60" />
                                 )}

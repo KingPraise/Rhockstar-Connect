@@ -1,4 +1,4 @@
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { 
   collection, 
   addDoc, 
@@ -15,7 +15,7 @@ import {
   getDocs,
   limit
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadMediaToCloudinary } from './cloudinary';
 import { UserProfile } from '../../store/useAuthStore';
 
 export interface PollOption {
@@ -100,10 +100,7 @@ const uploadMediaFile = async (mediaFile: File, userUid: string): Promise<{ url:
 
   try {
     const uploadPromise = (async () => {
-      const safeName = mediaFile.name.replace(/[^a-zA-Z0-9.]/g, '_');
-      const storageRef = ref(storage, `posts/${userUid}_${Date.now()}_${safeName}`);
-      const snapshot = await uploadBytes(storageRef, mediaFile);
-      return await getDownloadURL(snapshot.ref);
+      return await uploadMediaToCloudinary(mediaFile, 'posts', isVideo ? 'video' : 'image');
     })();
 
     const timeoutPromise = new Promise<string>((_, reject) => 

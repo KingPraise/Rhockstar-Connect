@@ -5,8 +5,7 @@ import { X, Upload, Save, Loader2, ChevronDown, Heart, Shield } from "lucide-rea
 import { useAuthStore } from "@/store/useAuthStore";
 import { updateUserProfile, UserBasic } from "@/lib/services/users";
 import { logoutUser } from "@/lib/auth";
-import { uploadBytes, ref, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
+import { uploadMediaToCloudinary } from "@/lib/services/cloudinary";
 import toast from "react-hot-toast";
 
 interface EditProfileModalProps {
@@ -113,15 +112,11 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
             setTimeout(() => reject(new Error("Upload timed out. Check your internet connection or Firebase Storage rules.")), 15000);
           });
 
-          const storageRef = ref(storage, `avatars/${profile.uid}_${Date.now()}`);
-          
           // Race the upload against the 15-second timeout
-          const snapshot = await Promise.race([
-            uploadBytes(storageRef, avatarFile),
+          avatarUrl = await Promise.race([
+            uploadMediaToCloudinary(avatarFile, 'avatars', 'image'),
             timeoutPromise
-          ]) as any;
-
-          avatarUrl = await getDownloadURL(snapshot.ref);
+          ]) as string;
         } catch (e: any) {
           toast.error("Avatar upload failed: " + e.message);
         }
@@ -132,12 +127,10 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error("Upload timed out.")), 15000);
           });
-          const storageRef = ref(storage, `resumes/${profile.uid}_${Date.now()}_${resumeFile.name}`);
-          const snapshot = await Promise.race([
-            uploadBytes(storageRef, resumeFile),
+          resumeUrl = await Promise.race([
+            uploadMediaToCloudinary(resumeFile, 'resumes', 'auto'),
             timeoutPromise
-          ]) as any;
-          resumeUrl = await getDownloadURL(snapshot.ref);
+          ]) as string;
         } catch (e: any) {
           toast.error("Resume upload failed: " + e.message);
         }

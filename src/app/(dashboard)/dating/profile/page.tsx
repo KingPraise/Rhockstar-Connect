@@ -3,8 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { updateUserProfile } from "@/lib/services/users";
-import { storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import { uploadMediaToCloudinary } from "@/lib/services/cloudinary";
 import { Heart, Loader2, Save, Upload, Plus, Trash2, Mic, Settings, X, ChevronDown, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -125,18 +124,14 @@ export default function DatingProfileSetup() {
       // 1. Upload new photos
       const uploadedPhotoUrls: string[] = [];
       for (const file of newPhotos) {
-        const storageRef = ref(storage, `dating_photos/${profile.uid}_${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(snapshot.ref);
+        const url = await uploadMediaToCloudinary(file, 'dating_photos', 'image');
         uploadedPhotoUrls.push(url);
       }
 
       // 2. Upload voice intro if exists
       let finalVoiceIntro = existingVoiceIntro;
       if (voiceIntroFile) {
-        const storageRef = ref(storage, `dating_voice/${profile.uid}_${Date.now()}_${voiceIntroFile.name}`);
-        const snapshot = await uploadBytes(storageRef, voiceIntroFile);
-        finalVoiceIntro = await getDownloadURL(snapshot.ref);
+        finalVoiceIntro = await uploadMediaToCloudinary(voiceIntroFile, 'dating_voice', 'auto');
       }
 
       const allPhotos = [...existingPhotos, ...uploadedPhotoUrls];
