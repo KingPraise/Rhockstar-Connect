@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead, editMessage, deleteMessage, toggleArchiveChat, deleteChatForUser, markChatAsUnread } from "@/lib/services/messages";
-import { getAllUsers, UserBasic, getUserById, getUserByUsername } from "@/lib/services/users";
+import { getAllUsers, UserBasic, getUserById, getUserByUsername, listenToUserProfile } from "@/lib/services/users";
 import { formatDistanceToNow } from "date-fns";
 import { 
   subscribeToCommunities, 
@@ -259,20 +259,41 @@ export default function MessagesPage() {
     return () => unsubscribe();
   }, [profile?.uid, activeChat?.id]);
 
-  // Subscribe to DM Messages
+  // Subscribe to DM Messages & Real-time Presence
   useEffect(() => {
     if (!activeChat) {
       setMessages([]);
       return;
     }
-    const unsubscribe = subscribeToMessages(activeChat.id, (newMessages) => {
+    const unsubscribeMsgs = subscribeToMessages(activeChat.id, (newMessages) => {
       setMessages(newMessages);
     });
     if (profile?.uid) {
       markMessagesAsRead(activeChat.id, profile.uid);
     }
-    return () => unsubscribe();
-  }, [activeChat?.id, profile?.uid]);
+    
+    // Subscribe to the other user's presence
+    const otherUserId = activeChat.participants.find((id: string) => id !== profile?.uid);
+    let unsubscribePresence: (() => void) | undefined;
+    if (otherUserId) {
+      unsubscribePresence = listenToUserProfile(otherUserId, (updatedUser) => {
+        setUsers(prev => ({
+          ...prev,
+          [otherUserId]: {
+            ...prev[otherUserId],
+            ...updatedUser,
+            // Ensure we keep existing UserBasic fields if updatedUser is missing some
+            uid: otherUserId
+          }
+        }));
+      });
+    }
+
+    return () => {
+      unsubscribeMsgs();
+      if (unsubscribePresence) unsubscribePresence();
+    };
+  }, [activeChat?.id, activeChat?.participants, profile?.uid]);
 
   // Subscribe to Public Communities
   useEffect(() => {
