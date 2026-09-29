@@ -34,6 +34,13 @@
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
   }
+
+  /* Global Keyboard Accessibility Focus Ring */
+  *:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: max(0.25rem, inherit);
+  }
 }
 
 @layer components {

@@ -158,17 +158,21 @@ export default function MessagesPage() {
     setSwipeOffset(0);
   };
 
-  // Helper for last seen status — checks real-time isOnline flag from PresenceHeartbeat
+  // Helper for last seen status — strictly checks timestamp to prevent "stuck online" bugs
   const getUserStatus = (user: any) => {
-    // First check the real-time isOnline boolean (set by PresenceHeartbeat every 60s)
-    if (user?.isOnline === true) return { isOnline: true, text: "Online" };
-
-    // Fall back to timestamp-based detection using lastSeen or lastLogin
     const lastSeen = user?.lastSeen || user?.lastLogin;
     if (!lastSeen) return { isOnline: false, text: "Offline" };
+    
+    // Parse timestamp safely
     const date = (lastSeen as any)?.toDate ? (lastSeen as any).toDate() : new Date(lastSeen as any);
     const diffInMinutes = (new Date().getTime() - date.getTime()) / (1000 * 60);
-    if (diffInMinutes < 3) return { isOnline: true, text: "Online" };
+    
+    // They are ONLY online if they have connected within the last 3 minutes AND the flag is true
+    // (This prevents users being stuck 'Online' if their phone died or disconnected without sending visibilitychange)
+    if (diffInMinutes < 3 && user?.isOnline === true) {
+      return { isOnline: true, text: "Online" };
+    }
+    
     return { isOnline: false, text: `Last seen ${formatDistanceToNow(date, { addSuffix: true })}` };
   };
 
@@ -851,8 +855,15 @@ export default function MessagesPage() {
                         </button>
                       </div>
 
-                      {/* Swipeable card */}
                       <div
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            if (swipedChatId === chat.id) setSwipedChatId(null);
+                            else setActiveChat(chat);
+                          }
+                        }}
                         onTouchStart={(e) => handleTouchStart(chat.id, e)}
                         onTouchMove={(e) => handleTouchMove(chat.id, e)}
                         onTouchEnd={() => handleTouchEnd(chat.id)}
@@ -988,6 +999,13 @@ export default function MessagesPage() {
                   return (
                     <div
                       key={comm.id}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setActiveCommunity(comm);
+                        }
+                      }}
                       onClick={() => setActiveCommunity(comm)}
                       className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                         isActive 
