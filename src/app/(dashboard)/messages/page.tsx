@@ -989,7 +989,7 @@ export default function MessagesPage() {
             filteredCommunities.length > 0 ? (
               <div className="p-2 space-y-2">
                 {filteredCommunities.map((comm) => {
-                  const isJoined = comm.members.includes(profile.uid);
+                  const isJoined = (comm.members || []).includes(profile.uid);
                   const isActive = activeCommunity?.id === comm.id;
 
                   return (
@@ -1558,7 +1558,7 @@ export default function MessagesPage() {
           <div className="flex-1 flex overflow-hidden relative">
             
             {/* Group Chat Messages Stream or Non-Member Gated View */}
-            {activeCommunity.members.includes(profile.uid) ? (
+            {(activeCommunity.members || []).includes(profile.uid) ? (
               <div className="flex-1 flex flex-col justify-between overflow-hidden">
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
                   {communityMessages.length > 0 ? (
@@ -2000,9 +2000,9 @@ export default function MessagesPage() {
                 {/* Member Status & Join/Leave */}
                 <div className="p-3 bg-slate-800/60 rounded-2xl border border-white/5 space-y-2 text-center">
                   <div className="text-xs text-slate-300 font-medium">
-                    {activeCommunity.members.length} Members
+                    {(activeCommunity.members || []).length} Members
                   </div>
-                  {activeCommunity.members.includes(profile.uid) ? (
+                  {(activeCommunity.members || []).includes(profile.uid) ? (
                     <button
                       onClick={() => handleLeaveCommunity(activeCommunity)}
                       className="w-full py-2 bg-rose-600/20 text-rose-400 hover:bg-rose-600/30 rounded-xl text-xs font-bold transition-colors"

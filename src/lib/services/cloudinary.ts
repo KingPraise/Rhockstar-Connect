@@ -62,5 +62,14 @@ export const uploadMediaToCloudinary = async (
   }
 
   const data = await uploadRes.json();
-  return data.secure_url;
+  let finalUrl = data.secure_url;
+  
+  // Apply auto-optimization for images (auto format, auto quality)
+  if (resourceType === 'image' || (resourceType === 'auto' && file.type.startsWith('image/'))) {
+    // e.g. res.cloudinary.com/dkayul64b/image/upload/v12345/folder/file.jpg
+    // becomes res.cloudinary.com/dkayul64b/image/upload/q_auto,f_auto/v12345/folder/file.jpg
+    finalUrl = finalUrl.replace('/upload/', '/upload/q_auto,f_auto/');
+  }
+  
+  return finalUrl;
 };
