@@ -37,8 +37,12 @@ export const uploadMediaToCloudinary = async (
   const { signature, timestamp } = await sigRes.json();
 
   // 2. Upload directly to Cloudinary
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dkayul64b';
-  const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || '963534816781882';
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
+
+  if (!cloudName || !apiKey) {
+    throw new Error('Cloudinary configuration is missing');
+  }
 
   const formData = new FormData();
   formData.append('file', file);
@@ -66,8 +70,8 @@ export const uploadMediaToCloudinary = async (
   
   // Apply auto-optimization for images (auto format, auto quality)
   if (resourceType === 'image' || (resourceType === 'auto' && file.type.startsWith('image/'))) {
-    // e.g. res.cloudinary.com/dkayul64b/image/upload/v12345/folder/file.jpg
-    // becomes res.cloudinary.com/dkayul64b/image/upload/q_auto,f_auto/v12345/folder/file.jpg
+    // e.g. res.cloudinary.com/CLOUD_NAME/image/upload/v12345/folder/file.jpg
+    // becomes res.cloudinary.com/CLOUD_NAME/image/upload/q_auto,f_auto/v12345/folder/file.jpg
     finalUrl = finalUrl.replace('/upload/', '/upload/q_auto,f_auto/');
   }
   
