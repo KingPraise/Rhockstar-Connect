@@ -24,8 +24,9 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
   const [icon, setIcon] = useState("💬");
   const [accessType, setAccessType] = useState<CommunityAccessType>("public");
   const [loading, setLoading] = useState(false);
-
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => setMounted(true), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,11 +72,7 @@ export default function CreateCommunityModal({ isOpen, onClose, onCreated }: Cre
     }
   };
 
-  
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  if (!mounted) return null;
+  if (!isOpen || !mounted) return null;
 
   return createPortal(
 
