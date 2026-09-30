@@ -33,6 +33,7 @@ export default function MobileNav() {
               id={`tour-mobile-${item.name.toLowerCase()}-nav`}
               href={item.href}
               prefetch={true}
+              replace={true}
               className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all duration-300 relative ${
                 isActive 
                   ? (isDating ? "text-rose-500 font-bold" : "text-brand font-bold") 

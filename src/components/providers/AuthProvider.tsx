@@ -6,8 +6,10 @@ import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthStore, UserProfile } from '@/store/useAuthStore';
 
+import SplashScreen from '@/components/layout/SplashScreen';
+
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setProfile, setLoading } = useAuthStore();
+  const { setUser, setProfile, setLoading, isLoading } = useAuthStore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -37,7 +39,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         setProfile(null);
       }
       
-      setLoading(false);
+      // Delay dismissing the loading screen slightly so Firestore has time to fetch the profile
+      setTimeout(() => setLoading(false), 300);
     });
 
     return () => {
@@ -46,5 +49,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     };
   }, [setUser, setProfile, setLoading]);
 
-  return <>{children}</>;
+  return (
+    <>
+      <SplashScreen isLoading={isLoading} />
+      {children}
+    </>
+  );
 }
