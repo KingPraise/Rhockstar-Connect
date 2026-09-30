@@ -25,22 +25,23 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             console.warn("User profile document not found!");
             setProfile(null);
           }
+          // Hold the splash screen until we actually have the profile data!
+          setLoading(false);
         }, (error) => {
           console.error("Error listening to user profile:", error);
+          setLoading(false);
         });
         
-        // Clean up profile listener when auth state changes (if needed, though this is handled by the parent effect cleanup)
-        // Store it on the window to prevent memory leaks if auth state changes rapidly
+        // Clean up profile listener when auth state changes
         if ((window as any)._profileUnsub) {
           (window as any)._profileUnsub();
         }
         (window as any)._profileUnsub = unsubscribeProfile;
       } else {
         setProfile(null);
+        // Only dismiss loading immediately if there is absolutely no logged-in user
+        setLoading(false);
       }
-      
-      // Delay dismissing the loading screen slightly so Firestore has time to fetch the profile
-      setTimeout(() => setLoading(false), 300);
     });
 
     return () => {
