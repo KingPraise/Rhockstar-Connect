@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 import { getDatabase } from "firebase/database";
 
 // Your web app's Firebase configuration
@@ -20,6 +20,14 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// Enable offline caching on the client side to speed up initial loads and support offline functionality
+if (typeof window !== "undefined") {
+  enableIndexedDbPersistence(db).catch((err) => {
+    console.warn("Firestore persistence could not be enabled:", err.code);
+  });
+}
+
 const rtdb = getDatabase(app);
 
 export { app, auth, db, rtdb };

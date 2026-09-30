@@ -46,9 +46,20 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
     return () => {
       unsubscribe();
-      if ((window as any)._profileUnsub) (window as any)._profileUnsub();
+      if ((window as any)._profileUnsub) {
+        (window as any)._profileUnsub();
+      }
     };
   }, [setUser, setProfile, setLoading]);
+
+  // Fallback: forcefully drop splash screen after 3 seconds to prevent indefinite hanging
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
+    return () => clearTimeout(safetyTimer);
+  }, [setLoading]);
 
   return (
     <>
