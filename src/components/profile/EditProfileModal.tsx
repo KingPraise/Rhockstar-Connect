@@ -119,6 +119,8 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           ]) as string;
         } catch (e: any) {
           toast.error("Avatar upload failed: " + e.message);
+          setLoading(false);
+          return;
         }
       }
 
@@ -133,6 +135,8 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           ]) as string;
         } catch (e: any) {
           toast.error("Resume upload failed: " + e.message);
+          setLoading(false);
+          return;
         }
       }
 
