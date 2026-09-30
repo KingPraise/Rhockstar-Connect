@@ -9,7 +9,7 @@ import { createPost, PollData } from "@/lib/services/posts";
 import toast from "react-hot-toast";
 
 export default function PostComposer() {
-  const { profile } = useAuthStore();
+  const { profile, isLoading } = useAuthStore();
   const [content, setContent] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<{ url: string, type: 'image' | 'video' | 'document', name?: string } | null>(null);
@@ -113,6 +113,12 @@ export default function PostComposer() {
       setErrorMsg("An unexpected error occurred.");
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="neo-card p-6 mb-6 h-[120px] bg-slate-900/60 rounded-2xl animate-pulse border border-white/5" />
+    );
+  }
 
   if (!profile) {
     return (

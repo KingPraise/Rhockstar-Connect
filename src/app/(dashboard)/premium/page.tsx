@@ -14,14 +14,16 @@ import { useCurrencyStore, CURRENCIES } from "@/store/useCurrencyStore";
 const PaymentButton = ({ tier, profile, currency, formatPrice, onSuccess, disabled, className, children }: any) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const baseUSD = tier === 'pro' ? 2 : 5;
-  const curr = (CURRENCIES as any)[currency] || { rateFromUSD: 1 };
-  const amount = baseUSD * curr.rateFromUSD;
+  
+  // Calculate NGN amount explicitly for Flutterwave checkout
+  const ngnRate = (CURRENCIES as any)['NGN']?.rateFromUSD || 1500;
+  const chargeAmountNGN = baseUSD * ngnRate;
 
   const config = {
     public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-78ba9038855272bdb48441ac8989d5aa-X',
     tx_ref: `rhockstar_${tier}_${Date.now()}`,
-    amount: amount,
-    currency: currency,
+    amount: chargeAmountNGN,
+    currency: 'NGN', // Always pass NGN to satisfy Flutterwave restrictions
     payment_options: 'card,mobilemoney,ussd',
     customer: {
       email: profile?.email || 'user@rhockstar.com',
