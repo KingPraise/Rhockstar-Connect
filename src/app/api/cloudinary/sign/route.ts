@@ -37,8 +37,8 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ timestamp, signature, folder });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cloudinary signature error', error);
-    return NextResponse.json({ error: 'Failed to sign request' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Failed to sign request' }, { status: 500 });
   }
 }
