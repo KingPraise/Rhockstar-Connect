@@ -1461,55 +1461,108 @@ export default function MessagesPage() {
             </div>
           )}
           {/* DM Input Bar */}
-          <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-slate-900/90 flex items-center gap-3">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileSelect}
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx"
-            />
-            <button 
-              type="button" 
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors shrink-0"
-            >
-              <Paperclip className="w-5 h-5" />
-            </button>
-            <button 
-              type="button" 
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`p-2.5 rounded-xl transition-colors shrink-0 ${isRecording ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30 animate-pulse' : 'text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700'}`}
-            >
-              {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-            </button>
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              placeholder="Write a message..."
-              value={newMessage}
-              onChange={(e) => {
-                 setNewMessage(e.target.value);
-                 e.target.style.height = 'auto';
-                 e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-                 if (!e.target.value) e.target.style.height = 'auto';
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
-                  e.preventDefault();
-                  handleSendMessage(e as any);
-                  e.currentTarget.style.height = 'auto';
-                }
-              }}
-              className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand resize-none min-h-[46px] max-h-[150px] overflow-y-auto"
-            />
-            <button
-              type="submit"
-              disabled={!newMessage.trim() && !mediaFile}
-              className="p-3 bg-brand text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity"
-            >
-              <Send className="w-5 h-5" />
-            </button>
+          <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-slate-900/90 flex flex-col gap-3">
+            {/* Media Preview Box */}
+            {mediaFile && !isRecording && (
+              <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl relative self-start">
+                {mediaFile.type.startsWith('image/') ? (
+                  <img src={URL.createObjectURL(mediaFile)} alt="preview" className="h-16 rounded-md object-cover" />
+                ) : mediaFile.type.startsWith('audio/') ? (
+                  <audio src={URL.createObjectURL(mediaFile)} controls className="h-10 w-[250px]" />
+                ) : (
+                  <div className="flex items-center gap-2 text-slate-300 px-2">
+                    <FileText className="w-5 h-5 text-brand" />
+                    <span className="text-sm font-medium truncate max-w-[150px]">{mediaFile.name}</span>
+                  </div>
+                )}
+                <button 
+                  type="button" 
+                  onClick={() => { setMediaFile(null); setMediaPreviewUrl(null); }}
+                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+            
+            <div className="flex items-end gap-3 w-full">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                className="hidden"
+                accept="image/*,.pdf,.doc,.docx"
+              />
+              {!isRecording && (
+                <button 
+                  type="button" 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2.5 mb-0.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors shrink-0"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+              )}
+              <button 
+                type="button" 
+                onClick={isRecording ? stopRecording : startRecording}
+                className={`p-2.5 mb-0.5 rounded-xl transition-colors shrink-0 ${isRecording ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700'}`}
+              >
+                {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+              
+              {isRecording ? (
+                <div className="flex-1 flex items-center justify-between bg-slate-800 border border-brand/50 rounded-2xl px-4 py-3 min-h-[46px] mb-0.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                    <span className="text-red-400 font-mono text-sm font-medium tracking-wider">
+                      {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                    </span>
+                  </div>
+                  {/* Animated Sound Waves */}
+                  <div className="flex items-center gap-1 h-5 overflow-hidden">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div 
+                        key={i} 
+                        className="w-1 bg-brand rounded-full animate-pulse" 
+                        style={{ height: `${Math.max(4, Math.random() * 16 + 4)}px`, animationDelay: `${i * 0.15}s` }} 
+                      />
+                    ))}
+                  </div>
+                  <button type="button" onClick={() => { stopRecording(); setTimeout(() => setMediaFile(null), 50); }} className="p-1 text-slate-400 hover:text-red-500 transition-colors" title="Cancel Recording">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  placeholder="Write a message..."
+                  value={newMessage}
+                  onChange={(e) => {
+                    setNewMessage(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                    if (!e.target.value) e.target.style.height = 'auto';
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+                      e.preventDefault();
+                      handleSendMessage(e as any);
+                      e.currentTarget.style.height = 'auto';
+                    }
+                  }}
+                  className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand resize-none min-h-[46px] max-h-[150px] overflow-y-auto"
+                />
+              )}
+              
+              <button
+                type="submit"
+                disabled={!newMessage.trim() && !mediaFile}
+                className="p-3 mb-0.5 bg-brand text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity shrink-0"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
           </form>
         </div>
       )}
