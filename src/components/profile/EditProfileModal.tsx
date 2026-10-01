@@ -37,6 +37,9 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(profile?.avatar || null);
+
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(profile?.coverImage || null);
   
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [resumeName, setResumeName] = useState<string | null>(profile?.resumeUrl ? "Current Resume Uploaded" : null);
@@ -51,6 +54,14 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
       const file = e.target.files[0];
       setAvatarFile(file);
       setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setCoverFile(file);
+      setCoverPreview(URL.createObjectURL(file));
     }
   };
 
@@ -103,22 +114,37 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
       }
 
       let avatarUrl = profile.avatar;
+      let coverUrl = profile.coverImage;
       let resumeUrl = profile.resumeUrl;
       
       if (avatarFile) {
         try {
-          // Create a timeout promise to prevent hanging
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error("Upload timed out. Check your internet connection or Firebase Storage rules.")), 15000);
           });
 
-          // Race the upload against the 15-second timeout
           avatarUrl = await Promise.race([
             uploadMediaToCloudinary(avatarFile, 'avatars', 'image'),
             timeoutPromise
           ]) as string;
         } catch (e: any) {
           toast.error("Avatar upload failed: " + e.message);
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      if (coverFile) {
+        try {
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error("Upload timed out.")), 15000);
+          });
+          coverUrl = await Promise.race([
+            uploadMediaToCloudinary(coverFile, 'covers', 'image'),
+            timeoutPromise
+          ]) as string;
+        } catch (e: any) {
+          toast.error("Cover upload failed: " + e.message);
           setIsSaving(false);
           return;
         }
@@ -156,6 +182,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
         portfolio: formData.portfolio.split(",").map(s => s.trim()).filter(Boolean),
         visibility: formData.visibility,
         ...(avatarUrl && { avatar: avatarUrl }),
+        ...(coverUrl && { coverImage: coverUrl }),
         ...(resumeUrl && { resumeUrl })
       };
 
@@ -231,21 +258,42 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
               {/* Personal Info Tab */}
               {activeTab === "personal" && (
                 <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-secondary ml-1">Profile Photo</label>
-                    <div className="flex items-center gap-4">
-                      {avatarPreview ? (
-                        <img src={avatarPreview} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-brand" />
-                      ) : (
-                        <div className="w-20 h-20 rounded-full bg-primary-light flex items-center justify-center text-white text-xl font-bold">
-                          {formData.fullName?.substring(0, 2).toUpperCase() || 'U'}
+                  <div className="flex flex-col md:flex-row gap-6 md:gap-10">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-secondary ml-1">Profile Photo</label>
+                      <div className="flex items-center gap-4">
+                        {avatarPreview ? (
+                          <img src={avatarPreview} alt="Avatar" className="w-20 h-20 rounded-full object-cover border-2 border-brand shrink-0" />
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-primary-light flex items-center justify-center text-white text-xl font-bold shrink-0">
+                            {formData.fullName?.substring(0, 2).toUpperCase() || 'U'}
+                          </div>
+                        )}
+                        <div>
+                          <input type="file" id="avatarUpload" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                          <label htmlFor="avatarUpload" className="neo-button text-sm flex items-center gap-2 cursor-pointer">
+                            <Upload className="w-4 h-4" /> Change Photo
+                          </label>
                         </div>
-                      )}
-                      <div>
-                        <input type="file" id="avatarUpload" accept="image/*" className="hidden" onChange={handleAvatarChange} />
-                        <label htmlFor="avatarUpload" className="neo-button text-sm flex items-center gap-2 cursor-pointer">
-                          <Upload className="w-4 h-4" /> Change Photo
-                        </label>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <label className="text-sm font-semibold text-secondary ml-1">Cover Photo</label>
+                      <div className="flex items-center gap-4">
+                        {coverPreview ? (
+                          <img src={coverPreview} alt="Cover" className="w-32 h-20 rounded-lg object-cover border-2 border-brand shrink-0" />
+                        ) : (
+                          <div className="w-32 h-20 rounded-lg bg-primary-light/50 border-2 border-dashed border-white/20 flex items-center justify-center text-white/50 text-xs shrink-0">
+                            No Cover
+                          </div>
+                        )}
+                        <div>
+                          <input type="file" id="coverUpload" accept="image/*" className="hidden" onChange={handleCoverChange} />
+                          <label htmlFor="coverUpload" className="neo-button text-sm flex items-center gap-2 cursor-pointer">
+                            <Upload className="w-4 h-4" /> Change Cover
+                          </label>
+                        </div>
                       </div>
                     </div>
                   </div>

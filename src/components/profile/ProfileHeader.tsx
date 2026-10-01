@@ -67,9 +67,13 @@ export default function ProfileHeader({
     <div className="neo-card p-0 overflow-hidden flex flex-col mb-6 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl group">
       {/* Cover Photo */}
       <div className={`h-36 sm:h-48 md:h-60 w-full bg-gradient-to-r ${themeClasses.cover} bg-[length:200%_200%] animate-gradient-x relative`}>
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]"></div>
+        {profile.coverImage ? (
+          <img src={profile.coverImage} alt="Cover" className="w-full h-full object-cover absolute inset-0" />
+        ) : (
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]"></div>
+        )}
         {isOwnProfile && (
-          <button onClick={onEditClick} className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white text-xs sm:text-sm py-1.5 px-3 sm:py-2 sm:px-4 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-all border border-white/10 shadow-lg">
+          <button onClick={onEditClick} className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white text-xs sm:text-sm py-1.5 px-3 sm:py-2 sm:px-4 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-all border border-white/10 shadow-lg z-10">
             <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span className="hidden sm:inline">Update Cover</span>
             <span className="sm:hidden">Cover</span>

@@ -10,6 +10,7 @@ export interface UserProfile {
   headline?: string;
   location?: { city?: string; state?: string; country?: string } | string;
   avatar?: string;
+  coverImage?: string;
   stats?: { posts: number; followers: number; following: number; connections: number };
   phone?: string;
   dob?: string;
