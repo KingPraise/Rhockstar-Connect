@@ -1285,14 +1285,12 @@ export default function MessagesPage() {
                     )}
                     <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
                       <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                        {!isMe && (
-                          <UserAvatar 
-                            src={otherUser?.avatar} 
-                            name={otherUser?.fullName || "Member"} 
-                            className="w-7 h-7 rounded-full shrink-0 mb-1" 
-                            textClassName="text-[10px] font-bold" 
-                          />
-                        )}
+                        <UserAvatar 
+                          src={isMe ? profile?.avatar : otherUser?.avatar} 
+                          name={isMe ? profile?.fullName : (otherUser?.fullName || "Member")} 
+                          className="w-7 h-7 rounded-full shrink-0 mb-1" 
+                          textClassName="text-[10px] font-bold" 
+                        />
 
                         <div 
   onClick={() => !isEditingThis && !msg.isDeleted && setOpenMessageMenuId(isMenuOpen ? null : msg.id)}
@@ -1507,7 +1505,7 @@ export default function MessagesPage() {
             />
             <button
               type="submit"
-              disabled={!newMessage.trim()}
+              disabled={!newMessage.trim() && !mediaFile}
               className="p-3 bg-brand text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity"
             >
               <Send className="w-5 h-5" />
@@ -1616,14 +1614,12 @@ export default function MessagesPage() {
                           )}
                           <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
                             <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[75%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                              {!isMe && (
-                                <UserAvatar 
-                                  src={msg.senderAvatar} 
-                                  name={msg.senderName} 
-                                  className="w-8 h-8 rounded-full shrink-0 mb-1" 
-                                  textClassName="text-[10px] font-bold" 
-                                />
-                              )}
+                              <UserAvatar 
+                                src={isMe ? profile?.avatar : msg.senderAvatar} 
+                                name={isMe ? profile?.fullName : msg.senderName} 
+                                className="w-8 h-8 rounded-full shrink-0 mb-1" 
+                                textClassName="text-[10px] font-bold" 
+                              />
                               
                               <div 
                                 onClick={() => !msg.isDeleted && setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}

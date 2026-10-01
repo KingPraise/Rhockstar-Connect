@@ -26,6 +26,7 @@ import {
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import QuickCreateModal from "@/components/layout/QuickCreateModal";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export default function Sidebar() {
   const { profile, logout, unreadNotifications, unreadMessages } = useAuthStore();
@@ -100,9 +101,12 @@ export default function Sidebar() {
       {/* Profile on Top */}
       <div className="px-6 mb-6">
         <Link href="/profile" className={`block neo-card p-3 flex items-center ${isMinimized ? "justify-center" : "gap-3"} bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-white/5 hover:border-brand/30 transition-all group cursor-pointer`}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] shrink-0 group-hover:scale-105 transition-transform">
-            {profile?.fullName?.charAt(0) || 'U'}
-          </div>
+          <UserAvatar 
+            src={profile?.avatar} 
+            name={profile?.fullName || 'User'} 
+            className="w-10 h-10 rounded-xl shrink-0 group-hover:scale-105 transition-transform" 
+            textClassName="font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]"
+          />
           {!isMinimized && (
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">

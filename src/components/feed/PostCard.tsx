@@ -266,10 +266,10 @@ export default function PostCard({ post }: PostCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <Link href={`/profile?uid=${post.userId}`} className="flex items-center gap-3 group min-w-0">
-          <UserAvatar src={post.user.avatar} name={post.user.name} className="w-9 h-9 shrink-0 shadow-inner group-hover:scale-105 transition-transform" textClassName="text-xs font-bold" />
+          <UserAvatar src={post.userId === profile?.uid ? profile?.avatar : post.user.avatar} name={post.userId === profile?.uid ? profile?.fullName : post.user.name} className="w-9 h-9 shrink-0 shadow-inner group-hover:scale-105 transition-transform" textClassName="text-xs font-bold" />
           <div className="min-w-0">
             <h4 className="font-bold text-sm text-white group-hover:text-purple-300 transition-colors flex items-center gap-1.5 truncate">
-              <span className="truncate">{post.user.name}</span>
+              <span className="truncate">{post.userId === profile?.uid ? profile?.fullName : post.user.name}</span>
               <VerifiedBadge tier={(post.user as any)?.subscriptionTier} />
             </h4>
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
@@ -555,11 +555,11 @@ export default function PostCard({ post }: PostCardProps) {
                   <div key={comment.id} className="flex flex-col gap-3">
                     <div className="flex gap-3">
                       <Link href={`/profile?uid=${comment.userId}`}>
-                        <UserAvatar src={comment.user.avatar} name={comment.user.name} className="w-10 h-10 shadow-inner" textClassName="text-xs font-bold" />
+                        <UserAvatar src={comment.userId === profile?.uid ? profile?.avatar : comment.user.avatar} name={comment.userId === profile?.uid ? profile?.fullName : comment.user.name} className="w-10 h-10 shadow-inner" textClassName="text-xs font-bold" />
                       </Link>
                       <div className="flex-1 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
                         <div className="flex items-center justify-between mb-1">
-                          <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors">{comment.user.name}</Link>
+                          <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors">{comment.userId === profile?.uid ? profile?.fullName : comment.user.name}</Link>
                           <span className="text-xs text-slate-500">{cTimeAgo}</span>
                         </div>
                         {editingCommentId === comment.id ? (
@@ -634,11 +634,11 @@ export default function PostCard({ post }: PostCardProps) {
                           return (
                             <div key={reply.id} className="flex gap-3 relative before:absolute before:left-[-22px] before:top-4 before:w-4 before:h-px before:bg-white/10">
                               <Link href={`/profile?uid=${reply.userId}`}>
-                                <UserAvatar src={reply.user.avatar} name={reply.user.name} className="w-8 h-8 shrink-0 shadow-inner" textClassName="text-[10px] font-bold" />
+                                <UserAvatar src={reply.userId === profile?.uid ? profile?.avatar : reply.user.avatar} name={reply.userId === profile?.uid ? profile?.fullName : reply.user.name} className="w-8 h-8 shrink-0 shadow-inner" textClassName="text-[10px] font-bold" />
                               </Link>
                               <div className="flex-1 bg-slate-900/50 rounded-2xl rounded-tl-sm p-3 border border-white/5">
                                 <div className="flex items-center justify-between mb-1">
-                                  <Link href={`/profile?uid=${reply.userId}`} className="font-bold text-white text-xs hover:text-brand transition-colors">{reply.user.name}</Link>
+                                  <Link href={`/profile?uid=${reply.userId}`} className="font-bold text-white text-xs hover:text-brand transition-colors">{reply.userId === profile?.uid ? profile?.fullName : reply.user.name}</Link>
                                   <span className="text-[10px] text-slate-500">{rTimeAgo}</span>
                                 </div>
                                 {editingCommentId === reply.id ? (
