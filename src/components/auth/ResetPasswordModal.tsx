@@ -45,7 +45,7 @@ export default function ResetPasswordModal({ isOpen, onClose }: ResetPasswordMod
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-md neo-card p-6 md:p-8 bg-slate-900 border border-brand/30 shadow-2xl relative">
         <button
           onClick={onClose}

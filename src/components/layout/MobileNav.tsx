@@ -3,14 +3,35 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Heart, Briefcase, MessageSquare, User } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function MobileNav() {
   const pathname = usePathname();
   const { unreadMessages } = useAuthStore();
-  
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Hide if scrolled down more than 10px and beyond 50px from top
+      if (currentScrollY > lastScrollY + 10 && currentScrollY > 50) {
+        setIsVisible(false);
+      } 
+      // Show if scrolled up more than 10px or close to top
+      else if (currentScrollY < lastScrollY - 10 || currentScrollY < 50) {
+        setIsVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
 
   const navItems = [
     { name: "Home", href: "/feed", icon: Home },
@@ -21,7 +42,7 @@ export default function MobileNav() {
   ];
 
   return (
-    <nav className={`md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 z-50 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)] `}>
+    <nav className={`md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 z-50 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}>
       <div className="flex items-center justify-around px-2 py-3">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
