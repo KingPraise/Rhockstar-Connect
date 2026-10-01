@@ -33,8 +33,14 @@ export const uploadMediaToCloudinary = async (
   if (!sigRes.ok) {
     let errMsg = 'Failed to get upload signature';
     try {
-      const errData = await sigRes.json();
-      errMsg = errData.error || errMsg;
+      const text = await sigRes.text();
+      try {
+        const errData = JSON.parse(text);
+        errMsg = errData.error || errMsg;
+      } catch {
+        // If it's a raw HTML 500 error page from Netlify, show a snippet of it
+        errMsg = `Server Error (500). Netlify says: ${text.substring(0, 100)}`;
+      }
     } catch {}
     throw new Error(errMsg);
   }
