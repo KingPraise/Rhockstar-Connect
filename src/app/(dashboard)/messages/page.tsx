@@ -1,0 +1,2139 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { useAuthStore } from "@/store/useAuthStore";
+import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead, editMessage, deleteMessage, toggleArchiveChat, deleteChatForUser, markChatAsUnread } from "@/lib/services/messages";
+import { getAllUsers, UserBasic, getUserById, getUserByUsername } from "@/lib/services/users";
+import { formatDistanceToNow } from "date-fns";
+import { 
+  subscribeToCommunities, 
+  subscribeToCommunityMessages, 
+  sendCommunityMessage, 
+  joinCommunity, 
+  leaveCommunity, 
+  deleteCommunityMessage, 
+  removeMemberFromCommunity, 
+  requestToJoinCommunity,
+  cancelJoinRequest,
+  acceptJoinRequest,
+  declineJoinRequest,
+  updateCommunityAccess,
+  Community, 
+  CommunityMessage,
+  CommunityAccessType,
+  JoinRequestDetail,
+  deleteCommunity,
+  updateCommunity
+} from "@/lib/services/communities";
+import CreateCommunityModal from "@/components/chat/CreateCommunityModal";
+import StardomBadge from "@/components/gamification/StardomBadge";
+import StreakBadge from "@/components/gamification/StreakBadge";
+import LevelUpModal from "@/components/gamification/LevelUpModal";
+import LeaderboardView from "@/components/gamification/LeaderboardView";
+import { awardUserXP, checkDailyStreak, StardomRank } from "@/lib/services/gamification";
+
+import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, ChevronLeft, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, Globe, Users, Compass, Plus, Lock, Shield, Sparkles, ShieldCheck, UserX, Crown, MessageSquare, Trophy, Flame, Paperclip } from "lucide-react";
+import { storage } from "@/lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import toast from "react-hot-toast";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import UserAvatar from "@/components/ui/UserAvatar";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+
+const CATEGORY_FILTERS = ["All", "Sports", "Tech & Career", "Hobbies", "Campus", "General"];
+
+export default function MessagesPage() {
+  const { profile } = useAuthStore();
+  const searchParams = useSearchParams();
+  const targetUserParam = searchParams.get('chatId') || searchParams.get('user') || searchParams.get('uid');
+  
+  // Check and maintain daily streak on mount
+  useEffect(() => {
+    if (profile?.uid) {
+      checkDailyStreak(profile.uid).then((res) => {
+        if (res.isNewDay && res.streakCount > 1) {
+          toast.success(`🔥 ${res.streakCount} Day Streak Active! Keep chatting to level up!`, { icon: '🔥' });
+        }
+      });
+    }
+  }, [profile?.uid]);
+
+  // DMs State
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [activeChat, setActiveChat] = useState<Chat | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [users, setUsers] = useState<Record<string, UserBasic>>({});
+  const [friends, setFriends] = useState<string[]>([]);
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [chatTab, setChatTab] = useState<'inbox' | 'archived'>('inbox');
+  const [activeMenuChatId, setActiveMenuChatId] = useState<string | null>(null);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+
+  // Communities State
+  const [messagesMode, setMessagesMode] = useState<'direct' | 'communities' | 'leaderboard'>('direct');
+  const [leveledUpRank, setLeveledUpRank] = useState<StardomRank | null>(null);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [activeCommunity, setActiveCommunity] = useState<Community | null>(null);
+  const [communityMessages, setCommunityMessages] = useState<CommunityMessage[]>([]);
+  const [communityCategory, setCommunityCategory] = useState<string>('All');
+  const [newCommunityMessageText, setNewCommunityMessageText] = useState("");
+  const [isCreateCommunityOpen, setIsCreateCommunityOpen] = useState(false);
+  const [isCommunityInfoOpen, setIsCommunityInfoOpen] = useState(false);
+  const [sendingCommunityMsg, setSendingCommunityMsg] = useState(false);
+  const [communityReplyingTo, setCommunityReplyingTo] = useState<CommunityMessage | null>(null);
+
+  // Media upload & editing state
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [openMessageMenuId, setOpenMessageMenuId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Voice Recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // iOS WhatsApp style touch swipe state
+  const [swipedChatId, setSwipedChatId] = useState<string | null>(null);
+  const [swipingChatId, setSwipingChatId] = useState<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
+  const touchStartXRef = useRef<number>(0);
+  const touchStartYRef = useRef<number>(0);
+  const isHorizontalSwipeRef = useRef<boolean | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const communityMessagesEndRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Touch handlers for chat card swipe left
+  const handleTouchStart = (chatId: string, e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+    isHorizontalSwipeRef.current = null;
+    setSwipingChatId(chatId);
+  };
+
+  const handleTouchMove = (chatId: string, e: React.TouchEvent) => {
+    const diffX = e.touches[0].clientX - touchStartXRef.current;
+    const diffY = e.touches[0].clientY - touchStartYRef.current;
+
+    if (isHorizontalSwipeRef.current === null) {
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 8) {
+        isHorizontalSwipeRef.current = true;
+      } else if (Math.abs(diffY) > 8) {
+        isHorizontalSwipeRef.current = false;
+      }
+    }
+
+    if (isHorizontalSwipeRef.current) {
+      if (diffX < 0) {
+        setSwipeOffset(Math.max(diffX, -160));
+      } else {
+        setSwipeOffset(0);
+      }
+    }
+  };
+
+  const handleTouchEnd = (chatId: string) => {
+    if (isHorizontalSwipeRef.current) {
+      if (swipeOffset < -60) {
+        setSwipedChatId(chatId);
+      } else {
+        setSwipedChatId(null);
+      }
+    }
+    setSwipingChatId(null);
+    setSwipeOffset(0);
+  };
+
+  // Helper for last seen status — checks real-time isOnline flag from PresenceHeartbeat
+  const getUserStatus = (user: any) => {
+    // First check the real-time isOnline boolean (set by PresenceHeartbeat every 60s)
+    if (user?.isOnline === true) return { isOnline: true, text: "Online" };
+
+    // Fall back to timestamp-based detection using lastSeen or lastLogin
+    const lastSeen = user?.lastSeen || user?.lastLogin;
+    if (!lastSeen) return { isOnline: false, text: "Offline" };
+    const date = (lastSeen as any)?.toDate ? (lastSeen as any).toDate() : new Date(lastSeen as any);
+    const diffInMinutes = (new Date().getTime() - date.getTime()) / (1000 * 60);
+    if (diffInMinutes < 3) return { isOnline: true, text: "Online" };
+    return { isOnline: false, text: `Last seen ${formatDistanceToNow(date, { addSuffix: true })}` };
+  };
+
+  // Helper to format timestamps
+  const formatMessageTime = (createdAt: any) => {
+    if (!createdAt) return "";
+    const date = (createdAt as any)?.toDate ? (createdAt as any).toDate() : new Date(createdAt as any);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Load users & friends
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const res = await getAllUsers();
+      const userList = res.success && res.users ? res.users : [];
+      const userMap: Record<string, UserBasic> = {};
+      userList.forEach(u => {
+        userMap[u.uid] = u;
+      });
+      setUsers(userMap);
+      if (profile?.uid) {
+        setFriends(userList.filter(u => u.uid !== profile.uid).map(u => u.uid));
+      }
+    };
+    fetchUsers();
+  }, [profile?.uid]);
+
+  // Handle URL target user param
+  useEffect(() => {
+    if (targetUserParam && profile?.uid) {
+      const initiateChat = async () => {
+        let targetUid = targetUserParam;
+        if (!users[targetUserParam]) {
+          const userRes = await getUserByUsername(targetUserParam);
+          if (userRes.success && userRes.user) {
+            targetUid = userRes.user.uid;
+          }
+        }
+        if (targetUid !== profile.uid) {
+          const res = await getOrCreateChat(profile.uid, targetUid);
+          if (res.success && res.chat) {
+            setActiveChat(res.chat as Chat);
+            setMessagesMode('direct');
+          }
+        }
+      };
+      initiateChat();
+    }
+  }, [targetUserParam, profile?.uid, users]);
+
+  // Subscribe to DMs
+  useEffect(() => {
+    if (!profile?.uid) return;
+    const unsubscribe = subscribeToChats(profile.uid, async (updatedChats) => {
+      setChats(updatedChats);
+      
+      const missingUserIds = new Set<string>();
+      updatedChats.forEach(chat => {
+        const otherUserId = chat.participants.find(p => p !== profile.uid);
+        if (otherUserId && !users[otherUserId]) {
+          missingUserIds.add(otherUserId);
+        }
+      });
+
+      if (missingUserIds.size > 0) {
+        const fetchedMap: Record<string, UserBasic> = {};
+        await Promise.all(
+          Array.from(missingUserIds).map(async (uid) => {
+            const res = await getUserById(uid);
+            if (res.success && res.user) {
+              fetchedMap[uid] = res.user;
+            }
+          })
+        );
+        if (Object.keys(fetchedMap).length > 0) {
+          setUsers(prev => ({ ...prev, ...fetchedMap }));
+        }
+      }
+
+      if (activeChat) {
+        const current = updatedChats.find(c => c.id === activeChat.id);
+        if (current) setActiveChat(current);
+      }
+    });
+    return () => unsubscribe();
+  }, [profile?.uid, activeChat?.id]);
+
+  // Subscribe to DM Messages
+  useEffect(() => {
+    if (!activeChat) {
+      setMessages([]);
+      return;
+    }
+    const unsubscribe = subscribeToMessages(activeChat.id, (newMessages) => {
+      setMessages(newMessages);
+    });
+    if (profile?.uid) {
+      markMessagesAsRead(activeChat.id, profile.uid);
+    }
+    return () => unsubscribe();
+  }, [activeChat?.id, profile?.uid]);
+
+  // Subscribe to Public Communities
+  useEffect(() => {
+    const unsubscribe = subscribeToCommunities((list) => {
+      setCommunities(list);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Subscribe to Active Community Messages
+  useEffect(() => {
+    if (!activeCommunity) {
+      setCommunityMessages([]);
+      return;
+    }
+    const unsubscribe = subscribeToCommunityMessages(activeCommunity.id, (msgs) => {
+      setCommunityMessages(msgs);
+    });
+    return () => unsubscribe();
+  }, [activeCommunity?.id]);
+
+  // Auto-scroll DMs
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, activeChat]);
+
+  // Auto-scroll Communities
+  useEffect(() => {
+    communityMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [communityMessages, activeCommunity]);
+
+  // Send DM Message
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if ((!newMessage.trim() && !mediaFile) || !activeChat || !profile?.uid) return;
+
+    const file = mediaFile;
+    const text = newMessage;
+
+    setNewMessage("");
+    setMediaFile(null);
+    setMediaPreviewUrl(null);
+    setReplyingTo(null);
+    
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    updateTypingStatus(activeChat.id, profile.uid, false);
+    
+    let uploadedMediaUrl = undefined;
+    let type: 'text' | 'image' | 'audio' | 'document' = 'text';
+    let finalMsgText = text;
+
+    if (file) {
+      try {
+        setIsUploadingImage(true);
+        const timestamp = Date.now();
+        const storageRef = ref(storage, `chats/${activeChat.id}/${timestamp}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        uploadedMediaUrl = await getDownloadURL(storageRef);
+        type = file.type.startsWith('image/') ? 'image' : 'document';
+        if (!finalMsgText) {
+          finalMsgText = type === 'image' ? "Sent an image" : file.name;
+        }
+      } catch (error) {
+        console.error("Error uploading file:", error);
+        toast.error("Failed to upload file.");
+      }
+      setIsUploadingImage(false);
+    }
+
+    await sendMessage(
+      activeChat.id, 
+      profile.uid, 
+      finalMsgText, 
+      type, 
+      uploadedMediaUrl,
+      replyingTo?.id,
+      replyingTo?.text
+    );
+
+    // Award message XP with smart rate-limiting
+    awardUserXP(profile.uid, 'send_message').then((res) => {
+      if (res.leveledUp && res.newRank) {
+        setLeveledUpRank(res.newRank);
+      }
+    });
+  };
+
+  // Send Community Message
+  const handleSendCommunityMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCommunityMessageText.trim() || !activeCommunity || !profile) return;
+
+    try {
+      setSendingCommunityMsg(true);
+      const text = newCommunityMessageText.trim();
+      const replyId = communityReplyingTo?.id;
+      const replyText = communityReplyingTo?.text;
+      const replySenderName = communityReplyingTo?.senderName;
+      setNewCommunityMessageText("");
+      setCommunityReplyingTo(null);
+
+      await sendCommunityMessage(
+        activeCommunity.id,
+        profile.uid,
+        text,
+        profile.fullName,
+        profile.avatar || "",
+        'text',
+        undefined,
+        replyId,
+        replyText,
+        replySenderName
+      );
+
+      // Award community message XP
+      awardUserXP(profile.uid, 'send_message').then((res) => {
+        if (res.leveledUp && res.newRank) {
+          setLeveledUpRank(res.newRank);
+        }
+      });
+    } catch (err: any) {
+      console.error("Error sending community message:", err);
+      toast.error("Failed to send message");
+    } finally {
+      setSendingCommunityMsg(false);
+    }
+  };
+
+  // Join Community Handler
+  const handleJoinCommunity = async (comm: Community) => {
+    if (!profile) {
+      toast.error("Please log in to join communities");
+      return;
+    }
+    
+    if (comm.accessType === 'locked') {
+      toast.error("This community is locked and not accepting new members.");
+      return;
+    }
+
+    if (comm.accessType === 'private') {
+      const res = await requestToJoinCommunity(comm.id, {
+        uid: profile.uid,
+        fullName: profile.fullName,
+        username: profile.username,
+        avatar: profile.avatar,
+      });
+      if (res.success) {
+        toast.success("Join request sent to community admin! 🔒");
+      } else {
+        toast.error(res.error || "Failed to send request");
+      }
+      return;
+    }
+
+    const res = await joinCommunity(comm.id, profile.uid);
+    if (res.success) {
+      toast.success(`Joined ${comm.name}! 🎉`);
+      setActiveCommunity({ ...comm, members: [...comm.members, profile.uid], memberCount: comm.memberCount + 1 });
+    } else {
+      toast.error(res.error || "Failed to join community");
+    }
+  };
+
+  const handleCancelJoinRequest = async (comm: Community) => {
+    if (!profile?.uid) return;
+    const res = await cancelJoinRequest(comm.id, profile.uid);
+    if (res.success) {
+      toast.success("Join request cancelled");
+    } else {
+      toast.error("Failed to cancel request");
+    }
+  };
+
+  const handleAcceptRequest = async (comm: Community, req: JoinRequestDetail) => {
+    const res = await acceptJoinRequest(comm.id, req);
+    if (res.success) {
+      toast.success(`Accepted ${req.fullName || "User"} into ${comm.name}! 🎉`);
+    } else {
+      toast.error("Failed to accept request");
+    }
+  };
+
+  const handleDeclineRequest = async (comm: Community, userId: string) => {
+    const res = await declineJoinRequest(comm.id, userId);
+    if (res.success) {
+      toast.success("Join request declined");
+    } else {
+      toast.error("Failed to decline request");
+    }
+  };
+
+  const handleUpdateCommunityAccess = async (comm: Community, newAccess: CommunityAccessType) => {
+    const res = await updateCommunityAccess(comm.id, newAccess);
+    if (res.success) {
+      toast.success(`Community access updated to ${newAccess.toUpperCase()}`);
+    } else {
+      toast.error("Failed to update access settings");
+    }
+  };
+
+  // Leave Community Handler
+  const handleLeaveCommunity = async (comm: Community) => {
+    if (!profile) return;
+    const res = await leaveCommunity(comm.id, profile.uid);
+    if (res.success) {
+      toast.success(`Left ${comm.name}`);
+      setActiveCommunity(null);
+    } else {
+      toast.error(res.error || "Failed to leave community");
+    }
+  };
+
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const audioFile = new File([audioBlob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+        setMediaFile(audioFile);
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      
+      let time = 0;
+      recordingTimerRef.current = setInterval(() => {
+        time++;
+        setRecordingTime(time);
+      }, 1000);
+      
+    } catch (err) {
+      toast.error("Microphone access denied");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      setRecordingTime(0);
+    }
+  };
+
+  // File Select Handler
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setMediaFile(file);
+      if (file.type.startsWith('image/')) {
+        setMediaPreviewUrl(URL.createObjectURL(file));
+      } else {
+        setMediaPreviewUrl(null);
+      }
+    }
+  };
+
+  // DM actions
+  const handleToggleArchive = async (chatId: string, isArchived: boolean, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!profile?.uid) return;
+    const res = await toggleArchiveChat(chatId, profile.uid, isArchived);
+    if (res.success) {
+      toast.success(isArchived ? "Chat restored to Inbox" : "Chat archived");
+    }
+  };
+
+  const handleDeleteChat = async (chatId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!profile?.uid) return;
+    if (confirm("Are you sure you want to delete this chat? It will be hidden from your inbox.")) {
+      const res = await deleteChatForUser(chatId, profile.uid);
+      if (res.success) {
+        toast.success("Chat deleted");
+        if (activeChat?.id === chatId) setActiveChat(null);
+      }
+    }
+  };
+
+  const handleMarkAsUnread = async (chatId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!profile?.uid) return;
+    await markChatAsUnread(chatId, profile.uid);
+    setActiveMenuChatId(null);
+    toast.success("Marked as unread");
+  };
+
+  const handleMarkAsRead = async (chatId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!profile?.uid) return;
+    await markMessagesAsRead(chatId, profile.uid);
+    setActiveMenuChatId(null);
+    toast.success("Marked as read");
+  };
+
+  const startNewChatWithUser = async (otherUserId: string) => {
+    if (!profile?.uid) return;
+    setShowNewChat(false);
+    const res = await getOrCreateChat(profile.uid, otherUserId);
+    if (res.success && res.chat) {
+      setActiveChat(res.chat as Chat);
+      setMessagesMode('direct');
+    }
+  };
+
+  if (!profile) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[calc(100vh-100px)]">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+      </div>
+    );
+  }
+
+  // Filter available users for DM
+  const availableUsers = Object.values(users).filter(
+    (u) => u.uid !== profile.uid && 
+           (u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.username.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  // Filter public communities
+  const filteredCommunities = communities.filter((c) => {
+    const matchesCategory = communityCategory === 'All' || c.category === communityCategory;
+    const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          c.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  return (
+    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100vh-100px)] gap-2 md:gap-4 p-2 md:p-4 lg:p-6 lg:gap-6">
+      
+      {/* SIDEBAR */}
+      <div className={`${(activeChat || activeCommunity) ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl`}>
+        
+        {/* Header & Mode Bar */}
+        <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-slate-900/80 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Messages</h2>
+            {messagesMode === 'direct' ? (
+              <button 
+                onClick={() => setShowNewChat(true)}
+                className="p-2 rounded-xl bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex items-center gap-1.5 text-xs font-bold"
+                title="Start New Chat"
+              >
+                <MessageSquarePlus className="w-4 h-4" />
+                <span className="hidden sm:inline">New Chat</span>
+              </button>
+            ) : (
+              <button 
+                onClick={() => setIsCreateCommunityOpen(true)}
+                className="p-2 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-slate-950 hover:opacity-90 transition-opacity flex items-center gap-1.5 text-xs font-extrabold shadow-md"
+                title="Create Community"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Create Community</span>
+              </button>
+            )}
+          </div>
+
+          {/* User Live Stardom Pill & Streak */}
+          <div className="flex items-center justify-between gap-2 p-1.5 rounded-2xl bg-slate-950/80 border border-white/5">
+            <StardomBadge xp={profile.stardomXP || 0} variant="progress-pill" className="w-full" />
+            {profile.streakCount && profile.streakCount > 0 ? (
+              <StreakBadge streakCount={profile.streakCount} showMultiplier={true} size="sm" />
+            ) : null}
+          </div>
+
+          {/* Mode Switcher: DMs vs Public Communities vs Leaderboard */}
+          <div className="flex bg-slate-950 p-1 rounded-2xl border border-white/10 gap-1">
+            <button
+              onClick={() => { setMessagesMode('direct'); setActiveCommunity(null); }}
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
+                messagesMode === 'direct' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <MessageSquare className="w-3 h-3" />
+              Direct
+            </button>
+            <button
+              onClick={() => { setMessagesMode('communities'); setActiveChat(null); }}
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
+                messagesMode === 'communities' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Globe className="w-3 h-3" />
+              Community 🌐
+            </button>
+            <button
+              onClick={() => { setMessagesMode('leaderboard'); setActiveChat(null); setActiveCommunity(null); }}
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
+                messagesMode === 'leaderboard' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Trophy className="w-3 h-3" />
+              Ranks ⭐
+            </button>
+          </div>
+
+          {/* Inbox / Archived Tab Switcher (For Direct Messages mode) */}
+          {messagesMode === 'direct' && (
+            <div className="flex bg-slate-800/60 p-1 rounded-xl border border-white/5 gap-1">
+              <button
+                onClick={() => { setChatTab('inbox'); setShowNewChat(false); }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                  chatTab === 'inbox' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Inbox className="w-3.5 h-3.5" />
+                Inbox
+              </button>
+              <button
+                onClick={() => { setChatTab('archived'); setShowNewChat(false); }}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 relative ${
+                  chatTab === 'archived' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Archive className="w-3.5 h-3.5" />
+                Archived
+                {chats.filter(c => profile?.uid && c.archivedFor?.includes(profile.uid) && !c.deletedFor?.includes(profile.uid)).length > 0 && (
+                  <span className="px-1.5 py-0.2 text-[10px] bg-brand text-slate-950 font-extrabold rounded-full ml-1">
+                    {chats.filter(c => profile?.uid && c.archivedFor?.includes(profile.uid) && !c.deletedFor?.includes(profile.uid)).length}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Category Filters (For Public Communities mode) */}
+          {messagesMode === 'communities' && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+              {CATEGORY_FILTERS.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCommunityCategory(cat)}
+                  className={`px-3 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
+                    communityCategory === cat 
+                      ? 'bg-brand/20 text-brand border border-brand/40' 
+                      : 'bg-slate-800/80 text-slate-400 hover:text-white border border-white/5'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Search */}
+        <div className="p-4 border-b border-white/5">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder={messagesMode === 'direct' ? "Search conversations..." : "Search communities e.g., Football..."}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand/50 transition-colors"
+            />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* List Content Area */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+
+          {/* MODE 1: DIRECT MESSAGES */}
+          {messagesMode === 'direct' && (
+            showNewChat ? (
+              <div className="p-2 space-y-1">
+                <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider flex justify-between items-center">
+                  <span>Start New Conversation</span>
+                  <button onClick={() => setShowNewChat(false)} className="text-slate-400 hover:text-white text-xs">Cancel</button>
+                </div>
+                {availableUsers.length > 0 ? (
+                  availableUsers.map((u) => (
+                    <button
+                      key={u.uid}
+                      onClick={() => startNewChatWithUser(u.uid)}
+                      className="w-full p-3 flex items-center gap-3 hover:bg-slate-800/60 rounded-2xl transition-colors text-left"
+                    >
+                      <UserAvatar src={u.avatar} name={u.fullName} className="w-10 h-10 shrink-0" textClassName="text-sm font-bold" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-white text-sm truncate">{u.fullName}</h3>
+                        <p className="text-xs text-slate-400 truncate">@{u.username}</p>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <p className="p-4 text-center text-slate-400 text-xs">No professionals found matching "{searchQuery}"</p>
+                )}
+              </div>
+            ) : (
+              (() => {
+                const filteredChats = chats.filter(chat => {
+                  if (!profile?.uid) return false;
+                  const isDeleted = chat.deletedFor?.includes(profile.uid);
+                  if (isDeleted) return false;
+
+                  const isArchived = chat.archivedFor?.includes(profile.uid);
+                  if (chatTab === 'inbox' && isArchived) return false;
+                  if (chatTab === 'archived' && !isArchived) return false;
+
+                  const otherUserId = chat.participants.find(p => p !== profile.uid);
+                  const otherUser = otherUserId ? users[otherUserId] : null;
+                  if (!otherUser) return true;
+
+                  return (
+                    otherUser.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    otherUser.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (chat.lastMessage && chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase()))
+                  );
+                });
+
+                return filteredChats.length > 0 ? filteredChats.map((chat) => {
+                  const otherUserId = chat.participants.find(p => p !== profile.uid) || chat.participants[0];
+                  const otherUser = users[otherUserId] || {
+                    uid: otherUserId,
+                    fullName: "Member",
+                    username: "user",
+                    avatar: "",
+                    lastLogin: null
+                  };
+                  const isTyping = chat.typingStatus?.[otherUserId];
+                  const isActive = activeChat?.id === chat.id;
+                  const unreadCount = chat.unreadCount?.[profile?.uid || ''] || 0;
+                  const isUnread = unreadCount > 0;
+                  const isArchived = chat.archivedFor?.includes(profile.uid);
+
+                  return (
+                    <div 
+                      key={chat.id} 
+                      className={`relative border-b border-white/5 last:border-0 group/swipe select-none bg-slate-950 ${
+                        activeMenuChatId === chat.id ? 'z-50 overflow-visible' : 'z-0 overflow-hidden'
+                      }`}
+                    >
+                      {/* Swipe actions */}
+                      <div className={`absolute right-0 top-0 bottom-0 flex items-center h-full z-0 transition-opacity duration-150 ${
+                        swipedChatId === chat.id || swipingChatId === chat.id ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                      }`}>
+                        <button
+                          onClick={(e) => {
+                            setSwipedChatId(null);
+                            handleToggleArchive(chat.id, !!isArchived, e);
+                          }}
+                          className="h-full px-4 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold flex flex-col items-center justify-center gap-1 transition-colors text-xs shrink-0"
+                        >
+                          <Archive className="w-5 h-5 text-slate-950" />
+                          <span className="text-[10px]">{isArchived ? "Unarchive" : "Archive"}</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            setSwipedChatId(null);
+                            handleDeleteChat(chat.id, e);
+                          }}
+                          className="h-full px-4 bg-rose-600 hover:bg-rose-500 text-white font-extrabold flex flex-col items-center justify-center gap-1 transition-colors text-xs shrink-0"
+                        >
+                          <Trash2 className="w-5 h-5 text-white" />
+                          <span className="text-[10px]">Delete</span>
+                        </button>
+                      </div>
+
+                      {/* Swipeable card */}
+                      <div
+                        onTouchStart={(e) => handleTouchStart(chat.id, e)}
+                        onTouchMove={(e) => handleTouchMove(chat.id, e)}
+                        onTouchEnd={() => handleTouchEnd(chat.id)}
+                        onClick={() => {
+                          if (swipedChatId === chat.id) {
+                            setSwipedChatId(null);
+                          } else {
+                            setActiveChat(chat);
+                          }
+                        }}
+                        style={{
+                          transform: `translateX(${
+                            swipingChatId === chat.id 
+                              ? `${swipeOffset}px` 
+                              : (swipedChatId === chat.id ? '-140px' : '0px')
+                          })`
+                        }}
+                        className={`w-full p-4 flex items-center justify-between gap-3 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${
+                          isActive 
+                            ? 'bg-slate-800 text-white shadow-md border-l-4 border-brand' 
+                            : isUnread 
+                              ? 'bg-slate-900 border-l-4 border-brand/70' 
+                              : 'bg-slate-900 hover:bg-slate-850'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="relative shrink-0">
+                            <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className={`w-12 h-12 transition-transform ${isActive ? 'scale-105 ring-2 ring-brand' : ''}`} textClassName="text-lg font-bold" />
+                            {getUserStatus(otherUser).isOnline && (
+                              <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <div className="flex justify-between items-baseline mb-0.5">
+                              <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
+                              <span className="text-[10px] text-slate-400 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-1">
+                              <p className={`text-sm truncate ${isTyping ? 'text-brand font-medium animate-pulse' : isUnread ? 'text-slate-200 font-medium' : 'text-slate-400'}`}>
+                                {isTyping ? 'Typing...' : chat.lastMessage || 'Start a conversation'}
+                              </p>
+                              {isUnread && (
+                                <span className="w-2.5 h-2.5 rounded-full bg-brand shrink-0" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Options Dropdown Trigger (Tablet/Desktop only) */}
+                        <div className="hidden sm:block relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuChatId(activeMenuChatId === chat.id ? null : chat.id);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                            title="Chat Options"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+
+                          {activeMenuChatId === chat.id && (
+                            <div className="absolute right-0 top-8 w-44 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-[100] p-1 animate-in fade-in zoom-in-95 duration-150">
+                              {isUnread ? (
+                                <button
+                                  onClick={(e) => handleMarkAsRead(chat.id, e)}
+                                  className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                                >
+                                  <CheckCheck className="w-3.5 h-3.5 text-brand" />
+                                  Mark as Read
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => handleMarkAsUnread(chat.id, e)}
+                                  className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                                >
+                                  <Mail className="w-3.5 h-3.5 text-brand" />
+                                  Mark as Unread
+                                </button>
+                              )}
+
+                              <button
+                                onClick={(e) => handleToggleArchive(chat.id, !!isArchived, e)}
+                                className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                              >
+                                {isArchived ? (
+                                  <>
+                                    <ArchiveRestore className="w-3.5 h-3.5 text-amber-400" />
+                                    Unarchive Chat
+                                  </>
+                                ) : (
+                                  <>
+                                    <Archive className="w-3.5 h-3.5 text-amber-400" />
+                                    Archive Chat
+                                  </>
+                                )}
+                              </button>
+
+                              <button
+                                onClick={(e) => handleDeleteChat(chat.id, e)}
+                                className="w-full px-3 py-2 text-xs text-left text-red-400 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-2"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete Chat
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }) : (
+                  <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                    <EmptyState 
+                      icon={chatTab === 'archived' ? Archive : MessageSquarePlus}
+                      title={chatTab === 'archived' ? "No archived chats" : "No messages yet"}
+                      description={chatTab === 'archived' ? "Archived conversations will appear here." : "Search for any professional to start a conversation!"}
+                    />
+                  </div>
+                );
+              })()
+            )
+          )}
+
+          {/* MODE 2: PUBLIC COMMUNITIES DIRECTORY */}
+          {messagesMode === 'communities' && (
+            filteredCommunities.length > 0 ? (
+              <div className="p-2 space-y-2">
+                {filteredCommunities.map((comm) => {
+                  const isJoined = comm.members.includes(profile.uid);
+                  const isActive = activeCommunity?.id === comm.id;
+
+                  return (
+                    <div
+                      key={comm.id}
+                      onClick={() => setActiveCommunity(comm)}
+                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                        isActive 
+                          ? 'bg-slate-800 border-brand/50 shadow-lg' 
+                          : 'bg-slate-900/80 hover:bg-slate-800/60 border-white/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="w-12 h-12 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
+                          {comm.icon || "💬"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <h3 className="font-bold text-white text-sm truncate">{comm.name}</h3>
+                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-slate-400 border border-white/5">
+                              {comm.category}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 truncate mb-1">{comm.description}</p>
+                          <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                            <Users className="w-3 h-3 text-brand" />
+                            <span>{comm.memberCount} members</span>
+                            {comm.creatorId === profile.uid && (
+                              <span className="text-amber-400 font-bold flex items-center gap-0.5">
+                                • Creator
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Join / Status Button */}
+                      {(() => {
+                        const hasRequested = comm.pendingRequests?.includes(profile.uid);
+                        const isLocked = comm.accessType === 'locked';
+                        const isPrivate = comm.accessType === 'private';
+
+                        if (isJoined) {
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveCommunity(comm);
+                              }}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 border border-white/10 transition-all shrink-0"
+                            >
+                              Open
+                            </button>
+                          );
+                        }
+
+                        if (isLocked) {
+                          return (
+                            <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-rose-950/60 text-rose-400 border border-rose-500/20 shrink-0 flex items-center gap-1">
+                              <Lock className="w-3 h-3" /> Locked
+                            </span>
+                          );
+                        }
+
+                        if (isPrivate) {
+                          if (hasRequested) {
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelJoinRequest(comm);
+                                }}
+                                className="px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/30 transition-all shrink-0"
+                                title="Click to cancel request"
+                              >
+                                ? Pending
+                              </button>
+                            );
+                          }
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleJoinCommunity(comm);
+                              }}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition-all shrink-0 flex items-center gap-1"
+                            >
+                              <Lock className="w-3 h-3" /> Request
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleJoinCommunity(comm);
+                            }}
+                            className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-brand to-brand-purple text-slate-950 hover:opacity-90 shadow-md transition-all shrink-0"
+                          >
+                            Join
+                          </button>
+                        );
+                      })()}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                <EmptyState
+                  icon={Globe}
+                  title="No communities found"
+                  description="Be the first to create a community for this topic!"
+                />
+                <button
+                  onClick={() => setIsCreateCommunityOpen(true)}
+                  className="mt-4 px-4 py-2 bg-brand text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Community
+                </button>
+              </div>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* MAIN CONVERSATION AREA */}
+
+      {/* VIEW 1: ACTIVE DM CHAT */}
+      {messagesMode === 'direct' && activeChat && (
+        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
+          
+          {/* DM Header */}
+          <div className="p-6 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <button 
+                className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
+                onClick={() => setActiveChat(null)}
+              >
+                ← Back
+              </button>
+              
+              {(() => {
+                const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
+                const otherUser = users[otherUserId];
+                
+                return otherUser ? (
+                  <Link href={`/profile?uid=${otherUserId}`} className="flex items-center gap-4 group cursor-pointer">
+                    <div className="relative">
+                      <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className="w-12 h-12 group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow" textClassName="text-lg font-bold" />
+                      {getUserStatus(otherUser).isOnline && (
+                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
+                      )}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-white leading-tight group-hover:text-brand transition-colors">{otherUser.fullName}</h2>
+                      <p className={`text-xs font-medium ${getUserStatus(otherUser).isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
+                        {getUserStatus(otherUser).text}
+                      </p>
+                    </div>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <UserAvatar name="Member" className="w-10 h-10" textClassName="text-sm font-bold" />
+                    <h2 className="text-base font-bold text-white">Rhockstar Member</h2>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* DM Options */}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setHeaderMenuOpen(!headerMenuOpen)}
+                className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors border border-white/5"
+                title="Conversation Options"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+
+              {headerMenuOpen && (
+                <div className="absolute right-0 top-12 w-48 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-1 animate-in fade-in zoom-in-95 duration-150">
+                  {(() => {
+                    const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
+                    const isArchived = activeChat.archivedFor?.includes(profile.uid);
+                    return (
+                      <>
+                        <Link
+                          href={`/profile?uid=${otherUserId}`}
+                          className="w-full px-3.5 py-2.5 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                          onClick={() => setHeaderMenuOpen(false)}
+                        >
+                          <User className="w-3.5 h-3.5 text-brand" />
+                          View Profile
+                        </Link>
+
+                        <button
+                          onClick={() => {
+                            setHeaderMenuOpen(false);
+                            handleToggleArchive(activeChat.id, !!isArchived);
+                          }}
+                          className="w-full px-3.5 py-2.5 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
+                        >
+                          <Archive className="w-3.5 h-3.5 text-amber-400" />
+                          {isArchived ? "Unarchive Chat" : "Archive Chat"}
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setHeaderMenuOpen(false);
+                            handleDeleteChat(activeChat.id);
+                          }}
+                          className="w-full px-3.5 py-2.5 text-xs text-left text-red-400 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-2"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete Chat
+                        </button>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* DM Message Feed */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
+            {(() => {
+              let dmLastDate: Date | null = null;
+              const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
+              const otherUser = users[otherUserId];
+              
+              return messages.map((msg) => {
+                const isMe = msg.senderId === profile.uid;
+                const isEditingThis = editingMessageId === msg.id;
+                const isMenuOpen = openMessageMenuId === msg.id;
+
+                if (msg.deletedForMe?.includes(profile.uid)) return null;
+
+                const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date((msg.createdAt as any) || Date.now());
+                const now = new Date();
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+                const showDateHeader = !dmLastDate || !isSameDay(dmLastDate, msgDate);
+                if (showDateHeader) {
+                  dmLastDate = msgDate;
+                }
+                
+                let dateLabel = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                if (isSameDay(msgDate, now)) dateLabel = 'Today';
+                else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
+
+                return (
+                  <div key={msg.id} id={msg.id} className="flex flex-col w-full">
+                    {showDateHeader && (
+                      <div className="flex justify-center my-3">
+                        <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
+                          {dateLabel}
+                        </span>
+                      </div>
+                    )}
+                    <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
+                      <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                        {!isMe && (
+                          <UserAvatar 
+                            src={otherUser?.avatar} 
+                            name={otherUser?.fullName || "Member"} 
+                            className="w-7 h-7 rounded-full shrink-0 mb-1" 
+                            textClassName="text-[10px] font-bold" 
+                          />
+                        )}
+
+                        <div 
+  onClick={() => !isEditingThis && !msg.isDeleted && setOpenMessageMenuId(isMenuOpen ? null : msg.id)}
+  className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}>
+                          {/* Reply preview */}
+                          {msg.replyToText && (
+                            <div 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (msg.replyToId) {
+                                  const el = document.getElementById(msg.replyToId);
+                                  if (el) {
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    el.classList.add('animate-pulse', 'bg-brand/20');
+                                    setTimeout(() => el.classList.remove('animate-pulse', 'bg-brand/20'), 2000);
+                                  }
+                                }
+                              }}
+                              className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-1.5 opacity-80 cursor-pointer hover:opacity-100 transition-opacity"
+                            >
+                              <span className="font-bold block text-[10px]">Replying to:</span>
+                              <span className="truncate block text-[11px]">{msg.replyToText}</span>
+                            </div>
+                          )}
+
+                          {/* Inline Editing view */}
+                          {isEditingThis ? (
+                            <div className="space-y-2">
+                              <input
+                                type="text"
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                className="w-full px-3 py-1.5 bg-slate-900 text-white text-xs rounded-xl border border-brand focus:outline-none"
+                              />
+                              <div className="flex justify-end gap-2 text-xs">
+                                <button
+                                  onClick={() => setEditingMessageId(null)}
+                                  className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (editingText.trim()) {
+                                      await editMessage(activeChat.id, msg.id, editingText.trim());
+                                      setEditingMessageId(null);
+                                      toast.success("Message updated");
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-slate-950 text-brand font-bold"
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </div>
+                          ) : msg.isDeleted ? (
+                            <p className="text-xs italic opacity-60 flex items-center gap-1">
+                              <Trash2 className="w-3 h-3" /> This message was deleted
+                            </p>
+                          ) : (
+                            <>
+                              {msg.type === 'image' && msg.mediaUrl && (
+                                <img src={msg.mediaUrl} alt="Shared" className="rounded-xl max-h-60 w-full object-cover mb-2" />
+                              )}
+                              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                            </>
+                          )}
+
+                          <div className={`flex items-center justify-end gap-1.5 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
+                            {msg.isEdited && !msg.isDeleted && <span className="italic font-normal">(edited)</span>}
+                            <span>{formatMessageTime(msg.createdAt)}</span>
+                            {isMe && !msg.isDeleted && (
+                              <div className="flex items-center ml-0.5">
+                                {msg.status === 'read' ? (
+                                  <CheckCheck className="w-3.5 h-3.5 text-blue-600" title={`Read at ${formatMessageTime(msg.readAt || msg.createdAt)}`} />
+                                ) : (
+                                  <Check className="w-3 h-3 text-slate-950/60" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action Menu Trigger (Dropdown) - Hidden by default, appears smoothly on hover or when open */}
+                        {!msg.isDeleted && !isEditingThis && (
+                          <div className={`relative flex items-center self-center transition-opacity ${isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                            <button
+                              onClick={() => setOpenMessageMenuId(isMenuOpen ? null : msg.id)}
+                              className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                              title="Message options"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+
+                            {isMenuOpen && (
+                              <div className={`absolute bottom-full ${isMe ? "left-0" : "right-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                                <button
+                                  onClick={() => { setReplyingTo(msg); setOpenMessageMenuId(null); setTimeout(() => textareaRef.current?.focus(), 0); }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                >
+                                  <Reply className="w-3.5 h-3.5" /> Reply
+                                </button>
+                                {isMe && (
+                                  <button
+                                    onClick={() => {
+                                      setEditingMessageId(msg.id);
+                                      setEditingText(msg.text);
+                                      setOpenMessageMenuId(null);
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" /> Edit
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => { navigator.clipboard.writeText(msg.text); toast.success("Copied to clipboard"); setOpenMessageMenuId(null); }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copy
+                                </button>
+                                <button
+                                  onClick={() => { setForwardingMessage(msg); setOpenMessageMenuId(null); }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg> Forward
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (window.confirm(isMe ? "Delete message for everyone?" : "Delete message for you?")) {
+                                      await deleteMessage(activeChat.id, msg.id, profile.uid, isMe ? 'forEveryone' : 'forMe');
+                                      toast.success("Message deleted");
+                                    }
+                                    setOpenMessageMenuId(null);
+                                  }}
+                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-rose-400"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" /> Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* New Reply Banner */}
+          {replyingTo && (
+            <div className="px-4 pt-3 pb-1 bg-slate-900/95 border-t border-white/5 animate-in slide-in-from-bottom duration-150">
+              <div className="flex items-center gap-3 p-2.5 bg-slate-800/80 rounded-xl border-l-4 border-brand">
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-brand block">
+                    {replyingTo.senderId === profile?.uid ? 'You' : (users[replyingTo.senderId]?.fullName || 'User')}
+                  </span>
+                  <span className="text-xs text-slate-300 truncate block">{replyingTo.text}</span>
+                </div>
+                <button onClick={() => setReplyingTo(null)} type="button" className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors shrink-0">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+          {/* DM Input Bar */}
+          <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-slate-900/90 flex items-center gap-3">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              className="hidden"
+              accept="image/*,.pdf,.doc,.docx"
+            />
+            <button 
+              type="button" 
+              onClick={() => fileInputRef.current?.click()}
+              className="p-2.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors shrink-0"
+            >
+              <Paperclip className="w-5 h-5" />
+            </button>
+            <button 
+              type="button" 
+              onClick={isRecording ? stopRecording : startRecording}
+              className={`p-2.5 rounded-xl transition-colors shrink-0 ${isRecording ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30 animate-pulse' : 'text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700'}`}
+            >
+              {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+            </button>
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              placeholder="Write a message..."
+              value={newMessage}
+              onChange={(e) => {
+                 setNewMessage(e.target.value);
+                 e.target.style.height = 'auto';
+                 e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                 if (!e.target.value) e.target.style.height = 'auto';
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  handleSendMessage(e as any);
+                  e.currentTarget.style.height = 'auto';
+                }
+              }}
+              className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand resize-none min-h-[46px] max-h-[150px] overflow-y-auto"
+            />
+            <button
+              type="submit"
+              disabled={!newMessage.trim()}
+              className="p-3 bg-brand text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* VIEW 2: ACTIVE PUBLIC COMMUNITY CHAT */}
+      {messagesMode === 'communities' && activeCommunity && (
+        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
+          
+          {/* Community Header */}
+          <div className="p-4 sm:p-5 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <button 
+                className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
+                onClick={() => setActiveCommunity(null)}
+              >
+                ← Back
+              </button>
+              
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
+                {activeCommunity.icon || "💬"}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm sm:text-base font-bold text-white">{activeCommunity.name}</h2>
+                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-brand border border-brand/20 shrink-0">
+                    {activeCommunity.category}
+                  </span>
+                  {activeCommunity.accessType === 'private' && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-purple-950/80 text-purple-300 border border-purple-500/30 shrink-0 flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> Private
+                    </span>
+                  )}
+                  {activeCommunity.accessType === 'locked' && (
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-950/80 text-rose-300 border border-rose-500/30 shrink-0 flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> Locked
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-brand" />
+                  <span>{activeCommunity.memberCount} members</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Info & Members Drawer Trigger */}
+            <button
+              onClick={() => setIsCommunityInfoOpen(!isCommunityInfoOpen)}
+              className={`relative p-2.5 rounded-xl border transition-all ${
+                isCommunityInfoOpen 
+                  ? 'bg-brand/20 text-brand border-brand/40' 
+                  : 'bg-slate-800/80 text-slate-400 hover:text-white border-white/5'
+              }`}
+              title="Community Members & Info"
+            >
+              <Users className="w-5 h-5" />
+              {(activeCommunity.creatorId === profile.uid || activeCommunity.admins?.includes(profile.uid)) && (activeCommunity.pendingRequests?.length || 0) > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-extrabold flex items-center justify-center shadow-lg animate-pulse">
+                  {activeCommunity.pendingRequests?.length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className="flex-1 flex overflow-hidden relative">
+            
+            {/* Group Chat Messages Stream or Non-Member Gated View */}
+            {activeCommunity.members.includes(profile.uid) ? (
+              <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
+                  {communityMessages.length > 0 ? (
+                    (() => {
+                    let commLastDate: Date | null = null;
+                    
+                    return communityMessages.map((msg) => {
+                      const isMe = msg.senderId === profile.uid;
+                      const isCreator = msg.senderId === activeCommunity.creatorId;
+                      
+                      const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date((msg.createdAt as any) || Date.now());
+                      const now = new Date();
+                      const yesterday = new Date(now);
+                      yesterday.setDate(yesterday.getDate() - 1);
+                      
+                      const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+                      const showDateHeader = !commLastDate || !isSameDay(commLastDate, msgDate);
+                      if (showDateHeader) {
+                        commLastDate = msgDate;
+                      }
+                      
+                      let dateLabel = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                      if (isSameDay(msgDate, now)) dateLabel = 'Today';
+                      else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
+
+                      return (
+                        <div key={msg.id} id={msg.id} className="flex flex-col w-full">
+                          {showDateHeader && (
+                            <div className="flex justify-center my-3">
+                              <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
+                                {dateLabel}
+                              </span>
+                            </div>
+                          )}
+                          <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
+                            <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[75%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                              {!isMe && (
+                                <UserAvatar 
+                                  src={msg.senderAvatar} 
+                                  name={msg.senderName} 
+                                  className="w-8 h-8 rounded-full shrink-0 mb-1" 
+                                  textClassName="text-[10px] font-bold" 
+                                />
+                              )}
+                              
+                              <div 
+                                onClick={() => !msg.isDeleted && setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}
+                                className={`rounded-2xl px-4 py-2.5 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}
+                              >
+                                {!isMe && (
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <span className="text-[11px] font-bold text-brand flex items-center gap-1">
+                                      {msg.senderName}
+                                      {isCreator && (
+                                        <span title="Community Creator">
+                                          <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                        </span>
+                                      )}
+                                    </span>
+                                    {users[msg.senderId]?.stardomXP !== undefined && (
+                                      <StardomBadge xp={users[msg.senderId]?.stardomXP || 0} variant="compact" />
+                                    )}
+                                    {users[msg.senderId]?.streakCount && (users[msg.senderId]?.streakCount || 0) > 0 ? (
+                                      <StreakBadge streakCount={users[msg.senderId]?.streakCount || 0} size="sm" />
+                                    ) : null}
+                                  </div>
+                                )}
+                                {msg.replyToText && (
+                                  <div 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (msg.replyToId) {
+                                        const el = document.getElementById(msg.replyToId);
+                                        if (el) {
+                                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                          el.classList.add('animate-pulse', 'bg-brand/20');
+                                          setTimeout(() => el.classList.remove('animate-pulse', 'bg-brand/20'), 2000);
+                                        }
+                                      }
+                                    }}
+                                    className={`p-2 rounded-xl ${isMe ? 'bg-black/20' : 'bg-slate-700/50'} border-l-2 border-brand text-xs mb-1.5 cursor-pointer hover:opacity-100 transition-opacity opacity-80`}
+                                  >
+                                    <span className="font-bold block text-[10px] text-brand">{msg.replyToSenderName || 'User'}</span>
+                                    <span className="truncate block text-[11px]">{msg.replyToText}</span>
+                                  </div>
+                                )}
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
+                                  <span>{formatMessageTime(msg.createdAt)}</span>
+                                </div>
+                              </div>
+
+                              {/* Message Actions (Dropdown) */}
+                              {!msg.isDeleted && (
+                                <div className={`relative flex items-center self-center transition-opacity ${openMessageMenuId === msg.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                                  <button
+                                    onClick={() => setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}
+                                    className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                                    title="Message options"
+                                  >
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </button>
+
+                                  {openMessageMenuId === msg.id && (
+                                    <div className={`absolute bottom-full ${isMe ? "left-0" : "right-0"} mb-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                                      <button
+                                        onClick={() => { setCommunityReplyingTo(msg); setOpenMessageMenuId(null); }}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                      >
+                                        <Reply className="w-3.5 h-3.5" /> Reply
+                                      </button>
+                                      <button
+                                        onClick={() => { navigator.clipboard.writeText(msg.text); toast.success("Copied to clipboard"); setOpenMessageMenuId(null); }}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copy
+                                      </button>
+                                      <button
+                                        onClick={() => { setForwardingMessage(msg as any); setOpenMessageMenuId(null); }}
+                                        className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                      >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg> Forward
+                                      </button>
+                                      {(isMe || activeCommunity.creatorId === profile.uid) && (
+                                        <button
+                                          onClick={async () => {
+                                            if (window.confirm("Delete this message?")) {
+                                              await deleteCommunityMessage(activeCommunity.id, msg.id);
+                                              toast.success("Message deleted");
+                                            }
+                                            setOpenMessageMenuId(null);
+                                          }}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-rose-400"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  })()
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                      <EmptyState
+                        icon={MessageSquare}
+                        title="Welcome to the Community!"
+                        description="Be the first to post a message to this public community."
+                      />
+                    </div>
+                  )}
+                  <div ref={communityMessagesEndRef} />
+                </div>
+
+                {/* Community Reply Banner */}
+                {communityReplyingTo && (
+                  <div className="px-4 pt-3 pb-1 bg-slate-900/95 border-t border-white/5 animate-in slide-in-from-bottom duration-150">
+                    <div className="flex items-center gap-3 p-2.5 bg-slate-800/80 rounded-xl border-l-4 border-brand">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-bold text-brand block">
+                          {communityReplyingTo.senderId === profile.uid ? 'You' : (communityReplyingTo.senderName || 'User')}
+                        </span>
+                        <span className="text-xs text-slate-300 truncate block">{communityReplyingTo.text}</span>
+                      </div>
+                      <button onClick={() => setCommunityReplyingTo(null)} className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors shrink-0">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Group Message Input */}
+                <form onSubmit={handleSendCommunityMessage} className="p-3.5 sm:p-4 border-t border-white/5 bg-slate-900/95 backdrop-blur-md flex items-center gap-3">
+                  <textarea
+                    rows={1}
+                    placeholder={`Message ${activeCommunity.name}...`}
+                    value={newCommunityMessageText}
+                    onChange={(e) => {
+                       setNewCommunityMessageText(e.target.value);
+                       e.target.style.height = 'auto';
+                       e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                       if (!e.target.value) e.target.style.height = 'auto';
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+                        e.preventDefault();
+                        handleSendCommunityMessage(e as any);
+                        e.currentTarget.style.height = 'auto';
+                      }
+                    }}
+                    className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand shadow-inner resize-none min-h-[46px] max-h-[150px] overflow-y-auto"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newCommunityMessageText.trim() || sendingCommunityMsg}
+                    className="p-3 bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity shadow-md shrink-0"
+                  >
+                    {sendingCommunityMsg ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              /* Non-Member Gated Access View */
+              <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 text-center max-w-lg mx-auto space-y-6">
+                <div className="w-20 h-20 rounded-3xl bg-slate-800/80 border border-white/10 flex items-center justify-center text-4xl shadow-xl">
+                  {activeCommunity.icon || "💬"}
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-extrabold text-white tracking-tight">{activeCommunity.name}</h3>
+                  <p className="text-slate-300 text-sm leading-relaxed">{activeCommunity.description}</p>
+                </div>
+
+                {(() => {
+                  const hasRequested = activeCommunity.pendingRequests?.includes(profile.uid);
+                  const isPrivate = activeCommunity.accessType === 'private';
+                  const isLocked = activeCommunity.accessType === 'locked';
+
+                  if (isLocked) {
+                    return (
+                      <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/20 text-rose-300 text-xs space-y-1 w-full max-w-sm">
+                        <p className="font-bold flex items-center justify-center gap-1.5 text-rose-400">
+                          <Lock className="w-4 h-4" /> Community Closed
+                        </p>
+                        <p className="text-slate-400">This community is currently locked by the administrator. New members are not accepted.</p>
+                      </div>
+                    );
+                  }
+
+                  if (isPrivate) {
+                    if (hasRequested) {
+                      return (
+                        <div className="p-6 rounded-3xl bg-slate-800/60 border border-amber-500/30 text-center space-y-4 w-full max-w-sm shadow-xl">
+                          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center mx-auto text-xl">
+                            ⏳
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-white text-base">Join Request Pending</h4>
+                            <p className="text-xs text-slate-400 mt-1">Your request is waiting for review by the community admin. You will gain access once approved.</p>
+                          </div>
+                          <button
+                            onClick={() => handleCancelJoinRequest(activeCommunity)}
+                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-colors border border-white/10"
+                          >
+                            Cancel Join Request
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="p-6 rounded-3xl bg-slate-800/60 border border-purple-500/30 text-center space-y-4 w-full max-w-sm shadow-xl">
+                        <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center mx-auto">
+                          <Lock className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white text-base">Private Community</h4>
+                          <p className="text-xs text-slate-400 mt-1">This community is exclusive. Submit a request to the community administrator to participate.</p>
+                        </div>
+                        <button
+                          onClick={() => handleJoinCommunity(activeCommunity)}
+                          className="w-full py-3 bg-gradient-to-r from-purple-600 to-brand text-white font-bold rounded-2xl text-xs shadow-lg hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                        >
+                          <Lock className="w-4 h-4" /> Request to Join
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4 w-full max-w-sm">
+                      <div className="p-3 bg-brand/10 border border-brand/20 rounded-2xl text-xs text-brand">
+                        Public Community • {activeCommunity.memberCount} members already participating
+                      </div>
+                      <button
+                        onClick={() => handleJoinCommunity(activeCommunity)}
+                        className="w-full py-3 bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-extrabold rounded-2xl text-sm shadow-lg hover:opacity-90 transition-opacity"
+                      >
+                        Join Community Now
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Info & Members Side Panel Drawer */}
+            {isCommunityInfoOpen && (
+              <div className="w-80 bg-slate-900 border-l border-white/5 p-5 flex flex-col gap-6 overflow-y-auto animate-in slide-in-from-right duration-200 z-20 custom-scrollbar">
+                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                  <h3 className="font-bold text-white text-sm">Community Details</h3>
+                  <button onClick={() => setIsCommunityInfoOpen(false)} className="text-slate-400 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Info Card */}
+                <div className="text-center space-y-2">
+                  <div className="w-16 h-16 rounded-3xl bg-brand/10 text-3xl flex items-center justify-center mx-auto border border-brand/20 shadow-inner">
+                    {activeCommunity.icon || "💬"}
+                  </div>
+                  <h4 className="font-bold text-white text-base">{activeCommunity.name}</h4>
+                  <p className="text-xs text-slate-400">{activeCommunity.description}</p>
+                  <div className="flex items-center justify-center gap-1.5 pt-1">
+                    <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-brand border border-brand/20">
+                      {activeCommunity.category}
+                    </span>
+                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md border flex items-center gap-1 ${
+                      activeCommunity.accessType === 'private'
+                        ? 'bg-purple-950/80 text-purple-300 border-purple-500/30'
+                        : activeCommunity.accessType === 'locked'
+                        ? 'bg-rose-950/80 text-rose-300 border-rose-500/30'
+                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/30'
+                    }`}>
+                      {activeCommunity.accessType === 'private' ? <><Lock className="w-2.5 h-2.5" /> Private</> :
+                       activeCommunity.accessType === 'locked' ? <><Lock className="w-2.5 h-2.5" /> Locked</> :
+                       <><Globe className="w-2.5 h-2.5" /> Public</>}
+                    </span>
+                  </div>
+                </div>
+
+                {/* ADMIN SETTINGS: ACCESS CONTROL (Creator & Admin only) */}
+                {(activeCommunity.creatorId === profile.uid || activeCommunity.admins?.includes(profile.uid)) && (
+                  <div className="p-3.5 bg-slate-800/40 rounded-2xl border border-white/5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5 text-brand" /> Access Control
+                      </h4>
+                      <span className="text-[10px] text-amber-400 font-bold">Admin</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <button
+                        onClick={() => handleUpdateCommunityAccess(activeCommunity, 'public')}
+                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${
+                          (activeCommunity.accessType || 'public') === 'public'
+                            ? 'bg-emerald-600 text-white shadow-md'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Public
+                      </button>
+                      <button
+                        onClick={() => handleUpdateCommunityAccess(activeCommunity, 'private')}
+                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${
+                          activeCommunity.accessType === 'private'
+                            ? 'bg-purple-600 text-white shadow-md'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Private
+                      </button>
+                      <button
+                        onClick={() => handleUpdateCommunityAccess(activeCommunity, 'locked')}
+                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${
+                          activeCommunity.accessType === 'locked'
+                            ? 'bg-rose-600 text-white shadow-md'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        Locked
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-tight">
+                      {activeCommunity.accessType === 'private' ? 'New members must request and be approved.' :
+                       activeCommunity.accessType === 'locked' ? 'No new members can request or join.' :
+                       'Anyone can join with 1-click.'}
+                    </p>
+                  </div>
+                )}
+
+                {/* ADMIN SETTINGS: PENDING JOIN REQUESTS (Creator & Admin only) */}
+                {(activeCommunity.creatorId === profile.uid || activeCommunity.admins?.includes(profile.uid)) && (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <span>Join Requests</span>
+                        {(activeCommunity.pendingRequests?.length || 0) > 0 && (
+                          <span className="px-1.5 py-0.2 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+                            {activeCommunity.pendingRequests?.length}
+                          </span>
+                        )}
+                      </h4>
+                    </div>
+
+                    {(activeCommunity.pendingRequests?.length || 0) > 0 ? (
+                      <div className="space-y-2">
+                        {activeCommunity.pendingRequests?.map((reqUid) => {
+                          const reqUser = users[reqUid] || { uid: reqUid, fullName: "Member Applicant", avatar: "" };
+                          return (
+                            <div key={reqUid} className="p-2.5 bg-slate-800/60 rounded-xl border border-white/5 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <UserAvatar src={reqUser.avatar} name={reqUser.fullName} className="w-8 h-8 rounded-full shrink-0" textClassName="text-xs font-bold" />
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold text-white truncate">{reqUser.fullName}</p>
+                                  {reqUser.username && (
+                                    <p className="text-[10px] text-slate-400 truncate">@{reqUser.username}</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  onClick={() => handleAcceptRequest(activeCommunity, { uid: reqUid, fullName: reqUser.fullName, username: reqUser.username, avatar: reqUser.avatar })}
+                                  className="p-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg transition-colors"
+                                  title="Accept Request"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeclineRequest(activeCommunity, reqUid)}
+                                  className="p-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg transition-colors"
+                                  title="Decline Request"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-500 italic p-2 bg-slate-800/20 rounded-xl border border-white/5 text-center">
+                        No pending join requests
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Member Status & Join/Leave */}
+                <div className="p-3 bg-slate-800/60 rounded-2xl border border-white/5 space-y-2 text-center">
+                  <div className="text-xs text-slate-300 font-medium">
+                    {activeCommunity.members.length} Members
+                  </div>
+                  {activeCommunity.members.includes(profile.uid) ? (
+                    <button
+                      onClick={() => handleLeaveCommunity(activeCommunity)}
+                      className="w-full py-2 bg-rose-600/20 text-rose-400 hover:bg-rose-600/30 rounded-xl text-xs font-bold transition-colors"
+                    >
+                      Leave Community
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleJoinCommunity(activeCommunity)}
+                      className="w-full py-2 bg-brand text-slate-950 rounded-xl text-xs font-extrabold transition-opacity hover:opacity-90 shadow-md"
+                    >
+                      {activeCommunity.accessType === 'private' ? 'Request to Join' : 'Join Community'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Creator Details */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Creator / Admin</h4>
+                  <div className="flex items-center gap-3 p-2.5 bg-slate-800/40 rounded-xl border border-white/5">
+                    <UserAvatar src={activeCommunity.creatorAvatar} name={activeCommunity.creatorName} className="w-8 h-8 rounded-full" textClassName="text-xs font-bold" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-white truncate flex items-center gap-1">
+                        {activeCommunity.creatorName}
+                        <Crown className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                      </p>
+                      <p className="text-[10px] text-amber-400 font-semibold">Community Admin</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 3: LEADERBOARD MODE */}
+      {messagesMode === 'leaderboard' && (
+        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+          <LeaderboardView />
+        </div>
+      )}
+
+      {/* VIEW 4: EMPTY STATE WHEN NO CHAT IS OPEN */}
+      {messagesMode !== 'leaderboard' && !activeChat && !activeCommunity && (
+        <div className="hidden md:flex flex-1 flex-col items-center justify-center neo-card bg-slate-900/60 border border-white/5 rounded-3xl p-8 text-center shadow-2xl">
+          <div className="w-20 h-20 rounded-3xl bg-brand/10 text-brand flex items-center justify-center mb-4 border border-brand/20 shadow-inner">
+            <Globe className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Welcome to Rhockstar Messages</h2>
+          <p className="text-slate-400 text-sm max-w-md leading-relaxed mb-6">
+            Connect 1-on-1 with professionals or join vibrant Public Communities to discuss football, tech, jobs, music, and more!
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { setMessagesMode('communities'); }}
+              className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-extrabold text-xs shadow-lg hover:opacity-90 transition-opacity flex items-center gap-2"
+            >
+              <Globe className="w-4 h-4" />
+              Explore Communities
+            </button>
+            <button
+              onClick={() => { setMessagesMode('direct'); setShowNewChat(true); }}
+              className="px-5 py-2.5 rounded-2xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-colors border border-white/10 flex items-center gap-2"
+            >
+              <MessageSquarePlus className="w-4 h-4" />
+              New Private Chat
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Create Community Modal */}
+      <CreateCommunityModal
+        isOpen={isCreateCommunityOpen}
+        onClose={() => setIsCreateCommunityOpen(false)}
+        onCreated={(commId) => {
+          setMessagesMode('communities');
+          const created = communities.find(c => c.id === commId);
+          if (created) setActiveCommunity(created);
+        }}
+      />
+
+
+      {/* Stardom Level Up Celebration Modal */}
+      <LevelUpModal
+        isOpen={!!leveledUpRank}
+        onClose={() => setLeveledUpRank(null)}
+        newRank={leveledUpRank || 'Explorer'}
+      />
+
+      {/* Forward Message Modal */}
+      {forwardingMessage && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[70vh]">
+            <div className="flex items-center justify-between p-4 border-b border-white/5">
+              <h3 className="text-base font-bold text-white">Forward Message</h3>
+              <button onClick={() => setForwardingMessage(null)} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-3 mx-4 mt-3 bg-slate-800/60 rounded-xl border-l-4 border-brand">
+              <p className="text-xs text-slate-300 truncate">{forwardingMessage.text}</p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+              <p className="text-xs text-slate-400 font-semibold mb-2">Select a conversation</p>
+              {chats.filter(c => c.id !== activeChat?.id).map((chat) => {
+                const otherUserId = chat.participants.find(p => p !== profile?.uid) || chat.participants[0];
+                const otherUser = users[otherUserId];
+                return (
+                  <button
+                    key={chat.id}
+                    onClick={async () => {
+                      if (!profile?.uid) return;
+                      await sendMessage(
+                        chat.id,
+                        profile.uid,
+                        `↩️ Forwarded: ${forwardingMessage.text}`,
+                        'text'
+                      );
+                      toast.success(`Forwarded to ${otherUser?.fullName || 'chat'}`);
+                      setForwardingMessage(null);
+                    }}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-800 transition-colors text-left"
+                  >
+                    <UserAvatar
+                      src={otherUser?.avatar}
+                      name={otherUser?.fullName || 'User'}
+                      className="w-10 h-10 rounded-full shrink-0"
+                      textClassName="text-xs font-bold"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{otherUser?.fullName || 'User'}</p>
+                      <p className="text-xs text-slate-400 truncate">@{otherUser?.username || 'user'}</p>
+                    </div>
+                  </button>
+                );
+              })}
+              {chats.filter(c => c.id !== activeChat?.id).length === 0 && (
+                <p className="text-center text-slate-500 text-sm py-6">No other conversations to forward to</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

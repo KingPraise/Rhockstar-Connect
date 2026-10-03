@@ -1,0 +1,150 @@
+### Category 6: Interactive Controls & Feature Completeness (DEAD)
+
+#### DEAD-01: Non-Functional Change Password Form in Settings
+- **Severity**: **High**
+- **Component**: User Settings / Account Security
+- **File & Lines**: `src/app/(dashboard)/settings/page.tsx:288-300`
+- **User Flow / Scenario**: A user navigates to `/settings`, enters Current Password and New Password, and looks for a way to save.
+- **Suspected Root Cause**: The input fields are static JSX without `value`, `onChange`, form wrapper, or submit button.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/settings/page.tsx:291-299
+  <div>
+    <label className="block text-sm font-bold text-slate-300 mb-2">Current Password</label>
+    <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
+  </div>
+  <div>
+    <label className="block text-sm font-bold text-slate-300 mb-2">New Password</label>
+    <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
+  </div>
+  // No submit button follows
+  ```
+- **Recommended Fix**:
+  Bind inputs to state and add an "Update Password" button executing Firebase `updatePassword(auth.currentUser, newPassword)`.
+
+---
+
+#### DEAD-02: Privacy & Notification Settings Toggles Do Not Persist
+- **Severity**: **Medium**
+- **Component**: User Settings / Preferences
+- **File & Lines**: `src/app/(dashboard)/settings/page.tsx:548, 559`
+- **User Flow / Scenario**: A user toggles notification preferences in `/settings` and reloads the page.
+- **Suspected Root Cause**: Toggles trigger only an ephemeral toast (`toast.success(...)`) and do not persist to Firestore.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/settings/page.tsx:548
+  <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Connection alert preference saved!")} />
+  // src/app/(dashboard)/settings/page.tsx:559
+  <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Post interaction preference saved!")} />
+  ```
+- **Recommended Fix**:
+  Save toggle preferences under `notificationSettings` on `/users/{uid}` in Firestore.
+
+---
+
+#### DEAD-03: Post and User Report / Block Actions Are Cosmetic Mockups
+- **Severity**: **High**
+- **Component**: Moderation & Safety
+- **File & Lines**: `src/components/feed/PostCard.tsx:273, 276`, `src/app/(dashboard)/dating/page.tsx:304, 307`
+- **User Flow / Scenario**: A user flags abusive content or blocks a harasser via the dropdown menu.
+- **Suspected Root Cause**: The menu items only trigger `toast.success("Post reported to admins.")` or `toast.success("User blocked...")`. No record is written to the `reports` collection and the user is not added to `blockedUsers`.
+- **Evidence Snippet**:
+  ```tsx
+  // src/components/feed/PostCard.tsx:273-277
+  <button onClick={() => { setShowMenu(false); toast.success("Post reported to admins."); }} className="...">
+    <Flag className="w-4 h-4" /> Report Post
+  </button>
+  <button onClick={() => { setShowMenu(false); toast.success("User blocked. You will no longer see their posts."); }} className="...">
+    <X className="w-4 h-4" /> Block User
+  </button>
+  ```
+- **Recommended Fix**:
+  Call `createReport({ targetId: post.id, targetType: 'post', reporterId: profile.uid, reason: 'user_flagged' })` and update user's `blockedUsers` array in Firestore.
+
+---
+
+#### DEAD-04: Admin Jobs Management Delete Button Has No onClick Handler
+- **Severity**: **High**
+- **Component**: Admin Job Management
+- **File & Lines**: `src/app/admin/(protected)/jobs/page.tsx:116-118`
+- **User Flow / Scenario**: An admin clicks the trash icon button next to a job listing on `/admin/jobs`.
+- **Suspected Root Cause**: The `<button>` tag contains no `onClick` handler.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/admin/(protected)/jobs/page.tsx:116-118
+  <button className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+    <Trash2 className="h-5 w-5" />
+  </button>
+  ```
+- **Recommended Fix**:
+  Attach `onClick={() => handleDeleteJob(job.id)}`.
+
+---
+
+#### DEAD-05: Dead File Attachment and Voice Note Controls in Direct Messages
+- **Severity**: **High**
+- **Component**: Direct Messaging Interface
+- **File & Lines**: `src/app/(dashboard)/messages/page.tsx:103-109, 1373-1401`
+- **User Flow / Scenario**: A user wants to attach a document or record a voice note in a DM conversation.
+- **Suspected Root Cause**: Media states and handlers (`mediaFile`, `handleFileSelect`, `mediaRecorderRef`) are defined in component logic, but the DM input JSX contains only a `<textarea>` and submit button.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/messages/page.tsx:1373-1401
+  {/* DM Input Bar */}
+  <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-slate-900/90 flex items-center gap-3">
+    <textarea ... />
+    <button type="submit" ...><Send className="w-5 h-5" /></button>
+  </form>
+  ```
+- **Recommended Fix**:
+  Add paperclip and microphone buttons hooked to file inputs and `MediaRecorder` in the DM form.
+
+---
+
+#### DEAD-06: Phone Verification Button Without Action
+- **Severity**: **Medium**
+- **Component**: User Settings / Verification
+- **File & Lines**: `src/app/(dashboard)/settings/page.tsx:318`
+- **User Flow / Scenario**: A user clicks "Verify Now" next to Phone Verification in `/settings`.
+- **Suspected Root Cause**: The button has no `onClick` handler.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/settings/page.tsx:318
+  <button className="px-4 py-2 bg-brand/10 text-brand font-bold rounded-lg border border-brand/20 hover:bg-brand hover:text-white transition-colors">
+    Verify Now
+  </button>
+  ```
+- **Recommended Fix**:
+  Attach an `onClick` opening a phone verification modal or label as "Coming Soon".
+
+---
+
+#### DEAD-07: "Follow Company" Button Has No Handler
+- **Severity**: **Medium**
+- **Component**: Company Public Profile
+- **File & Lines**: `src/app/(dashboard)/company/[username]/page.tsx:109-111`
+- **User Flow / Scenario**: A user clicks "Follow Company" on `/company/[username]`.
+- **Suspected Root Cause**: The `<button>` tag contains no `onClick` handler.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/company/[username]/page.tsx:109-111
+  <button className="py-2.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-500/20">
+    Follow Company
+  </button>
+  ```
+- **Recommended Fix**:
+  Connect to `src/lib/services/follows.ts` to persist followed company IDs.
+
+---
+
+#### DEAD-08: Resource Masterclass & Article Cards Styled with Pointer But Lack Links
+- **Severity**: **Medium**
+- **Component**: Career & Dating Resources
+- **File & Lines**: `src/app/(dashboard)/resources/career/page.tsx:68-75`, `src/app/(dashboard)/resources/dating/page.tsx:68-75`
+- **User Flow / Scenario**: A user hovers over "Featured Masterclass" cards and clicks.
+- **Suspected Root Cause**: Cards have `cursor-pointer` and hover styles but lack `<a>`, `<Link>`, or `onClick` handlers.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/resources/career/page.tsx:68-75
+  <div className="neo-card p-6 bg-slate-900/40 rounded-3xl border border-white/5 group cursor-pointer hover:border-brand/30 transition-all">
+    <div className="aspect-video w-full bg-slate-800 rounded-2xl relative overflow-hidden ...">

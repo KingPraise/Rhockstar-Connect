@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Register - Rhockstar Connect</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="css/profile.css">
+</head>
+
+<body>
+
+<section id="profile" class="page">
+
+<div class="profile-card">
+
+    <!-- COVER -->
+    <div class="profile-cover">
+
+        <img
+            id="coverPhoto"
+            src="images/cover.jpg"
+            alt="Cover Photo"
+            onerror="this.src='images/default-cover.jpg'"
+        >
+
+        <label for="uploadCover" class="cover-edit-btn">
+            📷 Change Cover
+        </label>
+
+        <input
+            type="file"
+            id="uploadCover"
+            accept="image/*"
+            hidden
+        >
+
+    </div>
+
+    <!-- PROFILE HEADER -->
+
+    <div class="profile-header">
+
+        <div class="profile-avatar-box">
+
+            <img
+                id="profileAvatar"
+                class="profile-avatar"
+                src="images/profile.jpg"
+                alt="Profile Picture"
+                onerror="this.src='images/default-avatar.png'"
+            >
+
+            <label
+                for="uploadPic"
+                class="avatar-edit-btn"
+            >
+                ✏
+            </label>
+
+            <input
+                type="file"
+                id="uploadPic"
+                accept="image/*"
+                hidden
+            >
+
+            <span class="verified-badge">
+                ✔
+            </span>
+
+            <span
+                id="displayStatus"
+                class="status online"
+            >
+                🟢 Online
+            </span>
+
+        </div>
+
+        <div class="profile-info">
+
+            <h2 id="displayName">
+                Elijah Peter
+            </h2>
+
+            <p
+                id="displayUsername"
+                class="username"
+            >
+                @rhockstar
+            </p>
+
+            <h4 id="displayTitle">
+                Web Developer • Digital Creator
+            </h4>
+
+            <p
+                id="displayBio"
+                class="bio"
+            >
+                Building meaningful connections through
+                Rhockstar Connect.
+            </p>
+
+            <div class="profile-buttons">
+
+                <button id="profileEditBtn">
+                    ✏ Edit Profile
+                </button>
+
+                <button id="shareProfileBtn">
+                    📤 Share
+                </button>
+
+                <button id="copyProfileBtn">
+                    🔗 Copy Link
+                </button>
+
+                <button id="downloadCVBtn">
+                    📄 Download CV
+                </button>
+
+                <button id="qrProfileBtn">
+                    QR Code
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- STATISTICS -->
+
+    <div class="profile-stats">
+
+        <div class="stat-box">
+            <h2 id="myPosts">0</h2>
+            <p>Posts</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="myFollowers">0</h2>
+            <p>Followers</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="myFollowing">0</h2>
+            <p>Following</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="myConnections">0</h2>
+            <p>Connections</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="myViews">0</h2>
+            <p>Views</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="myPhotos">0</h2>
+            <p>Photos</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="myVideos">0</h2>
+            <p>Videos</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="myLikes">0</h2>
+            <p>Likes</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="myComments">0</h2>
+            <p>Comments</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="myShares">0</h2>
+            <p>Shares</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="jobsPosted">0</h2>
+            <p>Jobs Posted</p>
+        </div>
+
+        <div class="stat-box">
+            <h2 id="jobsApplied">0</h2>
+            <p>Jobs Applied</p>
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- PERSONAL INFO -->
+
+    <div class="profile-section">
+
+        <h3>Personal Information</h3>
+
+        <div class="info-grid">
+
+            <div class="info-item">
+                <strong>Full Name</strong>
+                <span id="myN">Elijah Peter</span>
+            </div>
+
+            <div class="info-item">
+                <strong>Username</strong>
+                <span id="myUsername">@rhockstar</span>
+            </div>
+
+            <div class="info-item">
+                <strong>Email</strong>
+                <span id="myE">example@gmail.com</span>
+            </div>
+
+            <div class="info-item">
+                <strong>Phone</strong>
+                <span id="myPhone">Not Added</span>
+            </div>
+
+            <div class="info-item">
+                <strong>Gender</strong>
+                <span id="myGender">Not Added</span>
+            </div>
+
+            <div class="info-item">
+                <strong>Date of Birth</strong>
+                <span id="myDOB">Not Added</span>
+            </div>
+
+            <div class="info-item">
+                <strong>Country</strong>
+                <span id="myCountry">Nigeria</span>
+            </div>
+
+            <div class="info-item">
+                <strong>Location</strong>
+                <span id="myLocation">Lagos</span>
+            </div>
+
+            <div class="info-item">
+                <strong>Relationship</strong>
+                <span id="myRelationship">Not Added</span>
+            </div>
+
+            <div class="info-item">
+                <strong>Occupation</strong>
+                <span id="myOccupation">
+                    Web Developer
+                </span>
+            </div>
+
+            <div class="info-item">
+                <strong>Company</strong>
+                <span id="myCompany">
+                    Rhockstar Nation
+                </span>
+            </div>
+
+            <div class="info-item">
+                <strong>Website</strong>
+                <span id="myWebsite">
+                    Not Added
+                </span>
+            </div>
+
+            <div class="info-item">
+                <strong>Languages</strong>
+                <span id="myLanguages">
+                    English
+                </span>
+            </div>
+
+        </div>
+
+        <div class="about-box">
+
+            <h3>About Me</h3>
+
+            <p id="abtMe">
+                Passionate developer building
+                communities and digital products.
+            </p>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- SKILLS -->
+
+    <div class="profile-section">
+
+        <h3>Skills & Expertise</h3>
+
+        <div id="skillsContainer" class="skill-tags">
+
+            <span class="skill-tag">HTML</span>
+            <span class="skill-tag">CSS</span>
+            <span class="skill-tag">JavaScript</span>
+            <span class="skill-tag">Python</span>
+            <span class="skill-tag">React</span>
+            <span class="skill-tag">Firebase</span>
+            <span class="skill-tag">UI/UX</span>
+            <span class="skill-tag">Graphics Design</span>
+            <span class="skill-tag">Video Editing</span>
+            <span class="skill-tag">Content Creation</span>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- SOCIAL LINKS -->
+
+    <div class="profile-section">
+
+        <h3>Social Links</h3>
+
+        <div class="social-links">
+
+            <a id="facebookLink" href="#">
+                Facebook
+            </a>
+
+            <a id="instagramLink" href="#">
+                Instagram
+            </a>
+
+            <a id="xLink" href="#">
+                X
+            </a>
+
+            <a id="linkedinLink" href="#">
+                LinkedIn
+            </a>
+
+            <a id="githubLink" href="#">
+                GitHub
+            </a>
+
+            <a id="youtubeLink" href="#">
+                YouTube
+            </a>
+
+            <a id="tiktokLink" href="#">
+                TikTok
+            </a>
+
+            <a id="whatsappLink" href="#">
+                WhatsApp
+            </a>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- EXPERIENCE -->
+
+    <div class="profile-section">
+
+        <div class="section-header">
+
+            <h3>Work Experience</h3>
+
+            <button id="addExperienceBtn">
+                + Add Experience
+            </button>
+
+        </div>
+
+        <div id="experienceContainer">
+
+            <div class="experience-card">
+
+                <h4>Founder</h4>
+
+                <p>Rhockstar Nation</p>
+
+                <small>
+                    2024 - Present
+                </small>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- EDUCATION -->
+
+    <div class="profile-section">
+
+        <div class="section-header">
+
+            <h3>Education</h3>
+
+            <button id="addEducationBtn">
+                + Add Education
+            </button>
+
+        </div>
+
+        <div id="educationContainer">
+
+            <div class="education-card">
+
+                <h4>Mining Engineering</h4>
+
+                <p>Federal University of Technology Akure</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- CERTIFICATES -->
+
+    <div class="profile-section">
+
+        <div class="section-header">
+
+            <h3>Certificates</h3>
+
+            <input
+    type="file"
+    id="certificateUpload"
+    accept=".pdf,.jpg,.jpeg,.png"
+    hidden
+>
+            <button id="uploadCertificateBtn">
+                Upload
+            </button>
+           
+        </div>
+
+        <div id="certificateContainer"></div>
+
+    </div>
+
+    <hr>
+
+    <!-- PORTFOLIO -->
+
+    <div class="profile-section">
+
+        <div class="section-header">
+
+            <h3>Portfolio</h3>
+                       <input
+         type="file"
+         id="portfolioUpload"
+         multiple
+         accept="image/*,video/*"
+        hidden
+       >
+            <button id="uploadPortfolioBtn">
+                Upload Work
+            </button>
+
+        </div>
+
+        <div
+            id="portfolioContainer"
+            class="portfolio-grid"
+        >
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- RESUME -->
+
+    <div class="profile-section">
+
+        <h3>Resume</h3>
+
+        <input
+    type="file"
+    id="uploadCV"
+    accept=".pdf,.doc,.docx"
+    hidden
+    >
+        <button id="uploadCVBtn">
+            Upload CV
+        </button>
+        
+        <button id="replaceCVBtn">
+            Replace CV
+        </button>
+
+        <button id="deleteCVBtn">
+            Delete CV
+        </button>
+
+    </div>
+
+    <hr>
+
+    <!-- ACHIEVEMENTS -->
+
+    <div class="profile-section">
+
+        <h3>Achievements</h3>
+
+        <div class="achievement-grid">
+
+            <span>🏆 Top Creator</span>
+
+            <span>⭐ Verified Member</span>
+
+            <span>🔥 Active Member</span>
+
+            <span>💼 Recruiter</span>
+
+            <span>🥇 Early Supporter</span>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- INTERESTS -->
+
+    <div class="profile-section">
+
+        <h3>Interests</h3>
+
+        <div class="interest-tags">
+
+            <span>Technology</span>
+            <span>Business</span>
+            <span>AI</span>
+            <span>Programming</span>
+            <span>Finance</span>
+            <span>Music</span>
+            <span>Sports</span>
+            <span>Gaming</span>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- PROFILE VISITORS -->
+
+    <div class="profile-section">
+
+        <h3>Visitors</h3>
+
+        <div class="visitor-stats">
+
+            <div>
+
+                <h2 id="todayVisitors">0</h2>
+
+                <p>Today</p>
+
+            </div>
+
+            <div>
+
+                <h2 id="weekVisitors">0</h2>
+
+                <p>This Week</p>
+
+            </div>
+
+            <div>
+
+                <h2 id="monthVisitors">0</h2>
+
+                <p>This Month</p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- RECENT PHOTOS -->
+
+    <div class="profile-section">
+
+        <div class="section-header">
+
+            <h3>Recent Photos</h3>
+
+            <button id="uploadPhotoBtn">
+                Upload
+            </button>
+
+        </div>
+
+        <div
+            id="recentPhotos"
+            class="photo-grid"
+        >
+
+        </div>
+
+    </div>  
+
+        <hr>
+
+    <!-- PROFILE TIMELINE -->
+
+    <div class="profile-section">
+
+        <h3>Profile Timeline</h3>
+
+        <div class="timeline">
+
+            <div class="timeline-item">
+                <h4>Joined Rhockstar Connect</h4>
+                <small>June 2026</small>
+            </div>
+
+            <div class="timeline-item">
+                <h4>Created First Post</h4>
+                <small>June 2026</small>
+            </div>
+
+            <div class="timeline-item">
+                <h4>Connected with 10 Professionals</h4>
+                <small>Coming Soon</small>
+            </div>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- AVAILABILITY -->
+
+    <div class="profile-section">
+
+        <h3>Availability</h3>
+
+        <p>
+            <strong>Status:</strong>
+            <span id="availabilityStatus">
+                Available for Work
+            </span>
+        </p>
+
+        <p>
+            <strong>Employment Preference:</strong>
+            <span id="employmentType">
+                Full Time / Remote
+            </span>
+        </p>
+
+    </div>
+
+    <hr>
+
+    <!-- FEATURED POST -->
+
+    <div class="profile-section">
+
+        <h3>Featured Post</h3>
+
+        <div id="featuredPost">
+
+            <p>
+                You haven't pinned any post yet.
+            </p>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- PROFILE ACTIONS -->
+
+    <div class="profile-actions">
+
+        <button
+            id="profileEditBottomBtn"
+            class="primary-btn"
+        >
+            ✏ Edit Profile
+        </button>
+
+        <button
+            id="shareProfileBottomBtn"
+            class="secondary-btn"
+        >
+            📤 Share Profile
+        </button>
+
+        <button
+            id="copyProfileBottomBtn"
+            class="secondary-btn"
+        >
+            🔗 Copy Profile Link
+        </button>
+
+        <button
+            id="downloadProfileBtn"
+            class="secondary-btn"
+        >
+            📄 Download Profile
+        </button>
+
+    </div>
+
+</div>
+
+</section>
+
+<!-- ================= EDIT PROFILE ================= -->
+
+<section
+    id="profileEditSection"
+    class="profile-edit"
+    style="display:none;"
+>
+
+    <h2>Edit Profile</h2>
+
+    <!-- PROFILE PHOTO -->
+
+    <div class="upload-group">
+
+        <img
+            id="profilePicPreview"
+            src="images/profile.jpg"
+            class="profile-avatar"
+            alt="Preview"
+            onerror="this.src='images/default-avatar.png'"
+        >
+
+        <label for="uploadPic">
+            Upload Profile Picture
+        </label>
+
+        <input
+            type="file"
+            id="uploadPic"
+            accept="image/*"
+        >
+
+    </div>
+
+    <!-- COVER PHOTO -->
+
+    <div class="upload-group">
+
+        <label for="uploadCover">
+            Upload Cover Photo
+        </label>
+
+        <input
+            type="file"
+            id="uploadCover"
+            accept="image/*"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Full Name</label>
+
+        <input
+            type="text"
+            id="editFullName"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Username</label>
+
+        <input
+            type="text"
+            id="editUName"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Email</label>
+
+        <input
+            type="email"
+            id="editE"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Phone Number</label>
+
+        <input
+            type="tel"
+            id="editTel"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Location</label>
+
+        <input
+            type="text"
+            id="editL"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Website</label>
+
+        <input
+            type="url"
+            id="editWebsite"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Date of Birth</label>
+
+        <input
+            type="date"
+            id="editDOB"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Education</label>
+
+        <input
+            type="text"
+            id="editEducation"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Professional Title</label>
+
+        <input
+            type="text"
+            id="editTitle"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Relationship Status</label>
+
+        <select id="editRelationship">
+
+            <option value="">Select</option>
+            <option>Single</option>
+            <option>In a Relationship</option>
+            <option>Married</option>
+            <option>Complicated</option>
+
+        </select>
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Bio</label>
+
+        <textarea
+            id="editBio"
+            rows="5"
+        ></textarea>
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Skills</label>
+
+        <textarea
+            id="editSkills"
+            rows="4"
+        ></textarea>
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Facebook</label>
+
+        <input
+            type="url"
+            id="facebookInput"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Instagram</label>
+
+        <input
+            type="url"
+            id="instagramInput"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>X (Twitter)</label>
+
+        <input
+            type="url"
+            id="twitterInput"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>LinkedIn</label>
+
+        <input
+            type="url"
+            id="linkedinInput"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>GitHub</label>
+
+        <input
+            type="url"
+            id="githubInput"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>YouTube</label>
+
+        <input
+            type="url"
+            id="youtubeInput"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>TikTok</label>
+
+        <input
+            type="url"
+            id="tiktokInput"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>WhatsApp</label>
+
+        <input
+            type="url"
+            id="whatsappInput"
+        >
+
+    </div>
+
+    <div class="form-group">
+
+        <label>Privacy</label>
+
+        <select id="profilePrivacy">
+
+            <option>Public</option>
+            <option>Connections Only</option>
+            <option>Private</option>
+
+        </select>
+
+    </div>
+
+    <div class="form-actions">
+
+        <button
+            id="saveBtn"
+            class="primary-btn"
+        >
+            💾 Save Changes
+        </button>
+
+        <button
+            id="cancel"
+            class="secondary-btn"
+        >
+            ❌ Cancel
+        </button>
+
+    </div>
+
+</section>
+
+<!-- ================= DATING PROFILE ================= -->
+
+<div class="profile-section">
+
+    <h3>❤️ Dating Profile</h3>
+
+    <div class="info-item">
+        <strong>Gender</strong>
+        <span id="datingGender">Not Added</span>
+    </div>
+
+    <div class="info-item">
+        <strong>Interested In</strong>
+       <span id="datingInterestedIn">
+Not Added
+</span>
+    </div>
+
+    <div class="info-item">
+        <strong>Relationship Status</strong>
+        <span id="relationshipStatus">Single</span>
+    </div>
+
+    <div class="info-item">
+        <strong>Looking For</strong>
+        <span id="lookingFor">
+            Friendship
+        </span>
+    </div>
+
+    <div class="info-item">
+        <strong>Age</strong>
+        <span id="myAge">Not Added</span>
+    </div>
+
+    <div class="info-item">
+        <strong>Height</strong>
+        <span id="myHeight">Not Added</span>
+    </div>
+
+    <div class="info-item">
+        <strong>Religion</strong>
+        <span id="myReligion">Not Added</span>
+    </div>
+
+    <div class="info-item">
+        <strong>State</strong>
+        <span id="myState">Not Added</span>
+    </div>
+
+    <div class="info-item">
+        <strong>Country</strong>
+        <span id="datingCountry">Nigeria</span>
+    </div>
+
+    <div class="info-item">
+        <strong>Occupation</strong>
+        <span id="datingOccupation">Not Added</span>
+    </div>
+
+    <div class="info-item">
+        <strong>Hobbies</strong>
+        <span id="myHobbies">
+            Not Added
+        </span>
+    </div>
+
+    <div class="info-item">
+        <strong>Smoking</strong>
+        <span id="smoking">No</span>
+    </div>
+
+    <div class="info-item">
+        <strong>Drinking</strong>
+        <span id="drinking">Occasionally</span>
+    </div>
+
+</div>
+
+<hr>
+
+<div class="profile-section">
+
+    <h3>📸 Dating Gallery</h3>
+
+    <button id="uploadDatingPhotos">
+        Upload Photos
+    </button>
+
+    <div
+        id="datingGallery"
+        class="photo-grid"
+    ></div>
+
+</div>
+
+<hr>
+
+<div class="profile-section">
+
+    <h3>💖 Personality</h3>
+
+    <p id="personality">
+        Tell people what makes you unique...
+    </p>
+
+</div>
+
+<hr>
+
+<div class="profile-section">
+
+    <h3>💕 Match Preferences</h3>
+
+    <p>
+        Age Range:
+        <span id="agePreference">
+            18 - 30
+        </span>
+    </p>
+
+    <p>
+        Distance:
+        <span id="distancePreference">
+            50 km
+        </span>
+    </p>
+
+    <p>
+        Interested In:
+        <span id="genderPreference">
+            Female
+        </span>
+    </p>
+
+</div>
+
+<hr>
+
+<div class="profile-section">
+
+    <h3>🔥 Profile Boost</h3>
+
+    <button id="boostProfileBtn">
+        Boost My Profile
+    </button>
+
+</div>
+
+<hr>
+
+<div class="profile-section">
+
+    <h3>❤️ Compatibility</h3>
+
+    <div id="compatibilityScore">
+
+        <h2>0%</h2>
+
+        <p>
+            Complete your profile to improve matching.
+        </p>
+
+    </div>
+
+</div>
+
+<hr>
+
+<div class="profile-section">
+
+    <h3>👀 Visitors</h3>
+
+    <p>
+        People who viewed your dating profile:
+        <span id="datingVisitors">
+            0
+        </span>
+    </p>
+
+</div>
+
+<hr>
+
+<div class="profile-section">
+
+    <h3>❤️ Likes</h3>
+
+    <p>
+        Received:
+        <span id="likesReceived">
+            0
+        </span>
+    </p>
+
+    <p>
+        Sent:
+        <span id="likesSent">
+            0
+        </span>
+    </p>
+
+    <p>
+        Matches:
+        <span id="matchesCount">
+            0
+        </span>
+    </p>
+
+</div>
+
+<hr>
+
+<div class="profile-actions">
+
+    <button id="followBtn">
+        Follow
+    </button>
+
+    <button id="connectBtn">
+        Connect
+    </button>
+
+    <button id="messageBtn">
+        Message
+    </button>
+
+    <button id="likeProfileBtn">
+        ❤️ Like
+    </button>
+
+    <button id="superLikeBtn">
+        ⭐ Super Like
+    </button>
+
+    <button id="blockUserBtn">
+        Block
+    </button>
+
+    <button id="reportUserBtn">
+        Report
+    </button>
+
+</div>
+<div class="profile-completion">
+
+<h3>Profile Completion</h3>
+
+<div class="progress-bar">
+<div id="profileProgress"></div>
+</div>
+
+<p>
+<span id="profilePercent">0%</span> Completed
+</p>
+
+</div>
+
+<div class="verification">
+
+<h3>Verification</h3>
+
+<p>📧 Email Verified</p>
+
+<p>📱 Phone Verified</p>
+
+<p>🪪 Identity Verification</p>
+
+<button id="verifyProfileBtn">
+Verify Account
+</button>
+
+</div>
+
+<div class="profile-qr">
+
+<h3>Profile QR Code</h3>
+
+<div id="qrCode"></div>
+
+<button id="downloadQR">
+Download QR
+</button>
+
+</div>
+
+<div class="activity-stats">
+
+<div class="stat-box">
+<h3 id="likesCount">0</h3>
+<p>Likes</p>
+</div>
+
+<div class="stat-box">
+<h3 id="commentsCount">0</h3>
+<p>Comments</p>
+</div>
+
+<div class="stat-box">
+<h3 id="sharesCount">0</h3>
+<p>Shares</p>
+</div>
+
+<div class="stat-box">
+<h3 id="savedCount">0</h3>
+<p>Saved</p>
+</div>
+
+</div>
+
+
+<div class="profile-badges">
+
+<h3>Badges</h3>
+
+<div id="badgeContainer">
+
+<span class="badge">
+⭐ Early Member
+</span>
+
+<span class="badge">
+💻 Developer
+</span>
+
+<span class="badge">
+❤️ Verified
+</span>
+
+</div>
+
+</div>
+
+<div class="profile-interests">
+
+<h3>Interests</h3>
+
+<div id="interestContainer">
+
+<span>Technology</span>
+
+<span>Travel</span>
+
+<span>Business</span>
+
+<span>Gaming</span>
+
+<span>Music</span>
+
+</div>
+
+</div>
+
+<div class="favorite-quote">
+
+<h3>Favorite Quote</h3>
+
+<p id="favoriteQuote">
+"Dream big. Build bigger."
+</p>
+
+</div>
+
+<div class="availability-card">
+
+<h3>Current Availability</h3>
+
+<span class="available">
+🟢 Available
+</span>
+
+</div>
+
+<div class="account-info">
+
+<p>
+Member Since:
+<span id="joinDate">
+June 2026
+</span>
+</p>
+
+<p>
+Last Seen:
+<span id="lastSeen">
+Online
+</span>
+</p>
+
+</div>
+
+<div class="visitor-history">
+
+<h3>Recent Visitors</h3>
+
+<div id="visitorContainer">
+
+</div>
+
+</div>        
+    </section>
+
+<script type="module" src="js/profile.js"></script>
+
+
+
+

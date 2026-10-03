@@ -1,0 +1,150 @@
+### Category 3: Database Architecture & Firestore Security Rules (DATA)
+
+#### DATA-01: Complete Production Failure Due to 11 Missing Collections in Firestore Rules
+- **Severity**: **Critical**
+- **Component**: Firestore Security Rules / Platform Operation
+- **File & Lines**: `firestore.rules:1-65`
+- **User Flow / Scenario**: Authenticated users attempt to browse jobs, apply to jobs, send chat messages, join communities, connect with colleagues, swipe on dating profiles, or receive notifications.
+- **Suspected Root Cause**: Firestore rules default to DENY for all unlisted collections. The following 11 collections and subcollections used by client services are completely absent from `firestore.rules`:
+  1. `jobs`
+  2. `job_applications`
+  3. `chats`
+  4. `chats/{chatId}/messages`
+  5. `communities/{communityId}/messages`
+  6. `connections`
+  7. `dating_interactions`
+  8. `matches`
+  9. `notifications`
+  10. `referrals`
+  11. `settings`
+- **Evidence Snippet**:
+  `firestore.rules` defines rules only for `users`, `advertisements`, `posts`, `communities` (shallow), `messages` (standalone), `mail`, and `reports`.
+- **Recommended Fix**:
+  Add explicit security rules for all 11 collections and subcollections, enforcing user authentication, participant checks, and document ownership.
+
+---
+
+#### DATA-02: Firestore Rules Reject Feed Likes, Comments, Poll Votes & Ad Tracking
+- **Severity**: **Critical**
+- **Component**: Feed Interactions & Analytics
+- **File & Lines**: `firestore.rules:27-31, 34-38`, `src/lib/services/posts.ts:176, 258, 333`, `src/lib/services/ads.ts:294, 306`
+- **User Flow / Scenario**: User B attempts to like, comment on, or vote in a poll on User A's post; visitors view or click on sponsored ads.
+- **Suspected Root Cause**:
+  1. `posts` rule requires `isAdmin() || (isAuthenticated() && resource.data.authorId == request.auth.uid)`. When User B interacts with User A's post, Firestore rejects the update because User B is not the post author.
+  2. In `createPost`, the document records `userId`, not `authorId`. Because `resource.data.authorId` is `null`, even the author cannot edit or delete their own post.
+  3. In `advertisements`, updates require `companyId == request.auth.uid`. When feed visitors view or click an ad, `trackAdImpression` or `trackAdClick` is rejected with `PERMISSION_DENIED`.
+- **Evidence Snippet**:
+  ```firestore-rules
+  // firestore.rules:34-38
+  match /posts/{postId} {
+    allow read: if isAuthenticated();
+    allow create: if isAuthenticated();
+    allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.authorId == request.auth.uid);
+  }
+  ```
+- **Recommended Fix**:
+  1. Normalize field naming to `userId` across `posts.ts` and `firestore.rules`.
+  2. Allow non-authors to update only the `likes`, `comments`, and `poll` fields.
+  3. Track ad impressions via a backend API route (`POST /api/ads/track`) using `adminDb`.
+
+---
+
+#### DATA-03: Catastrophic Read Overhead, 500-Batch Limit & Permission Denial on Profile Updates
+- **Severity**: **High**
+- **Component**: User Service Layer / Firestore Performance
+- **File & Lines**: `src/lib/services/users.ts:167-246`, `src/lib/services/admin.ts:241-319`
+- **User Flow / Scenario**: A user updates their avatar, full name, or username in profile settings.
+- **Suspected Root Cause**:
+  1. `updateUserProfile` runs `getDocs(query(collection(db, 'posts')))`—downloading every post in the database to the client browser.
+  2. It iterates through all comments and adds `batch.update(postDoc.ref, { comments: newComments })`.
+  3. Under `firestore.rules:37`, updating another user's post is rejected, causing `batch.commit()` to fail with `Missing or insufficient permissions`.
+  4. If total updates exceed 500 (`count > 500`), the batch write crashes with `FirebaseError: A maximum of 500 writes are allowed per batch`.
+- **Evidence Snippet**:
+  ```ts
+  // src/lib/services/users.ts:188-193, 207-208, 244
+  const allPostsQuery = query(collection(db, 'posts'));
+  const allPostsSnap = await getDocs(allPostsQuery);
+  ...
+  batch.update(postDoc.ref, { comments: newComments });
+  count++;
+  ...
+  await batch.commit(); // Rejection if any post is authored by another user!
+  ```
+- **Recommended Fix**:
+  Remove client-side collection-wide cascade updates. Render author and commenter details dynamically from the user profile or process denormalization asynchronously via Firebase Cloud Functions in chunked batches of <= 500.
+
+---
+
+#### DATA-04: Read-Modify-Write Race Conditions & 1MB Document Limit in Post Comments
+- **Severity**: **High**
+- **Component**: Posts Service
+- **File & Lines**: `src/lib/services/posts.ts:333-358, 493-517`
+- **User Flow / Scenario**: Two users comment simultaneously on a popular post.
+- **Suspected Root Cause**: Comments are stored as an array field inside the post document. `addComment` reads the post, appends the comment to the array, and writes it back without a Firestore transaction. Concurrent comments overwrite each other. Additionally, posts with many comments risk exceeding Firestore's 1MB document limit.
+- **Evidence Snippet**:
+  ```ts
+  // src/lib/services/posts.ts:333-358
+  const postRef = doc(db, 'posts', postId);
+  const postSnap = await getDoc(postRef);
+  ...
+  const existingComments = postData.comments || [];
+  const updatedComments = [...existingComments, newComment];
+  await updateDoc(postRef, {
+    comments: updatedComments,
+    commentsCount: increment(1)
+  });
+  ```
+- **Recommended Fix**:
+  Store comments in a subcollection `/posts/{postId}/comments/{commentId}` and use `arrayUnion` or Firestore transactions.
+
+---
+
+#### DATA-05: Missing Composite Firestore Indexes Causing Runtime Query Failures
+- **Severity**: **High**
+- **Component**: Database Indexes
+- **File & Lines**: `src/lib/services/notifications.ts:88-93`, `src/lib/services/messages.ts:185-186`, `firestore.indexes.json`
+- **User Flow / Scenario**: A user marks all notifications as read or opens an active chat.
+- **Suspected Root Cause**: `markAllNotificationsAsRead` queries `where('userId', '==', userId)` and `where('read', '==', false)`. `markMessagesAsRead` queries with inequality `where('senderId', '!=', currentUserId)`. Neither compound index is declared in `firestore.indexes.json`.
+- **Evidence Snippet**:
+  ```ts
+  // src/lib/services/notifications.ts:88-90
+  const q = query(
+    collection(db, 'notifications'),
+    where('userId', '==', userId),
+    where('read', '==', false)
+  );
+  ```
+- **Recommended Fix**:
+  Add required compound index definitions to `firestore.indexes.json`:
+  ```json
+  {
+    "collectionGroup": "notifications",
+    "queryScope": "COLLECTION",
+    "fields": [
+      { "fieldPath": "userId", "order": "ASCENDING" },
+      { "fieldPath": "read", "order": "ASCENDING" }
+    ]
+  }
+  ```
+
+---
+
+#### DATA-06: Referral Registration Blocked by User Document Ownership Rule
+- **Severity**: **High**
+- **Component**: Referral System / Registration
+- **File & Lines**: `src/lib/services/referrals.ts:93-102`, `src/lib/auth.ts:69`
+- **User Flow / Scenario**: A new user completes signup using a friend's referral code.
+- **Suspected Root Cause**: During registration, `recordReferral` is called directly from the new user's browser, attempting to update the referrer's document (`updateDoc(referrerRef, ...)`). Under `firestore.rules:22` (`allow create, update: if isOwner(userId) || isAdmin()`), the update is rejected with `Missing or insufficient permissions`. The referrer never receives credit.
+- **Evidence Snippet**:
+  ```ts
+  // src/lib/services/referrals.ts:93-102
+  const referrerRef = doc(db, 'users', referrerId);
+  await updateDoc(referrerRef, {
+    referralCount: increment(1),
+    referredFriends: arrayUnion({
+      uid: newUserId,
+      name: newUserName,
+      registeredAt: new Date().toISOString()
+    })
+  });
+  ```
