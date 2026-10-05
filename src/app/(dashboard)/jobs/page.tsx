@@ -393,7 +393,7 @@ export default function JobsPage() {
                   ×
                 </button>
               </div>
-              <form onSubmit={submitApplication} className="p-6 space-y-4">
+              <form onSubmit={submitApplication} className="p-0 overflow-y-auto max-h-[70vh]"><div className="p-6 space-y-4"><div><h3 className="text-sm font-semibold text-white mb-2 uppercase tracking-wider">Job Details</h3><div className="bg-[#2C2C2E]/50 p-4 rounded-xl border border-gray-700/50 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto custom-scrollbar">{applyModalJob.description}</div></div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Cover Letter (Optional)</label>
                   <textarea
@@ -422,7 +422,7 @@ export default function JobsPage() {
                     {isApplying === applyModalJob.id ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Application"}
                   </button>
                 </div>
-              </form>
+              </div></form>
             </div>
           </div>
         )}
@@ -430,3 +430,6 @@ export default function JobsPage() {
     </PullToRefresh>
   );
 }
+
+
+
