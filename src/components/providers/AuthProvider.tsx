@@ -52,11 +52,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     };
   }, [setUser, setProfile, setLoading]);
 
-  // Fallback: forcefully drop splash screen after 3 seconds to prevent indefinite hanging
+  // Fallback: forcefully drop splash screen after 10 seconds to prevent indefinite hanging on very slow networks
   useEffect(() => {
     const safetyTimer = setTimeout(() => {
       setLoading(false);
-    }, 3000);
+    }, 10000);
 
     return () => clearTimeout(safetyTimer);
   }, [setLoading]);
