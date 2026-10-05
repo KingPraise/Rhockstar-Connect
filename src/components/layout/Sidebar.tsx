@@ -109,15 +109,15 @@ export default function Sidebar() {
           />
           {!isMinimized && (
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-white truncate group-hover:text-brand transition-colors">{profile?.fullName || 'User'}</p>
+              <div className="flex items-start gap-1.5 flex-col xl:flex-row xl:items-center">
+                <p className="text-sm font-bold text-white line-clamp-2 leading-tight group-hover:text-brand transition-colors">{profile?.fullName || 'User'}</p>
                 {isPremium && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase shrink-0">
                     {profile.subscriptionTier}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 truncate">@{profile?.username || 'user'}</p>
+              <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">@{profile?.username || 'user'}</p>
             </div>
           )}
         </Link>

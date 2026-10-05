@@ -282,9 +282,9 @@ export default function JobsPage() {
                                 )}
                               </div>
                               <div className="min-w-0">
-                                <h3 className="text-base font-bold text-white group-hover:text-purple-300 transition-colors truncate">{job.title}</h3>
-                                <p className="text-xs font-semibold text-purple-400 flex items-center gap-1 truncate">
-                                  <Building2 className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{job.company}</span>
+                                <h3 className="text-[15px] leading-tight mb-1 font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-2">{job.title}</h3>
+                                <p className="text-xs font-semibold text-purple-400 flex items-start gap-1">
+                                  <Building2 className="w-3.5 h-3.5 shrink-0 mt-0.5" /> <span className="line-clamp-2 leading-tight">{job.company}</span>
                                 </p>
                               </div>
                             </div>
