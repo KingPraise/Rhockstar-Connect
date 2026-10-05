@@ -5,7 +5,7 @@ import "./globals.css";
 import AuthProvider from "@/components/providers/AuthProvider";
 import NextTopLoader from "nextjs-toploader";
 import ToastProvider from "@/components/ui/ToastProvider";
-import AIAssistantWidget from "@/components/AIAssistantWidget";
+import AIAssistantWidget from "@/components/ai/AIAssistantWidget";
 
 const inter = Inter({
   subsets: ["latin"],
