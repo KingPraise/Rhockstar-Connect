@@ -106,7 +106,11 @@ export default function NetworkPage() {
     const res = await sendConnectionRequest(profile.uid, toUserId);
     if (res.success) {
       toast.success("Connection request sent!");
-      await fetchData();
+      setConnections(prev => [
+        ...prev,
+        { id: `temp_${Date.now()}`, fromUserId: profile.uid, toUserId, status: 'pending', createdAt: new Date() } as ConnectionRequest
+      ]);
+      fetchData(); // run in background
     } else {
       toast.error(res.error || "Failed to send request");
     }
@@ -118,7 +122,8 @@ export default function NetworkPage() {
     const res = await removeConnection(connectionId);
     if (res.success) {
       toast.success("Request cancelled");
-      await fetchData();
+      setConnections(prev => prev.filter(c => c.id !== connectionId));
+      fetchData(); // run in background
     } else {
       toast.error(res.error || "Failed to cancel request");
     }
@@ -130,7 +135,14 @@ export default function NetworkPage() {
     const res = await updateConnectionStatus(connectionId, status);
     if (res.success) {
       toast.success(`Request ${status}!`);
-      await fetchData();
+      if (status === 'rejected') {
+        setConnections(prev => prev.filter(c => c.id !== connectionId));
+      } else {
+        setConnections(prev => prev.map(c => 
+          c.id === connectionId ? { ...c, status } : c
+        ));
+      }
+      fetchData(); // run in background
     } else {
       toast.error(res.error || "Failed to update request");
     }
