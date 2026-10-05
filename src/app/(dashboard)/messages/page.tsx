@@ -349,9 +349,15 @@ export default function MessagesPage() {
       try {
         setIsUploadingImage(true);
         uploadedMediaUrl = await uploadMediaToCloudinary(file, `chats_${activeChat.id}`, file.type.startsWith('image/') ? 'image' : 'auto');
-        type = file.type.startsWith('image/') ? 'image' : 'document';
+        
+        if (file.type.startsWith('image/')) type = 'image';
+        else if (file.type.startsWith('audio/') || file.type.includes('mp4') || file.type.includes('webm')) type = 'audio';
+        else type = 'document';
+        
         if (!finalMsgText) {
-          finalMsgText = type === 'image' ? "Sent an image" : file.name;
+          if (type === 'image') finalMsgText = "Sent an image";
+          else if (type === 'audio') finalMsgText = "Sent an audio message";
+          else finalMsgText = file.name;
         }
       } catch (error) {
         console.error("Error uploading file:", error);
@@ -519,8 +525,15 @@ export default function MessagesPage() {
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const audioFile = new File([audioBlob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        
+        let ext = 'webm';
+        if (mimeType.includes('mp4')) ext = 'mp4';
+        else if (mimeType.includes('ogg')) ext = 'ogg';
+        else if (mimeType.includes('mpeg') || mimeType.includes('mp3')) ext = 'mp3';
+        
+        const audioFile = new File([audioBlob], `voice-note-${Date.now()}.${ext}`, { type: mimeType });
         setMediaFile(audioFile);
         stream.getTracks().forEach(track => track.stop());
       };
@@ -1353,9 +1366,16 @@ export default function MessagesPage() {
                           ) : (
                             <>
                               {msg.type === 'image' && msg.mediaUrl && (
-                                <img src={msg.mediaUrl} alt="Shared" className="rounded-xl max-h-60 w-full object-cover mb-2" />
+                                <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
+                                  <img src={msg.mediaUrl} alt="Shared" className="rounded-xl max-h-60 w-full object-cover mb-2 cursor-pointer hover:opacity-95 transition-opacity shadow-sm" title="Click to view full image" />
+                                </a>
                               )}
-                              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                              {msg.type === 'audio' && msg.mediaUrl && (
+                                <div className="mb-2 w-full max-w-[240px]">
+                                  <audio controls src={msg.mediaUrl} className="w-full h-10" />
+                                </div>
+                              )}
+                              {msg.type !== 'audio' && <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
                             </>
                           )}
 
