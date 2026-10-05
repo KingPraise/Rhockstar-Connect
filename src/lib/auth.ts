@@ -18,7 +18,7 @@ const RESERVED_USERNAMES = [
   'dev', 'news', 'updates', 'blog', 'careers', 'jobs', 'ads', 'advertise', 'business', 
   'press', 'media', 'privacy', 'legal', 'terms', 'community', 'events', 'feedback', 
   'report', 'appeal', 'notifications', 'api', 'bot', 'ai', 'assistant', 'store', 'market', 
-  'payments', 'wallet', 'rhockstar', 'rhockstarconnect', 'rhockstarnation', 
+  'payments', 'wallet', 'rhockstarconnect', 'rhockstarnation', 
   'rhockstar_support', 'rhockstar_help', 'rhockstar_official', 'connectsupport', 'connectadmin'
 ];
 
