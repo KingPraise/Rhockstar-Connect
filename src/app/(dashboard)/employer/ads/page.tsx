@@ -30,7 +30,7 @@ import toast from "react-hot-toast";
 const AdPaymentButton = ({ ad, profile, onComplete }: any) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const config = {
-    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-78ba9038855272bdb48441ac8989d5aa-X',
+    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || '',
     tx_ref: `rhockstar_ad_${ad.id}_${Date.now()}`,
     amount: ad.price || 15000,
     currency: 'NGN',
@@ -364,3 +364,4 @@ export default function EmployerAdsPage() {
     </div>
   );
 }
+

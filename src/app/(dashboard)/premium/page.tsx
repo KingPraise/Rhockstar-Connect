@@ -20,7 +20,7 @@ const PaymentButton = ({ tier, profile, currency, formatPrice, onSuccess, disabl
   const chargeAmountNGN = baseUSD * ngnRate;
 
   const config = {
-    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-78ba9038855272bdb48441ac8989d5aa-X',
+    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || '',
     tx_ref: `rhockstar_${tier}_${Date.now()}`,
     amount: chargeAmountNGN,
     currency: 'NGN', // Always pass NGN to satisfy Flutterwave restrictions

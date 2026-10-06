@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     }
 
     // Verify transaction with Flutterwave
-    const secretKey = process.env.FLUTTERWAVE_SECRET_KEY || 'dummy_test_secret_key_remove_me';
+    const secretKey = process.env.FLUTTERWAVE_SECRET_KEY || '';
     
     const flwRes = await fetch(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
       method: 'GET',
@@ -71,3 +71,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
