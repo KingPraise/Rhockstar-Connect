@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
       }
     ],
   },
@@ -46,3 +50,4 @@ const nextConfig: NextConfig = {
 };
 
 export default withPWA(nextConfig);
+
