@@ -1325,7 +1325,7 @@ export default function MessagesPage() {
                               className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-1.5 opacity-80 cursor-pointer hover:opacity-100 transition-opacity"
                             >
                               <span className="font-bold block text-[10px]">Replying to:</span>
-                              <span className="truncate block text-[11px]">{msg.replyToText}</span>
+                              <span className="line-clamp-2 text-[11px] whitespace-normal break-words">{msg.replyToText}</span>
                             </div>
                           )}
 
@@ -1408,7 +1408,7 @@ export default function MessagesPage() {
                             </button>
 
                             {isMenuOpen && (
-                              <div className={`absolute top-full ${isMe ? "left-0" : "right-0"} mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                              <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
                                 <button
                                   onClick={() => { setReplyingTo(msg); setOpenMessageMenuId(null); setTimeout(() => textareaRef.current?.focus(), 0); }}
                                   className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
@@ -1732,7 +1732,7 @@ export default function MessagesPage() {
                                     className={`p-2 rounded-xl ${isMe ? 'bg-black/20' : 'bg-slate-700/50'} border-l-2 border-brand text-xs mb-1.5 cursor-pointer hover:opacity-100 transition-opacity opacity-80`}
                                   >
                                     <span className="font-bold block text-[10px] text-brand">{msg.replyToSenderName || 'User'}</span>
-                                    <span className="truncate block text-[11px]">{msg.replyToText}</span>
+                                    <span className="line-clamp-2 text-[11px] whitespace-normal break-words">{msg.replyToText}</span>
                                   </div>
                                 )}
                                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
@@ -1753,7 +1753,7 @@ export default function MessagesPage() {
                                   </button>
 
                                   {openMessageMenuId === msg.id && (
-                                    <div className={`absolute top-full ${isMe ? "left-0" : "right-0"} mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                                    <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
                                       <button
                                         onClick={() => { setCommunityReplyingTo(msg); setOpenMessageMenuId(null); }}
                                         className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
@@ -2242,4 +2242,6 @@ export default function MessagesPage() {
     </div>
   );
 }
+
+
 

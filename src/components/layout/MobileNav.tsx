@@ -14,8 +14,8 @@ export default function MobileNav() {
   const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+    const handleScroll = (e: Event) => {
+      const currentScrollY = (e.target as HTMLElement).scrollTop;
       
       // Hide if scrolled down more than 10px and beyond 50px from top
       if (currentScrollY > lastScrollY + 10 && currentScrollY > 50) {
@@ -29,8 +29,8 @@ export default function MobileNav() {
       setLastScrollY(currentScrollY);
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    document.getElementById("main-scroll-container")?.addEventListener("scroll", handleScroll, { passive: true });
+    return () => document.getElementById("main-scroll-container")?.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
   const navItems = [
@@ -82,3 +82,5 @@ export default function MobileNav() {
     </nav>
   );
 }
+
+
