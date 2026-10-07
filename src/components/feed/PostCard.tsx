@@ -300,6 +300,15 @@ export default function PostCard({ post }: PostCardProps) {
                     <Trash2 className="w-4 h-4" /> {isDeleting ? "Deleting..." : "Delete Post"}
                   </button>
                 </>
+              ) : profile?.role === "admin" ? (
+                <>
+                  <button onClick={() => { setIsEditingPost(true); setEditPostText(post.content); setShowMenu(false); }} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
+                    <Edit2 className="w-4 h-4" /> Edit Post
+                  </button>
+                  <button onClick={handleDeletePost} disabled={isDeleting} className="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-slate-800 hover:text-red-300 transition-colors flex items-center gap-2 disabled:opacity-50">
+                    <Trash2 className="w-4 h-4" /> {isDeleting ? "Deleting..." : "Delete Post"}
+                  </button>
+                </>
               ) : (
                 <>
                   <button onClick={handleReportPost} className="w-full px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors flex items-center gap-2">
@@ -590,7 +599,7 @@ export default function PostCard({ post }: PostCardProps) {
                             <Reply className="w-3.5 h-3.5" />
                             Reply
                           </button>
-                          {profile?.uid === comment.userId && (
+                          {profile?.uid === comment.userId ? (
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
@@ -607,7 +616,24 @@ export default function PostCard({ post }: PostCardProps) {
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
-                          )}
+                          ) : profile?.role === "admin" ? (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => { setEditingCommentId(comment.id); setEditCommentText(comment.content); }}
+                                className="text-xs font-semibold text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-xs font-semibold text-slate-500 hover:text-red-400 flex items-center gap-1 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : null}
                           {(post.userId === profile?.uid || profile?.role === 'admin') && (
                             <button
                               type="button"
@@ -661,7 +687,7 @@ export default function PostCard({ post }: PostCardProps) {
                                   </p>
                                 )}
                                 <div className="mt-1 pt-1 border-t border-white/5 flex justify-end gap-2">
-                                  {profile?.uid === reply.userId && (
+                                  {profile?.uid === reply.userId ? (
                                     <>
                                       <button
                                         type="button"
@@ -678,7 +704,24 @@ export default function PostCard({ post }: PostCardProps) {
                                         <Trash2 className="w-3 h-3" />
                                       </button>
                                     </>
-                                  )}
+                                  ) : profile?.role === "admin" ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => { setEditingCommentId(reply.id); setEditCommentText(reply.content); }}
+                                        className="text-[10px] font-semibold text-slate-500 hover:text-white transition-colors flex items-center gap-1"
+                                      >
+                                        <Edit2 className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteComment(reply.id)}
+                                        className="text-[10px] font-semibold text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </>
+                                  ) : null}
                                   {(post.userId === profile?.uid || profile?.role === 'admin') && (
                                     <button
                                       type="button"
@@ -782,3 +825,6 @@ export default function PostCard({ post }: PostCardProps) {
     </div>
   );
 }
+
+
+
