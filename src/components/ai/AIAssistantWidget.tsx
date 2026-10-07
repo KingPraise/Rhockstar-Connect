@@ -16,7 +16,10 @@ import type {
   AIMessage,
 } from "@/lib/services/ai";
 
+import { useAuthStore } from "@/store/useAuthStore";
+
 export default function AIAssistantWidget() {
+  const { aiWidgetVisible, setAiWidgetVisible } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [persona, setPersona] = useState<AIPersona>("career");
   const [input, setInput] = useState("");
@@ -806,4 +809,7 @@ export default function AIAssistantWidget() {
     </>
   );
 }
+
+
+
 
