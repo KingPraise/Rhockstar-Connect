@@ -351,7 +351,7 @@ export default function MessagesPage() {
         uploadedMediaUrl = await uploadMediaToCloudinary(file, `chats_${activeChat.id}`, file.type.startsWith('image/') ? 'image' : 'auto');
         
         if (file.type.startsWith('image/')) type = 'image';
-        else if (file.type.startsWith('audio/') || file.type.includes('mp4') || file.type.includes('webm')) type = 'audio';
+        else if (file.type.startsWith('audio/') || file.type.includes('mp4') || file.type.includes('webm') || file.name.endsWith('.webm') || file.name.endsWith('.mp3') || file.name.endsWith('.ogg') || file.name.endsWith('.m4a') || file.name.endsWith('.wav')) type = 'audio';
         else type = 'document';
         
         if (!finalMsgText) {
@@ -1371,11 +1371,16 @@ export default function MessagesPage() {
                                 </a>
                               )}
                               {msg.type === 'audio' && msg.mediaUrl && (
-                                <div className="mb-2 w-full max-w-[240px]">
+                                <div className="mb-2 w-full min-w-[220px] sm:min-w-[260px] max-w-full">
                                   <audio controls src={msg.mediaUrl} className="w-full h-10" />
                                 </div>
                               )}
-                              {msg.type !== 'audio' && <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+                              {msg.type === 'document' && msg.mediaUrl && (
+                                  <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2.5 mb-2 rounded-xl bg-black/20 hover:bg-black/30 transition-colors border border-white/10 w-full">
+                                    <span className="text-sm font-medium truncate flex-1">{msg.text || "View Document"}</span>
+                                  </a>
+                                )}
+                                {(msg.type === 'text' || (msg.type === 'image' && msg.text !== 'Sent an image') || (msg.type === 'document' && !msg.mediaUrl)) && msg.text && <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
                             </>
                           )}
 
@@ -2242,6 +2247,10 @@ export default function MessagesPage() {
     </div>
   );
 }
+
+
+
+
 
 
 
