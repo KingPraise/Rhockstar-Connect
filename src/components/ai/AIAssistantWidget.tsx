@@ -1,6 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
 import {
   Sparkles,
   Send,
@@ -10,37 +15,131 @@ import {
   ChevronDown,
 } from "lucide-react";
 
-import { getAIResponse } from "@/lib/services/ai";
+import {
+  getAIResponse,
+} from "@/lib/services/ai";
+
 import type {
   AIPersona,
   AIMessage,
 } from "@/lib/services/ai";
 
+import {
+  useAuthStore,
+} from "@/store/useAuthStore";
+
+const LAUNCHER_SIZE = 56;
+
+const DRAG_THRESHOLD = 5;
+
 export default function AIAssistantWidget() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [persona, setPersona] = useState<AIPersona>("career");
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const {
+    aiWidgetVisible,
+    setAiWidgetVisible,
+  } = useAuthStore();
 
-  const [messages, setMessages] = useState<AIMessage[]>([
-    {
-      id: "welcome",
-      role: "ai",
-      content:
-        "Hi! I'm Rhockstar AI. How can I help you level up your career today?",
-      timestamp: new Date(),
-    },
-  ]);
+  const [
+    isOpen,
+    setIsOpen,
+  ] = useState(false);
 
-  const [position, setPosition] = useState({
+  const [
+    persona,
+    setPersona,
+  ] =
+    useState<AIPersona>(
+      "career",
+    );
+
+  const [
+    input,
+    setInput,
+  ] = useState("");
+
+  const [
+    isTyping,
+    setIsTyping,
+  ] = useState(false);
+
+  const [
+    messages,
+    setMessages,
+  ] =
+    useState<AIMessage[]>([
+      {
+        id: "welcome",
+        role: "ai",
+        content:
+          "Hi! I'm Rhockstar AI. How can I help you level up your career today?",
+        timestamp:
+          new Date(),
+      },
+    ]);
+
+  /*
+   * ==========================================
+   * OPEN CHAT POSITION
+   * ==========================================
+   */
+
+  const [
+    position,
+    setPosition,
+  ] = useState({
     x: 0,
     y: 0,
   });
 
-  const [isDragging, setIsDragging] = useState(false);
+  /*
+   * ==========================================
+   * CLOSED BUTTON POSITION
+   * ==========================================
+   */
 
-  const windowRef = useRef<HTMLDivElement | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [
+    launcherPosition,
+    setLauncherPosition,
+  ] = useState({
+    x: 0,
+    y: 0,
+  });
+
+  const [
+    launcherReady,
+    setLauncherReady,
+  ] = useState(false);
+
+  /*
+   * ==========================================
+   * DRAG STATES
+   * ==========================================
+   */
+
+  const [
+    isDragging,
+    setIsDragging,
+  ] = useState(false);
+
+  const [
+    isLauncherDragging,
+    setIsLauncherDragging,
+  ] = useState(false);
+
+  /*
+   * ==========================================
+   * REFS
+   * ==========================================
+   */
+
+  const windowRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
+
+  const messagesEndRef =
+    useRef<HTMLDivElement | null>(
+      null,
+    );
 
   const dragRef = useRef({
     startX: 0,
@@ -49,96 +148,556 @@ export default function AIAssistantWidget() {
     startTop: 0,
   });
 
-  const createMessageId = () => {
-    return `${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(2, 9)}`;
-  };
+  const launcherDragRef =
+    useRef({
+      startX: 0,
+      startY: 0,
+      startLeft: 0,
+      startTop: 0,
+      moved: false,
+    });
 
   /*
    * ==========================================
-   * CALCULATE WINDOW POSITION
+   * MESSAGE ID
    * ==========================================
    */
 
-  const setInitialPosition = () => {
-    if (typeof window === "undefined") return;
-
-    const isMobile = window.innerWidth < 768;
-
-    const width = isMobile
-      ? window.innerWidth
-      : 384;
-
-    const height = isMobile
-      ? Math.min(window.innerHeight * 0.85, window.innerHeight)
-      : 600;
-
-    const margin = isMobile ? 0 : 32;
-
-    setPosition({
-      x: Math.max(
-        0,
-        window.innerWidth - width - margin
-      ),
-      y: Math.max(
-        0,
-        window.innerHeight - height - margin
-      ),
-    });
-  };
+  const createMessageId =
+    () => {
+      return `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
+    };
 
   /*
    * ==========================================
-   * OPEN WINDOW
+   * INITIAL LAUNCHER POSITION
    * ==========================================
    */
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return;
+    }
 
-    setInitialPosition();
+    const isMobile =
+      window.innerWidth <
+      768;
 
-    const handleResize = () => {
-      if (!windowRef.current) {
-        setInitialPosition();
-        return;
-      }
+    const rightMargin =
+      isMobile
+        ? 16
+        : 32;
 
-      const rect =
-        windowRef.current.getBoundingClientRect();
+    const bottomMargin =
+      isMobile
+        ? 80
+        : 32;
 
-      const maxX = Math.max(
+    setLauncherPosition({
+      x: Math.max(
         0,
-        window.innerWidth - rect.width
-      );
+        window.innerWidth -
+          LAUNCHER_SIZE -
+          rightMargin,
+      ),
 
-      const maxY = Math.max(
+      y: Math.max(
         0,
-        window.innerHeight - rect.height
-      );
+        window.innerHeight -
+          LAUNCHER_SIZE -
+          bottomMargin,
+      ),
+    });
 
-      setPosition((current) => ({
-        x: Math.min(
-          Math.max(0, current.x),
-          maxX
-        ),
-        y: Math.min(
-          Math.max(0, current.y),
-          maxY
-        ),
-      }));
-    };
+    setLauncherReady(
+      true,
+    );
+  }, []);
+
+  /*
+   * ==========================================
+   * KEEP LAUNCHER INSIDE VIEWPORT
+   * ==========================================
+   */
+
+  useEffect(() => {
+    const handleResize =
+      () => {
+        setLauncherPosition(
+          (current) => {
+            const maxX =
+              Math.max(
+                0,
+                window.innerWidth -
+                  LAUNCHER_SIZE,
+              );
+
+            const maxY =
+              Math.max(
+                0,
+                window.innerHeight -
+                  LAUNCHER_SIZE,
+              );
+
+            return {
+              x: Math.min(
+                Math.max(
+                  0,
+                  current.x,
+                ),
+                maxX,
+              ),
+
+              y: Math.min(
+                Math.max(
+                  0,
+                  current.y,
+                ),
+                maxY,
+              ),
+            };
+          },
+        );
+      };
 
     window.addEventListener(
       "resize",
-      handleResize
+      handleResize,
     );
 
     return () => {
       window.removeEventListener(
         "resize",
-        handleResize
+        handleResize,
+      );
+    };
+  }, []);
+
+  /*
+   * ==========================================
+   * WIDGET VISIBILITY
+   * ==========================================
+   */
+
+  useEffect(() => {
+    const isHidden =
+      localStorage.getItem(
+        "aiWidgetHidden",
+      );
+
+    if (
+      isHidden === "true"
+    ) {
+      setAiWidgetVisible(
+        false,
+      );
+    }
+  }, [
+    setAiWidgetVisible,
+  ]);
+
+  /*
+   * ==========================================
+   * OPEN CHAT NEAR LAUNCHER
+   * ==========================================
+   */
+
+  const openChat =
+    () => {
+      if (
+        typeof window ===
+        "undefined"
+      ) {
+        return;
+      }
+
+      const isMobile =
+        window.innerWidth <
+        768;
+
+      const chatWidth =
+        isMobile
+          ? window.innerWidth
+          : 384;
+
+      const chatHeight =
+        isMobile
+          ? Math.min(
+              window.innerHeight *
+                0.85,
+              window.innerHeight,
+            )
+          : 600;
+
+      /*
+        Mobile remains full-width,
+        so horizontal position is 0.
+      */
+      if (isMobile) {
+        setPosition({
+          x: 0,
+
+          y: Math.max(
+            0,
+            window.innerHeight -
+              chatHeight,
+          ),
+        });
+
+        setIsOpen(true);
+
+        return;
+      }
+
+      /*
+        Center the chat horizontally
+        around the floating button.
+      */
+      let desiredX =
+        launcherPosition.x +
+        LAUNCHER_SIZE / 2 -
+        chatWidth / 2;
+
+      /*
+        Prefer opening above the
+        launcher if there is room.
+      */
+      let desiredY =
+        launcherPosition.y -
+        chatHeight -
+        12;
+
+      /*
+        If there isn't enough space
+        above, try opening below.
+      */
+      if (
+        desiredY < 0
+      ) {
+        desiredY =
+          launcherPosition.y +
+          LAUNCHER_SIZE +
+          12;
+      }
+
+      const maxX =
+        Math.max(
+          0,
+          window.innerWidth -
+            chatWidth,
+        );
+
+      const maxY =
+        Math.max(
+          0,
+          window.innerHeight -
+            chatHeight,
+        );
+
+      desiredX =
+        Math.min(
+          Math.max(
+            0,
+            desiredX,
+          ),
+          maxX,
+        );
+
+      desiredY =
+        Math.min(
+          Math.max(
+            0,
+            desiredY,
+          ),
+          maxY,
+        );
+
+      setPosition({
+        x: desiredX,
+        y: desiredY,
+      });
+
+      setIsOpen(true);
+    };
+
+  /*
+   * ==========================================
+   * CLOSED BUTTON DRAG START
+   * ==========================================
+   */
+
+  const handleLauncherDragStart =
+    (
+      event: React.PointerEvent<HTMLButtonElement>,
+    ) => {
+      if (
+        event.pointerType ===
+          "mouse" &&
+        event.button !== 0
+      ) {
+        return;
+      }
+
+      launcherDragRef.current =
+        {
+          startX:
+            event.clientX,
+
+          startY:
+            event.clientY,
+
+          startLeft:
+            launcherPosition.x,
+
+          startTop:
+            launcherPosition.y,
+
+          moved: false,
+        };
+
+      setIsLauncherDragging(
+        true,
+      );
+    };
+
+  /*
+   * ==========================================
+   * CLOSED BUTTON DRAG
+   * ==========================================
+   */
+
+  useEffect(() => {
+    if (
+      !isLauncherDragging
+    ) {
+      return;
+    }
+
+    const handlePointerMove =
+      (
+        event: PointerEvent,
+      ) => {
+        const deltaX =
+          event.clientX -
+          launcherDragRef
+            .current.startX;
+
+        const deltaY =
+          event.clientY -
+          launcherDragRef
+            .current.startY;
+
+        /*
+          Don't treat tiny accidental
+          movements as dragging.
+        */
+        const distance =
+          Math.sqrt(
+            deltaX *
+              deltaX +
+              deltaY *
+                deltaY,
+          );
+
+        if (
+          distance >
+          DRAG_THRESHOLD
+        ) {
+          launcherDragRef.current.moved =
+            true;
+        }
+
+        if (
+          !launcherDragRef
+            .current.moved
+        ) {
+          return;
+        }
+
+        const maxX =
+          Math.max(
+            0,
+            window.innerWidth -
+              LAUNCHER_SIZE,
+          );
+
+        const maxY =
+          Math.max(
+            0,
+            window.innerHeight -
+              LAUNCHER_SIZE,
+          );
+
+        const newX =
+          Math.min(
+            Math.max(
+              0,
+              launcherDragRef
+                .current
+                .startLeft +
+                deltaX,
+            ),
+            maxX,
+          );
+
+        const newY =
+          Math.min(
+            Math.max(
+              0,
+              launcherDragRef
+                .current
+                .startTop +
+                deltaY,
+            ),
+            maxY,
+          );
+
+        setLauncherPosition({
+          x: newX,
+          y: newY,
+        });
+      };
+
+    const handlePointerUp =
+      () => {
+        setIsLauncherDragging(
+          false,
+        );
+      };
+
+    window.addEventListener(
+      "pointermove",
+      handlePointerMove,
+    );
+
+    window.addEventListener(
+      "pointerup",
+      handlePointerUp,
+    );
+
+    window.addEventListener(
+      "pointercancel",
+      handlePointerUp,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "pointermove",
+        handlePointerMove,
+      );
+
+      window.removeEventListener(
+        "pointerup",
+        handlePointerUp,
+      );
+
+      window.removeEventListener(
+        "pointercancel",
+        handlePointerUp,
+      );
+    };
+  }, [
+    isLauncherDragging,
+  ]);
+
+  /*
+   * ==========================================
+   * CLOSED BUTTON CLICK
+   * ==========================================
+   */
+
+  const handleLauncherClick =
+    (
+      event: React.MouseEvent<HTMLButtonElement>,
+    ) => {
+      /*
+        If the pointer actually moved,
+        this interaction was a drag,
+        not a click.
+      */
+      if (
+        launcherDragRef
+          .current.moved
+      ) {
+        event.preventDefault();
+
+        return;
+      }
+
+      openChat();
+    };
+
+  /*
+   * ==========================================
+   * KEEP OPEN CHAT INSIDE VIEWPORT
+   * ==========================================
+   */
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleResize =
+      () => {
+        if (
+          !windowRef.current
+        ) {
+          return;
+        }
+
+        const rect =
+          windowRef.current.getBoundingClientRect();
+
+        const maxX =
+          Math.max(
+            0,
+            window.innerWidth -
+              rect.width,
+          );
+
+        const maxY =
+          Math.max(
+            0,
+            window.innerHeight -
+              rect.height,
+          );
+
+        setPosition(
+          (current) => ({
+            x: Math.min(
+              Math.max(
+                0,
+                current.x,
+              ),
+              maxX,
+            ),
+
+            y: Math.min(
+              Math.max(
+                0,
+                current.y,
+              ),
+              maxY,
+            ),
+          }),
+        );
+      };
+
+    window.addEventListener(
+      "resize",
+      handleResize,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        handleResize,
       );
     };
   }, [isOpen]);
@@ -150,140 +709,209 @@ export default function AIAssistantWidget() {
    */
 
   useEffect(() => {
-    if (!isOpen) return;
-
-    const timer = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-    }, 50);
-
-    return () => clearTimeout(timer);
-  }, [messages, isTyping, isOpen]);
-
-  /*
-   * ==========================================
-   * DRAG START
-   * ==========================================
-   */
-
-  const handleDragStart = (
-    event: React.PointerEvent<HTMLDivElement>
-  ) => {
-    if (window.innerWidth < 768) return;
-
-    if (
-      event.pointerType === "mouse" &&
-      event.button !== 0
-    ) {
+    if (!isOpen) {
       return;
     }
 
-    if (!windowRef.current) return;
+    const timer =
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView(
+          {
+            behavior:
+              "smooth",
 
-    const rect =
-      windowRef.current.getBoundingClientRect();
+            block:
+              "nearest",
+          },
+        );
+      }, 50);
 
-    dragRef.current = {
-      startX: event.clientX,
-      startY: event.clientY,
-      startLeft: rect.left,
-      startTop: rect.top,
-    };
-
-    setIsDragging(true);
-
-    try {
-      event.currentTarget.setPointerCapture(
-        event.pointerId
-      );
-    } catch {
-      // Ignore pointer capture errors.
-    }
-  };
+    return () =>
+      clearTimeout(timer);
+  }, [
+    messages,
+    isTyping,
+    isOpen,
+  ]);
 
   /*
    * ==========================================
-   * DRAG MOVE
+   * OPEN CHAT DRAG START
    * ==========================================
    */
 
-  const handleDragMove = (
-    event: React.PointerEvent<HTMLDivElement>
-  ) => {
-    if (!isDragging) return;
-
-    if (!windowRef.current) return;
-
-    const rect =
-      windowRef.current.getBoundingClientRect();
-
-    const deltaX =
-      event.clientX -
-      dragRef.current.startX;
-
-    const deltaY =
-      event.clientY -
-      dragRef.current.startY;
-
-    const maxX = Math.max(
-      0,
-      window.innerWidth - rect.width
-    );
-
-    const maxY = Math.max(
-      0,
-      window.innerHeight - rect.height
-    );
-
-    const newX = Math.min(
-      Math.max(
-        0,
-        dragRef.current.startLeft + deltaX
-      ),
-      maxX
-    );
-
-    const newY = Math.min(
-      Math.max(
-        0,
-        dragRef.current.startTop + deltaY
-      ),
-      maxY
-    );
-
-    setPosition({
-      x: newX,
-      y: newY,
-    });
-  };
-
-  /*
-   * ==========================================
-   * DRAG END
-   * ==========================================
-   */
-
-  const handleDragEnd = (
-    event: React.PointerEvent<HTMLDivElement>
-  ) => {
-    setIsDragging(false);
-
-    try {
+  const handleDragStart =
+    (
+      event: React.PointerEvent<HTMLDivElement>,
+    ) => {
       if (
-        event.currentTarget.hasPointerCapture(
-          event.pointerId
+        event.pointerType ===
+          "mouse" &&
+        event.button !== 0
+      ) {
+        return;
+      }
+
+      if (
+        !windowRef.current
+      ) {
+        return;
+      }
+
+      const target =
+        event.target as HTMLElement;
+
+      /*
+        Don't begin dragging when
+        pressing header buttons.
+      */
+      if (
+        target.closest(
+          "button",
         )
       ) {
-        event.currentTarget.releasePointerCapture(
-          event.pointerId
-        );
+        return;
       }
-    } catch {
-      // Ignore pointer release errors.
+
+      const rect =
+        windowRef.current.getBoundingClientRect();
+
+      dragRef.current = {
+        startX:
+          event.clientX,
+
+        startY:
+          event.clientY,
+
+        startLeft:
+          rect.left,
+
+        startTop:
+          rect.top,
+      };
+
+      setIsDragging(
+        true,
+      );
+
+      event.preventDefault();
+    };
+
+  /*
+   * ==========================================
+   * OPEN CHAT GLOBAL DRAG TRACKING
+   * ==========================================
+   */
+
+  useEffect(() => {
+    if (!isDragging) {
+      return;
     }
-  };
+
+    const handlePointerMove =
+      (
+        event: PointerEvent,
+      ) => {
+        if (
+          !windowRef.current
+        ) {
+          return;
+        }
+
+        const rect =
+          windowRef.current.getBoundingClientRect();
+
+        const deltaX =
+          event.clientX -
+          dragRef.current
+            .startX;
+
+        const deltaY =
+          event.clientY -
+          dragRef.current
+            .startY;
+
+        const maxX =
+          Math.max(
+            0,
+            window.innerWidth -
+              rect.width,
+          );
+
+        const maxY =
+          Math.max(
+            0,
+            window.innerHeight -
+              rect.height,
+          );
+
+        const newX =
+          Math.min(
+            Math.max(
+              0,
+              dragRef.current
+                .startLeft +
+                deltaX,
+            ),
+            maxX,
+          );
+
+        const newY =
+          Math.min(
+            Math.max(
+              0,
+              dragRef.current
+                .startTop +
+                deltaY,
+            ),
+            maxY,
+          );
+
+        setPosition({
+          x: newX,
+          y: newY,
+        });
+      };
+
+    const handlePointerUp =
+      () => {
+        setIsDragging(
+          false,
+        );
+      };
+
+    window.addEventListener(
+      "pointermove",
+      handlePointerMove,
+    );
+
+    window.addEventListener(
+      "pointerup",
+      handlePointerUp,
+    );
+
+    window.addEventListener(
+      "pointercancel",
+      handlePointerUp,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "pointermove",
+        handlePointerMove,
+      );
+
+      window.removeEventListener(
+        "pointerup",
+        handlePointerUp,
+      );
+
+      window.removeEventListener(
+        "pointercancel",
+        handlePointerUp,
+      );
+    };
+  }, [isDragging]);
 
   /*
    * ==========================================
@@ -291,25 +919,40 @@ export default function AIAssistantWidget() {
    * ==========================================
    */
 
-  const handlePersonaChange = (
-    newPersona: AIPersona
-  ) => {
-    if (persona === newPersona) return;
+  const handlePersonaChange =
+    (
+      newPersona: AIPersona,
+    ) => {
+      if (
+        persona ===
+        newPersona
+      ) {
+        return;
+      }
 
-    setPersona(newPersona);
+      setPersona(
+        newPersona,
+      );
 
-    setMessages([
-      {
-        id: createMessageId(),
-        role: "ai",
-        content:
-          newPersona === "career"
-            ? "You're now talking to Career Coach. I can help with your resume, interviews, job search, career planning, and professional growth."
-            : "You're now talking to Dating Wingman. I can help with your dating profile, conversations, openers, and date ideas.",
-        timestamp: new Date(),
-      },
-    ]);
-  };
+      setMessages([
+        {
+          id:
+            createMessageId(),
+
+          role:
+            "ai",
+
+          content:
+            newPersona ===
+            "career"
+              ? "You're now talking to Career Coach. I can help with your resume, interviews, job search, career planning, and professional growth."
+              : "You're now talking to Dating Wingman. I can help with your dating profile, conversations, openers, and date ideas.",
+
+          timestamp:
+            new Date(),
+        },
+      ]);
+    };
 
   /*
    * ==========================================
@@ -317,78 +960,136 @@ export default function AIAssistantWidget() {
    * ==========================================
    */
 
-  const handleSend = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
+  const handleSend =
+    async (
+      event: React.FormEvent<HTMLFormElement>,
+    ) => {
+      event.preventDefault();
 
-    const text = input.trim();
+      const text =
+        input.trim();
 
-    if (!text || isTyping) return;
+      if (
+        !text ||
+        isTyping
+      ) {
+        return;
+      }
 
-    const userMessage: AIMessage = {
-      id: createMessageId(),
-      role: "user",
-      content: text,
-      timestamp: new Date(),
-    };
-
-    setMessages((previous) => [
-      ...previous,
-      userMessage,
-    ]);
-
-    setInput("");
-    setIsTyping(true);
-
-    try {
-      const response = await getAIResponse(
-        persona,
-        text
-      );
-
-      const aiMessage: AIMessage = {
-        id: createMessageId(),
-        role: "ai",
-        content: response,
-        timestamp: new Date(),
-      };
-
-      setMessages((previous) => [
-        ...previous,
-        aiMessage,
-      ]);
-    } catch (error) {
-      console.error(
-        "Rhockstar AI error:",
-        error
-      );
-
-      setMessages((previous) => [
-        ...previous,
+      const userMessage: AIMessage =
         {
-          id: createMessageId(),
-          role: "ai",
+          id:
+            createMessageId(),
+
+          role:
+            "user",
+
           content:
-            "Sorry, I couldn't process that right now. Please try again.",
-          timestamp: new Date(),
-        },
-      ]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
+            text,
+
+          timestamp:
+            new Date(),
+        };
+
+      setMessages(
+        (previous) => [
+          ...previous,
+          userMessage,
+        ],
+      );
+
+      setInput("");
+
+      setIsTyping(
+        true,
+      );
+
+      try {
+        const response =
+          await getAIResponse(
+            persona,
+            text,
+          );
+
+        const aiMessage: AIMessage =
+          {
+            id:
+              createMessageId(),
+
+            role:
+              "ai",
+
+            content:
+              response,
+
+            timestamp:
+              new Date(),
+          };
+
+        setMessages(
+          (previous) => [
+            ...previous,
+            aiMessage,
+          ],
+        );
+      } catch (error) {
+        console.error(
+          "Rhockstar AI error:",
+          error,
+        );
+
+        setMessages(
+          (previous) => [
+            ...previous,
+
+            {
+              id:
+                createMessageId(),
+
+              role:
+                "ai",
+
+              content:
+                "Sorry, I couldn't process that right now. Please try again.",
+
+              timestamp:
+                new Date(),
+            },
+          ],
+        );
+      } finally {
+        setIsTyping(
+          false,
+        );
+      }
+    };
 
   /*
    * ==========================================
-   * CLOSE
+   * CLOSE CHAT
    * ==========================================
    */
 
-  const handleClose = () => {
-    setIsOpen(false);
-    setIsDragging(false);
-  };
+  const handleClose =
+    () => {
+      setIsOpen(false);
+
+      setIsDragging(
+        false,
+      );
+    };
+
+  /*
+   * ==========================================
+   * HIDDEN WIDGET
+   * ==========================================
+   */
+
+  if (
+    !aiWidgetVisible
+  ) {
+    return null;
+  }
 
   /*
    * ==========================================
@@ -398,43 +1099,62 @@ export default function AIAssistantWidget() {
 
   return (
     <>
-      {!isOpen && (
-        <button
-          type="button"
-          aria-label="Open Rhockstar AI"
-          onClick={() => setIsOpen(true)}
-          className="
-            fixed
-            bottom-20
-            right-4
-            md:bottom-8
-            md:right-8
-            z-[9999]
-            w-14
-            h-14
-            rounded-full
-            flex
-            items-center
-            justify-center
-            bg-gradient-to-r
-            from-blue-500
-            to-purple-500
-            text-white
-            shadow-lg
-            hover:shadow-[0_0_25px_rgba(168,85,247,0.5)]
-            hover:scale-110
-            active:scale-95
-            transition-all
-            duration-200
-          "
-        >
-          <Sparkles className="w-6 h-6" />
-        </button>
-      )}
+      {!isOpen &&
+        launcherReady && (
+          <button
+            type="button"
+            aria-label="Open Rhockstar AI"
+            onPointerDown={
+              handleLauncherDragStart
+            }
+            onClick={
+              handleLauncherClick
+            }
+            className={`
+              fixed
+              z-[9999]
+              w-14
+              h-14
+              rounded-full
+              flex
+              items-center
+              justify-center
+              bg-gradient-to-r
+              from-blue-500
+              to-purple-500
+              text-white
+              shadow-lg
+              hover:shadow-[0_0_25px_rgba(168,85,247,0.5)]
+              active:scale-95
+              transition-shadow
+              duration-200
+              select-none
+              ${
+                isLauncherDragging
+                  ? "cursor-grabbing"
+                  : "cursor-grab"
+              }
+            `}
+            style={{
+              left:
+                launcherPosition.x,
+
+              top:
+                launcherPosition.y,
+
+              touchAction:
+                "none",
+            }}
+          >
+            <Sparkles className="w-6 h-6 pointer-events-none" />
+          </button>
+        )}
 
       {isOpen && (
         <div
-          ref={windowRef}
+          ref={
+            windowRef
+          }
           className="
             fixed
             z-[9999]
@@ -453,17 +1173,19 @@ export default function AIAssistantWidget() {
             overflow-hidden
           "
           style={{
-            left: position.x,
-            top: position.y,
+            left:
+              position.x,
+
+            top:
+              position.y,
           }}
         >
           {/* HEADER */}
 
           <div
-            onPointerDown={handleDragStart}
-            onPointerMove={handleDragMove}
-            onPointerUp={handleDragEnd}
-            onPointerCancel={handleDragEnd}
+            onPointerDown={
+              handleDragStart
+            }
             className={`
               shrink-0
               p-4
@@ -479,11 +1201,12 @@ export default function AIAssistantWidget() {
               ${
                 isDragging
                   ? "cursor-grabbing"
-                  : "md:cursor-grab"
+                  : "cursor-grab"
               }
             `}
             style={{
-              touchAction: "none",
+              touchAction:
+                "none",
             }}
           >
             <div className="flex items-center gap-3">
@@ -523,7 +1246,8 @@ export default function AIAssistantWidget() {
                 </h3>
 
                 <p className="text-xs text-purple-400">
-                  Your personal assistant
+                  Your personal
+                  assistant
                 </p>
               </div>
             </div>
@@ -531,11 +1255,16 @@ export default function AIAssistantWidget() {
             <button
               type="button"
               aria-label="Close Rhockstar AI"
-              onPointerDown={(event) => {
+              onPointerDown={(
+                event,
+              ) => {
                 event.stopPropagation();
               }}
-              onClick={(event) => {
+              onClick={(
+                event,
+              ) => {
                 event.stopPropagation();
+
                 handleClose();
               }}
               className="
@@ -572,7 +1301,9 @@ export default function AIAssistantWidget() {
             <button
               type="button"
               onClick={() =>
-                handlePersonaChange("career")
+                handlePersonaChange(
+                  "career",
+                )
               }
               className={`
                 flex-1
@@ -586,7 +1317,8 @@ export default function AIAssistantWidget() {
                 gap-2
                 transition-all
                 ${
-                  persona === "career"
+                  persona ===
+                  "career"
                     ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                     : "text-slate-400 hover:bg-white/5"
                 }
@@ -599,7 +1331,9 @@ export default function AIAssistantWidget() {
             <button
               type="button"
               onClick={() =>
-                handlePersonaChange("dating")
+                handlePersonaChange(
+                  "dating",
+                )
               }
               className={`
                 flex-1
@@ -613,7 +1347,8 @@ export default function AIAssistantWidget() {
                 gap-2
                 transition-all
                 ${
-                  persona === "dating"
+                  persona ===
+                  "dating"
                     ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
                     : "text-slate-400 hover:bg-white/5"
                 }
@@ -637,45 +1372,57 @@ export default function AIAssistantWidget() {
               select-text
             "
           >
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.role === "user"
-                    ? "justify-end"
-                    : "justify-start"
-                }`}
-              >
+            {messages.map(
+              (
+                message,
+              ) => (
                 <div
-                  className={`
-                    max-w-[85%]
-                    rounded-2xl
-                    px-4
-                    py-3
-                    break-words
-                    ${
-                      message.role === "user"
-                        ? "bg-blue-600 text-white rounded-tr-sm"
-                        : "bg-slate-800 text-slate-200 rounded-tl-sm border border-white/5"
-                    }
-                  `}
+                  key={
+                    message.id
+                  }
+                  className={`flex ${
+                    message.role ===
+                    "user"
+                      ? "justify-end"
+                      : "justify-start"
+                  }`}
                 >
-                  {message.role === "ai" && (
-                    <div className="flex items-center gap-2 mb-1">
-                      <Bot className="w-3.5 h-3.5 text-purple-400" />
+                  <div
+                    className={`
+                      max-w-[85%]
+                      rounded-2xl
+                      px-4
+                      py-3
+                      break-words
+                      ${
+                        message.role ===
+                        "user"
+                          ? "bg-blue-600 text-white rounded-tr-sm"
+                          : "bg-slate-800 text-slate-200 rounded-tl-sm border border-white/5"
+                      }
+                    `}
+                  >
+                    {message.role ===
+                      "ai" && (
+                      <div className="flex items-center gap-2 mb-1">
+                        <Bot className="w-3.5 h-3.5 text-purple-400" />
 
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Rhockstar AI
-                      </span>
-                    </div>
-                  )}
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Rhockstar
+                          AI
+                        </span>
+                      </div>
+                    )}
 
-                  <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                    {message.content}
-                  </p>
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                      {
+                        message.content
+                      }
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
 
             {isTyping && (
               <div className="flex justify-start">
@@ -698,27 +1445,35 @@ export default function AIAssistantWidget() {
                   <span
                     className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce"
                     style={{
-                      animationDelay: "150ms",
+                      animationDelay:
+                        "150ms",
                     }}
                   />
 
                   <span
                     className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce"
                     style={{
-                      animationDelay: "300ms",
+                      animationDelay:
+                        "300ms",
                     }}
                   />
                 </div>
               </div>
             )}
 
-            <div ref={messagesEndRef} />
+            <div
+              ref={
+                messagesEndRef
+              }
+            />
           </div>
 
           {/* INPUT */}
 
           <form
-            onSubmit={handleSend}
+            onSubmit={
+              handleSend
+            }
             className="
               shrink-0
               p-3
@@ -730,17 +1485,27 @@ export default function AIAssistantWidget() {
             <div className="relative flex items-center">
               <input
                 type="text"
-                value={input}
-                onChange={(event) =>
-                  setInput(event.target.value)
+                value={
+                  input
+                }
+                onChange={(
+                  event,
+                ) =>
+                  setInput(
+                    event.target
+                      .value,
+                  )
                 }
                 placeholder={
-                  persona === "career"
+                  persona ===
+                  "career"
                     ? "Ask about your career..."
                     : "Ask about dating..."
                 }
                 autoComplete="off"
-                disabled={isTyping}
+                disabled={
+                  isTyping
+                }
                 className="
                   w-full
                   bg-slate-800
@@ -798,4 +1563,3 @@ export default function AIAssistantWidget() {
     </>
   );
 }
-
