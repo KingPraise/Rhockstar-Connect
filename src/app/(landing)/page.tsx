@@ -171,6 +171,15 @@ export default function Home() {
   const closeMenu = () => setMenuOpen(false);
 
   useEffect(() => {
+    document.documentElement.style.scrollBehavior = "smooth";
+    document.documentElement.style.scrollPaddingTop = "80px";
+    return () => {
+      document.documentElement.style.scrollBehavior = "";
+      document.documentElement.style.scrollPaddingTop = "";
+    };
+  }, []);
+
+  useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
 
     return () => {
@@ -970,3 +979,4 @@ export default function Home() {
     </div>
   );
 }
+
