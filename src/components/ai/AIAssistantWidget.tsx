@@ -24,20 +24,10 @@ import type {
   AIMessage,
 } from "@/lib/services/ai";
 
-import {
-  useAuthStore,
-} from "@/store/useAuthStore";
-
 const LAUNCHER_SIZE = 56;
-
 const DRAG_THRESHOLD = 5;
 
 export default function AIAssistantWidget() {
-  const {
-    aiWidgetVisible,
-    setAiWidgetVisible,
-  } = useAuthStore();
-
   const [
     isOpen,
     setIsOpen,
@@ -280,29 +270,6 @@ export default function AIAssistantWidget() {
 
   /*
    * ==========================================
-   * WIDGET VISIBILITY
-   * ==========================================
-   */
-
-  useEffect(() => {
-    const isHidden =
-      localStorage.getItem(
-        "aiWidgetHidden",
-      );
-
-    if (
-      isHidden === "true"
-    ) {
-      setAiWidgetVisible(
-        false,
-      );
-    }
-  }, [
-    setAiWidgetVisible,
-  ]);
-
-  /*
-   * ==========================================
    * OPEN CHAT NEAR LAUNCHER
    * ==========================================
    */
@@ -334,10 +301,6 @@ export default function AIAssistantWidget() {
             )
           : 600;
 
-      /*
-        Mobile remains full-width,
-        so horizontal position is 0.
-      */
       if (isMobile) {
         setPosition({
           x: 0,
@@ -354,28 +317,16 @@ export default function AIAssistantWidget() {
         return;
       }
 
-      /*
-        Center the chat horizontally
-        around the floating button.
-      */
       let desiredX =
         launcherPosition.x +
         LAUNCHER_SIZE / 2 -
         chatWidth / 2;
 
-      /*
-        Prefer opening above the
-        launcher if there is room.
-      */
       let desiredY =
         launcherPosition.y -
         chatHeight -
         12;
 
-      /*
-        If there isn't enough space
-        above, try opening below.
-      */
       if (
         desiredY < 0
       ) {
@@ -492,10 +443,6 @@ export default function AIAssistantWidget() {
           launcherDragRef
             .current.startY;
 
-        /*
-          Don't treat tiny accidental
-          movements as dragging.
-        */
         const distance =
           Math.sqrt(
             deltaX *
@@ -615,11 +562,6 @@ export default function AIAssistantWidget() {
     (
       event: React.MouseEvent<HTMLButtonElement>,
     ) => {
-      /*
-        If the pointer actually moved,
-        this interaction was a drag,
-        not a click.
-      */
       if (
         launcherDragRef
           .current.moved
@@ -761,10 +703,6 @@ export default function AIAssistantWidget() {
       const target =
         event.target as HTMLElement;
 
-      /*
-        Don't begin dragging when
-        pressing header buttons.
-      */
       if (
         target.closest(
           "button",
@@ -1078,18 +1016,6 @@ export default function AIAssistantWidget() {
         false,
       );
     };
-
-  /*
-   * ==========================================
-   * HIDDEN WIDGET
-   * ==========================================
-   */
-
-  if (
-    !aiWidgetVisible
-  ) {
-    return null;
-  }
 
   /*
    * ==========================================
@@ -1408,8 +1334,7 @@ export default function AIAssistantWidget() {
                         <Bot className="w-3.5 h-3.5 text-purple-400" />
 
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          Rhockstar
-                          AI
+                          Rhockstar AI
                         </span>
                       </div>
                     )}
