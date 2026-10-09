@@ -248,7 +248,7 @@ export default function DatingPage() {
         </div>
       ) : viewMode === 'swipe' ? (
         /* SWIPE STACK */
-        <div className="relative w-full max-w-md mx-auto h-[580px] sm:h-[650px] flex items-center justify-center">
+        <div className="relative w-full max-w-md mx-auto h-[500px] sm:h-[600px] flex items-center justify-center">
           <div className="relative w-full h-full">
             {/* NEXT CARD (Background) */}
             {prospects.length > 1 && (
@@ -354,7 +354,7 @@ export default function DatingPage() {
                     )}
 
                     {currentProspect.datingPrompts && currentProspect.datingPrompts.length > 0 && (
-                      <div className="flex flex-col gap-4">
+                      <div className="grid grid-cols-2 gap-3">
                         {currentProspect.datingPrompts.map((p, i) => (
                           <div key={i} className="p-4 rounded-2xl bg-slate-800/50 border border-white/5">
                             <p className="text-sm font-bold text-brand-purple mb-1">{p.prompt}</p>
@@ -366,9 +366,9 @@ export default function DatingPage() {
 
                     {/* Additional Photos */}
                     {currentProspect.datingPhotos && currentProspect.datingPhotos.length > 1 && (
-                      <div className="flex flex-col gap-4">
+                      <div className="grid grid-cols-2 gap-3">
                          {currentProspect.datingPhotos.slice(1).map((photoUrl, i) => (
-                           <div key={i} className="w-full aspect-square rounded-3xl overflow-hidden border border-white/5">
+                           <div key={i} className="w-full aspect-square rounded-2xl overflow-hidden border border-white/5 shadow-md">
                              <img 
                                src={photoUrl} 
                                alt={`Dating Photo ${i+2}`} 
@@ -408,7 +408,7 @@ export default function DatingPage() {
         </div>
       ) : (
         /* GRID VIEW */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in zoom-in-95 duration-300">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 animate-in fade-in zoom-in-95 duration-300">
           {prospects.map((prospect) => (
             <div key={prospect.uid} className="neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden flex flex-col group hover:border-brand-purple/30 transition-all duration-300">
               <div className="w-full aspect-[4/5] bg-slate-800 relative overflow-hidden">
@@ -526,5 +526,9 @@ export default function DatingPage() {
     </div>
   );
 }
+
+
+
+
 
 
