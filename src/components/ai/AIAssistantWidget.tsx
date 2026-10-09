@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
   Send,
@@ -35,265 +36,19 @@ export default function AIAssistantWidget() {
     },
   ]);
 
-  const [position, setPosition] = useState({
-    x: 0,
-    y: 0,
-  });
+  
 
-  const [isDragging, setIsDragging] = useState(false);
+  
 
   const windowRef = useRef<HTMLDivElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const dragRef = useRef({
-    startX: 0,
-    startY: 0,
-    startLeft: 0,
-    startTop: 0,
-  });
+  
 
   const createMessageId = () => {
     return `${Date.now()}-${Math.random()
       .toString(36)
       .substring(2, 9)}`;
-  };
-
-  /*
-   * ==========================================
-   * CALCULATE WINDOW POSITION
-   * ==========================================
-   */
-
-  const setInitialPosition = () => {
-    if (typeof window === "undefined") return;
-
-    const isMobile = window.innerWidth < 768;
-
-    const width = isMobile
-      ? window.innerWidth
-      : 384;
-
-    const height = isMobile
-      ? Math.min(window.innerHeight * 0.85, window.innerHeight)
-      : 600;
-
-    const margin = isMobile ? 0 : 32;
-
-    setPosition({
-      x: Math.max(
-        0,
-        window.innerWidth - width - margin
-      ),
-      y: Math.max(
-        0,
-        window.innerHeight - height - margin
-      ),
-    });
-  };
-
-  /*
-   * ==========================================
-   * OPEN WINDOW
-   * ==========================================
-   */
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    setInitialPosition();
-
-    const handleResize = () => {
-      if (!windowRef.current) {
-        setInitialPosition();
-        return;
-      }
-
-      const rect =
-        windowRef.current.getBoundingClientRect();
-
-      const maxX = Math.max(
-        0,
-        window.innerWidth - rect.width
-      );
-
-      const maxY = Math.max(
-        0,
-        window.innerHeight - rect.height
-      );
-
-      setPosition((current) => ({
-        x: Math.min(
-          Math.max(0, current.x),
-          maxX
-        ),
-        y: Math.min(
-          Math.max(0, current.y),
-          maxY
-        ),
-      }));
-    };
-
-    window.addEventListener(
-      "resize",
-      handleResize
-    );
-
-    return () => {
-      window.removeEventListener(
-        "resize",
-        handleResize
-      );
-    };
-  }, [isOpen]);
-
-  /*
-   * ==========================================
-   * AUTO SCROLL
-   * ==========================================
-   */
-
-  // Initialize visibility from local storage on mount
-  useEffect(() => {
-    const isHidden = localStorage.getItem('aiWidgetHidden');
-    if (isHidden === 'true') {
-      setAiWidgetVisible(false);
-    }
-  }, [setAiWidgetVisible]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const timer = setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-    }, 50);
-
-    return () => clearTimeout(timer);
-  }, [messages, isTyping, isOpen]);
-
-  /*
-   * ==========================================
-   * DRAG START
-   * ==========================================
-   */
-
-  const handleDragStart = (
-    event: React.PointerEvent<HTMLDivElement>
-  ) => {
-    if (window.innerWidth < 768) return;
-
-    if (
-      event.pointerType === "mouse" &&
-      event.button !== 0
-    ) {
-      return;
-    }
-
-    if (!windowRef.current) return;
-
-    const rect =
-      windowRef.current.getBoundingClientRect();
-
-    dragRef.current = {
-      startX: event.clientX,
-      startY: event.clientY,
-      startLeft: rect.left,
-      startTop: rect.top,
-    };
-
-    setIsDragging(true);
-
-    try {
-      event.currentTarget.setPointerCapture(
-        event.pointerId
-      );
-    } catch {
-      // Ignore pointer capture errors.
-    }
-  };
-
-  /*
-   * ==========================================
-   * DRAG MOVE
-   * ==========================================
-   */
-
-  const handleDragMove = (
-    event: React.PointerEvent<HTMLDivElement>
-  ) => {
-    if (!isDragging) return;
-
-    if (!windowRef.current) return;
-
-    const rect =
-      windowRef.current.getBoundingClientRect();
-
-    const deltaX =
-      event.clientX -
-      dragRef.current.startX;
-
-    const deltaY =
-      event.clientY -
-      dragRef.current.startY;
-
-    const maxX = Math.max(
-      0,
-      window.innerWidth - rect.width
-    );
-
-    const maxY = Math.max(
-      0,
-      window.innerHeight - rect.height
-    );
-
-    const newX = Math.min(
-      Math.max(
-        0,
-        dragRef.current.startLeft + deltaX
-      ),
-      maxX
-    );
-
-    const newY = Math.min(
-      Math.max(
-        0,
-        dragRef.current.startTop + deltaY
-      ),
-      maxY
-    );
-
-    setPosition({
-      x: newX,
-      y: newY,
-    });
-  };
-
-  /*
-   * ==========================================
-   * DRAG END
-   * ==========================================
-   */
-
-  const handleDragEnd = (
-    event: React.PointerEvent<HTMLDivElement>
-  ) => {
-    setIsDragging(false);
-
-    try {
-      if (
-        event.currentTarget.hasPointerCapture(
-          event.pointerId
-        )
-      ) {
-        event.currentTarget.releasePointerCapture(
-          event.pointerId
-        );
-      }
-    } catch {
-      // Ignore pointer release errors.
-    }
   };
 
   /*
@@ -408,95 +163,16 @@ export default function AIAssistantWidget() {
    */
 
   return (
-    <>
-      {!isOpen && (
-        <button
-          type="button"
-          aria-label="Open Rhockstar AI"
-          onClick={() => setIsOpen(true)}
-          className="
-            fixed
-            bottom-20
-            right-4
-            md:bottom-8
-            md:right-8
-            z-[9999]
-            w-14
-            h-14
-            rounded-full
-            flex
-            items-center
-            justify-center
-            bg-gradient-to-r
-            from-blue-500
-            to-purple-500
-            text-white
-            shadow-lg
-            hover:shadow-[0_0_25px_rgba(168,85,247,0.5)]
-            hover:scale-110
-            active:scale-95
-            transition-all
-            duration-200
-          "
-        >
-          <Sparkles className="w-6 h-6" />
-        </button>
+      <>
+      <AnimatePresence>
+        {!isOpen && (
+        <motion.button type="button" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} aria-label="Open Rhockstar AI" onClick={() => setIsOpen(true)} className="fixed bottom-20 right-4 md:bottom-8 md:right-8 z-[9999] w-14 h-14 rounded-full flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg hover:shadow-[0_0_25px_rgba(168,85,247,0.5)] hover:scale-110 active:scale-95 transition-all duration-200"><Sparkles className="w-6 h-6" /></motion.button>
       )}
 
-      {isOpen && (
-        <div
-          ref={windowRef}
-          className="
-            fixed
-            z-[9999]
-            w-screen
-            md:w-96
-            h-[85vh]
-            md:h-[600px]
-            bg-slate-900
-            border
-            border-white/10
-            rounded-t-2xl
-            md:rounded-2xl
-            shadow-2xl
-            flex
-            flex-col
-            overflow-hidden
-          "
-          style={{
-            left: position.x,
-            top: position.y,
-          }}
-        >
+      {isOpen && (<motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} drag={typeof window !== "undefined" && window.innerWidth >= 768} dragConstraints={{ left: -1500, right: 0, top: -800, bottom: 0 }} dragElastic={0.1} dragMomentum={false} ref={windowRef} className="fixed z-[9999] w-screen md:w-96 h-[85vh] md:h-[600px] bg-slate-900 border border-white/10 rounded-t-2xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden bottom-0 md:bottom-24 right-0 md:right-8">
           {/* HEADER */}
 
-          <div
-            onPointerDown={handleDragStart}
-            onPointerMove={handleDragMove}
-            onPointerUp={handleDragEnd}
-            onPointerCancel={handleDragEnd}
-            className={`
-              shrink-0
-              p-4
-              border-b
-              border-white/10
-              bg-gradient-to-r
-              from-slate-800
-              to-slate-900
-              flex
-              items-center
-              justify-between
-              select-none
-              ${
-                isDragging
-                  ? "cursor-grabbing"
-                  : "md:cursor-grab"
-              }
-            `}
-            style={{
-              touchAction: "none",
-            }}
-          >
+          <div className="shrink-0 p-4 border-b border-white/10 bg-gradient-to-r from-slate-800 to-slate-900 flex items-center justify-between select-none md:cursor-grab active:cursor-grabbing" style={{ touchAction: "none" }}>
             <div className="flex items-center gap-3">
               <div
                 className="
@@ -804,9 +480,10 @@ export default function AIAssistantWidget() {
               </button>
             </div>
           </form>
-        </div>
-      )}
-    </>
+        </motion.div>
+        )}
+      </AnimatePresence>
+      </>
   );
 }
 
