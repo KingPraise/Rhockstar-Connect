@@ -313,3 +313,4 @@ export const trackAdClick = async (adId: string) => {
     console.error('Error tracking ad click:', error);
   }
 };
+

@@ -39,6 +39,7 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
   
   const [ctaText, setCtaText] = useState("Learn More");
   const [targetUrl, setTargetUrl] = useState("");
+  const [duration, setDuration] = useState("7");
   const [loading, setLoading] = useState(false);
 
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -94,7 +95,16 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
         finalMediaUrl = await uploadMediaToCloudinary(mediaFile, 'ads_media', 'auto');
       }
 
+      let calcPrice = 15000;
+      let calcDurationDays = 7;
+      if (duration === "1") { calcPrice = 5000; calcDurationDays = 1; }
+      else if (duration === "7") { calcPrice = 15000; calcDurationDays = 7; }
+      else if (duration === "30") { calcPrice = 50000; calcDurationDays = 30; }
+      else if (duration === "365") { calcPrice = 500000; calcDurationDays = 365; }
+
       const res = await createAdvertisement({
+        price: calcPrice,
+        durationDays: calcDurationDays,
         companyId: profile.uid,
         companyName: companyName.trim() || profile.fullName,
         companyLogo: finalLogoUrl || profile.avatar || "",
@@ -194,6 +204,23 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
                   {companyLogoPreview && (
                     <img src={companyLogoPreview} alt="Logo preview" className="w-9 h-9 rounded-full object-cover border border-purple-500/30" />
                   )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Ad Duration & Pricing</label>
+                <div className="relative">
+                  <select
+                    value={duration}
+                    onChange={(e) => setDuration(e.target.value)}
+                    className="w-full neo-input py-2.5 text-xs text-white appearance-none pr-8 bg-slate-800"
+                  >
+                    <option value="1">1 Day - ?5,000</option>
+                    <option value="7">1 Week - ?15,000</option>
+                    <option value="30">1 Month - ?50,000</option>
+                    <option value="365">1 Year - ?500,000</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
 
@@ -402,4 +429,5 @@ export default function CreateAdModal({ isOpen, onClose, onCreated }: CreateAdMo
     </div>
   );
 }
+
 

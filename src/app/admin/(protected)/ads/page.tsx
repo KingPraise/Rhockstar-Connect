@@ -46,7 +46,7 @@ export default function AdminAdsPage() {
   const handleApprove = async (ad: Advertisement) => {
     try {
       setProcessingId(ad.id);
-      const res = await approveAdvertisement(ad.id, 15000);
+      const res = await approveAdvertisement(ad.id, ad.price || 15000);
       if (res.success) {
         toast.success(`Advert "${ad.title}" approved! Advertiser notified to pay.`);
       } else {
@@ -408,3 +408,4 @@ export default function AdminAdsPage() {
     </div>
   );
 }
+

@@ -22,7 +22,7 @@ import {
   Search,
   Building2,
   Plus
-} from "lucide-react";
+, Megaphone } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import QuickCreateModal from "@/components/layout/QuickCreateModal";
@@ -268,3 +268,7 @@ export default function Sidebar() {
     </aside>
   );
 }
+
+
+
+

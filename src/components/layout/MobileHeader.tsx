@@ -24,7 +24,7 @@ import {
   Search,
   Building2,
   Plus
-} from "lucide-react";
+, Megaphone } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import { logoutUser } from "@/lib/auth";
@@ -106,6 +106,7 @@ export default function MobileHeader() {
   const careerLinks = [
     { name: "Jobs", href: "/jobs", icon: Briefcase },
     ...(isEmployer ? [{ name: "Employer Portal", href: "/employer", icon: Building2 }] : []),
+    { name: "My Adverts", href: "/employer/ads", icon: Megaphone },
     { name: "Insights", href: "/insights", icon: TrendingUp },
     { name: "Career Hub", href: "/resources/career", icon: FileText },
   ];
@@ -355,3 +356,7 @@ export default function MobileHeader() {
     </>
   );
 }
+
+
+
+

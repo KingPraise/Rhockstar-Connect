@@ -37,6 +37,7 @@ export interface Post {
     name: string;
     handle: string;
     avatar: string;
+    subscriptionTier?: string;
   };
   content: string;
   imageUrl?: string;
@@ -149,7 +150,8 @@ export const createPost = async (
       user: {
         name: user.fullName,
         handle: user.username,
-        avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase()
+        avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase(),
+        subscriptionTier: user.subscriptionTier
       },
       content,
       ...(imageUrl && { imageUrl }),
@@ -319,6 +321,7 @@ export interface Comment {
     name: string;
     handle: string;
     avatar: string;
+    subscriptionTier?: string;
   };
   content: string;
   createdAt: string;
@@ -340,8 +343,9 @@ export const addComment = async (postId: string, user: UserProfile, content: str
         user: {
           name: user.fullName,
           handle: user.username,
-          avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase()
-        },
+          avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase(),
+        subscriptionTier: user.subscriptionTier
+      },
         content,
         createdAt: new Date().toISOString(),
         ...(replyToId && { replyToId })
@@ -571,3 +575,5 @@ export const toggleCommentVisibility = async (postId: string, commentId: string,
     return { success: false, error: error.message };
   }
 };
+
+

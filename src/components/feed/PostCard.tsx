@@ -270,7 +270,7 @@ export default function PostCard({ post }: PostCardProps) {
           <div className="min-w-0">
             <h4 className="font-bold text-sm text-white group-hover:text-purple-300 transition-colors flex items-center gap-1.5 truncate">
               <span className="truncate">{post.userId === profile?.uid ? profile?.fullName : post.user.name}</span>
-              <VerifiedBadge tier={(post.user as any)?.subscriptionTier} />
+              <VerifiedBadge tier={post.userId === profile?.uid ? (profile as any)?.subscriptionTier : (post.user as any)?.subscriptionTier} />
             </h4>
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
               <span className="truncate">@{post.user.handle}</span>
@@ -568,7 +568,10 @@ export default function PostCard({ post }: PostCardProps) {
                       </Link>
                       <div className="flex-1 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
                         <div className="flex items-center justify-between mb-1">
-                          <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors">{comment.userId === profile?.uid ? profile?.fullName : comment.user.name}</Link>
+                          <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors flex items-center gap-1">
+                              {comment.userId === profile?.uid ? profile?.fullName : comment.user.name}
+                              <VerifiedBadge tier={comment.userId === profile?.uid ? (profile as any)?.subscriptionTier : (comment.user as any)?.subscriptionTier} />
+                            </Link>
                           <span className="text-xs text-slate-500">{cTimeAgo}</span>
                         </div>
                         {editingCommentId === comment.id ? (
@@ -825,6 +828,8 @@ export default function PostCard({ post }: PostCardProps) {
     </div>
   );
 }
+
+
 
 
 

@@ -231,11 +231,20 @@ export default function DatingPage() {
       </div>
 
       {/* CONTENT AREA */}
-      {prospects.length === 0 ? (
+      {!profile?.datingActive ? (
+          <div className="neo-card w-full max-w-md mx-auto min-h-[400px] p-10 flex flex-col items-center justify-center text-center bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-[3rem]">
+            <Heart className="w-16 h-16 text-rose-500 mb-6 opacity-80" />
+            <h2 className="text-2xl font-bold text-white mb-2">Activate Dating</h2>
+            <p className="text-slate-400 mb-6">Set up your dating profile to start finding matches in your professional network!</p>
+            <button onClick={() => router.push('/dating/profile')} className="px-6 py-3 bg-gradient-to-r from-rose-500 to-rose-600 text-white font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
+              Set Up Profile
+            </button>
+          </div>
+        ) : prospects.length === 0 ? (
         <div className="neo-card w-full max-w-md mx-auto min-h-[400px] p-10 flex flex-col items-center justify-center text-center bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-[3rem]">
           <Sparkles className="w-16 h-16 text-brand-purple mb-6 opacity-50" />
           <h2 className="text-2xl font-bold text-white mb-2">You&apos;re all caught up!</h2>
-          <p className="text-slate-400">Check back later for new potential matches in your professional network.</p>
+          <p className="text-slate-400">There are currently no other users active in dating, or you've already interacted with everyone. Share the app to get more people on board!</p>
         </div>
       ) : viewMode === 'swipe' ? (
         /* SWIPE STACK */
@@ -517,3 +526,5 @@ export default function DatingPage() {
     </div>
   );
 }
+
+
