@@ -151,7 +151,7 @@ export const createPost = async (
         name: user.fullName,
         handle: user.username,
         avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase(),
-        subscriptionTier: user.subscriptionTier
+        ...(user.subscriptionTier && { subscriptionTier: user.subscriptionTier })
       },
       content,
       ...(imageUrl && { imageUrl }),
@@ -344,7 +344,7 @@ export const addComment = async (postId: string, user: UserProfile, content: str
           name: user.fullName,
           handle: user.username,
           avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase(),
-        subscriptionTier: user.subscriptionTier
+        ...(user.subscriptionTier && { subscriptionTier: user.subscriptionTier })
       },
         content,
         createdAt: new Date().toISOString(),
@@ -575,5 +575,6 @@ export const toggleCommentVisibility = async (postId: string, commentId: string,
     return { success: false, error: error.message };
   }
 };
+
 
 
