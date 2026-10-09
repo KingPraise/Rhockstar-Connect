@@ -42,7 +42,7 @@ export default function MobileNav() {
   ];
 
   return (
-    <nav className={`md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 z-50 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-in-out ${isVisible ? 'translate-y-0' : 'translate-y-full'}`}>
+    <nav className={`md:hidden fixed left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 z-50 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transition-all duration-300 ease-in-out ${isVisible ? 'bottom-0 translate-y-0 opacity-100' : '-bottom-[120px] translate-y-full opacity-0 pointer-events-none'}`}>
       <div className="flex items-center justify-around px-2 py-3">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);

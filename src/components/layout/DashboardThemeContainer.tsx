@@ -20,7 +20,7 @@ export default function DashboardThemeContainer({ children }: { children: React.
 
   return (
     <div 
-      className={`flex flex-col md:flex-row h-screen w-screen overflow-hidden text-white relative pb-16 md:pb-0 transition-colors duration-500 ${themeClasses.appBg}`}
+      className={`flex flex-col md:flex-row h-screen w-screen overflow-hidden text-white relative transition-colors duration-500 ${themeClasses.appBg}`}
       style={{
         // Inject CSS variables for real-time dynamic button & card styling
         ["--theme-primary" as any]: themeClasses.primaryColor,
@@ -34,3 +34,4 @@ export default function DashboardThemeContainer({ children }: { children: React.
     </div>
   );
 }
+
