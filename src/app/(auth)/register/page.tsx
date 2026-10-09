@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { User, Mail, Lock, UserPlus, Loader2, AtSign, Gift, Eye, EyeOff, Calendar } from "lucide-react";
 import { registerUser } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
 import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
 
@@ -87,7 +88,8 @@ function RegisterForm() {
       setError(error);
       setLoading(false);
     } else if (user) {
-      router.push("/feed");
+        trackEvent('sign_up', { method: 'email', account_type: accountType });
+        router.push("/feed");
     }
   };
 
@@ -362,3 +364,6 @@ export default function RegisterPage() {
     </Suspense>
   );
 }
+
+
+

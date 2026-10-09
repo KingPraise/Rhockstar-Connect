@@ -6,6 +6,7 @@ import AuthProvider from "@/components/providers/AuthProvider";
 import NextTopLoader from "nextjs-toploader";
 import ToastProvider from "@/components/ui/ToastProvider";
 import AIAssistantWidget from "@/components/ai/AIAssistantWidget";
+import AnalyticsProvider from "@/components/AnalyticsProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -78,7 +79,10 @@ export default function RootLayout({
 
           <AIAssistantWidget />
         </AuthProvider>
+        <AnalyticsProvider />
       </body>
     </html>
   );
 }
+
+

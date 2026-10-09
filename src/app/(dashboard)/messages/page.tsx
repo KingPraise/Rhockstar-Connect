@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { trackEvent } from "@/lib/analytics";
+// from "@/store/useAuthStore";
 import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead, editMessage, deleteMessage, toggleArchiveChat, deleteChatForUser, markChatAsUnread } from "@/lib/services/messages";
 import { getAllUsers, UserBasic, getUserById, getUserByUsername, listenToUserProfile } from "@/lib/services/users";
 import { formatDistanceToNow } from "date-fns";
@@ -445,7 +447,8 @@ export default function MessagesPage() {
         avatar: profile.avatar,
       });
       if (res.success) {
-        toast.success("Join request sent to community admin! 🔒");
+          trackEvent("join_community", { community_id: comm.id, access_type: comm.accessType, status: "pending" });
+          toast.success("Join request sent to community admin! 🔒");
       } else {
         toast.error(res.error || "Failed to send request");
       }
@@ -2247,6 +2250,8 @@ export default function MessagesPage() {
     </div>
   );
 }
+
+
 
 
 

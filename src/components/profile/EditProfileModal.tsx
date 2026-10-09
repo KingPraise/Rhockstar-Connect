@@ -5,6 +5,7 @@ import { X, Upload, Save, Loader2, ChevronDown, Heart, Shield } from "lucide-rea
 import { useAuthStore } from "@/store/useAuthStore";
 import { updateUserProfile, UserBasic } from "@/lib/services/users";
 import { logoutUser } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
 import { uploadMediaToCloudinary } from "@/lib/services/cloudinary";
 import toast from "react-hot-toast";
 
@@ -195,6 +196,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
           ...updateData
         } as any);
         toast.success("Profile updated successfully");
+          trackEvent("complete_profile");
         onClose();
       } else {
         toast.error("Failed to update profile");
@@ -455,3 +457,5 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
     </div>
   );
 }
+
+
