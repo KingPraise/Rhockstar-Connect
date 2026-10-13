@@ -16,6 +16,7 @@ import { Loader2, Users, UserPlus, Check, X, Search, Lock, Filter, Inbox, Send, 
 import Link from "next/link";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import UserAvatar from "@/components/ui/UserAvatar";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import toast from "react-hot-toast";
 import { useSearchParams } from "next/navigation";
 
@@ -374,7 +375,10 @@ export default function NetworkPage() {
                     textClassName="text-xl font-bold" 
                   />
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-white truncate group-hover/profile:text-brand transition-colors">{user.fullName}</h3>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-bold text-white truncate group-hover/profile:text-brand transition-colors">{user.fullName}</h3>
+                      <VerifiedBadge tier={user.subscriptionTier} />
+                    </div>
                     <p className="text-sm text-slate-400 truncate group-hover/profile:text-white transition-colors">@{user.username}</p>
                     {user.headline && (
                       <p className="text-xs text-slate-500 truncate mt-1">{user.headline}</p>

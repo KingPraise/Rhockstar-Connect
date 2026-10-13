@@ -684,7 +684,10 @@ export default function PostCard({ post }: PostCardProps) {
                               </Link>
                               <div className="flex-1 bg-slate-900/50 rounded-2xl rounded-tl-sm p-3 border border-white/5">
                                 <div className="flex items-center justify-between mb-1">
-                                  <Link href={`/profile?uid=${reply.userId}`} className="font-bold text-white text-xs hover:text-brand transition-colors">{reply.userId === profile?.uid ? profile?.fullName : reply.user.name}</Link>
+                                  <Link href={`/profile?uid=${reply.userId}`} className="font-bold text-white text-xs hover:text-brand transition-colors flex items-center gap-1">
+                                    <span>{reply.userId === profile?.uid ? profile?.fullName : reply.user.name}</span>
+                                    <VerifiedBadge tier={reply.userId === profile?.uid ? (profile as any)?.subscriptionTier : (reply.user as any)?.subscriptionTier} />
+                                  </Link>
                                   <span className="text-[10px] text-slate-500">{rTimeAgo}</span>
                                 </div>
                                 {editingCommentId === reply.id ? (
@@ -829,7 +832,10 @@ export default function PostCard({ post }: PostCardProps) {
                   <Link href={`/profile?uid=${u.uid}`} key={u.uid} onClick={() => setIsLikesModalOpen(false)} className="flex items-center gap-3 group">
                     <UserAvatar src={u.avatar} name={u.fullName} className="w-10 h-10 shrink-0" textClassName="text-sm font-bold" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold text-sm truncate group-hover:text-brand transition-colors">{u.fullName}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-white font-semibold text-sm truncate group-hover:text-brand transition-colors">{u.fullName}</p>
+                        <VerifiedBadge tier={(u as any)?.subscriptionTier} />
+                      </div>
                       <p className="text-slate-400 text-xs truncate">@{u.username}</p>
                     </div>
                   </Link>

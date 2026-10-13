@@ -1,10 +1,11 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import { subscribeToLeaderboard, LeaderboardUser } from "@/lib/services/gamification";
 import StardomBadge from "./StardomBadge";
 import StreakBadge from "./StreakBadge";
 import UserAvatar from "@/components/ui/UserAvatar";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { Trophy, Crown, Medal, Sparkles, Loader2, HelpCircle } from "lucide-react";
 import StardomInfoModal from "./StardomInfoModal";
 
@@ -72,7 +73,10 @@ export default function LeaderboardView() {
                 <Medal className="w-3 h-3 text-slate-400" /> #2
               </div>
               <UserAvatar src={top3[1].avatar} name={top3[1].fullName} className="w-16 h-16 rounded-2xl mb-3 border-2 border-slate-400 shadow-md" textClassName="text-base font-black" />
-              <h4 className="font-bold text-white text-sm truncate max-w-[140px]">{top3[1].fullName}</h4>
+              <div className="flex items-center justify-center gap-1 max-w-[140px]">
+                <h4 className="font-bold text-white text-sm truncate">{top3[1].fullName}</h4>
+                <VerifiedBadge tier={top3[1].subscriptionTier} />
+              </div>
               <p className="text-[11px] text-slate-400 font-mono mt-0.5">{top3[1].stardomXP.toLocaleString()} XP</p>
               <div className="mt-3 flex items-center gap-1.5 flex-wrap justify-center">
                 <StardomBadge xp={top3[1].stardomXP} variant="compact" />
@@ -88,7 +92,10 @@ export default function LeaderboardView() {
                 <Crown className="w-3.5 h-3.5 fill-slate-950" /> #1 Champion
               </div>
               <UserAvatar src={top3[0].avatar} name={top3[0].fullName} className="w-20 h-20 rounded-3xl mb-3 border-2 border-amber-400 shadow-lg" textClassName="text-lg font-black" />
-              <h4 className="font-black text-white text-base truncate max-w-[160px]">{top3[0].fullName}</h4>
+              <div className="flex items-center justify-center gap-1.5 max-w-[160px]">
+                <h4 className="font-black text-white text-base truncate">{top3[0].fullName}</h4>
+                <VerifiedBadge tier={top3[0].subscriptionTier} />
+              </div>
               <p className="text-xs text-amber-400 font-mono font-bold mt-0.5">{top3[0].stardomXP.toLocaleString()} XP</p>
               <div className="mt-3 flex items-center gap-1.5 flex-wrap justify-center">
                 <StardomBadge xp={top3[0].stardomXP} variant="compact" />
@@ -104,7 +111,10 @@ export default function LeaderboardView() {
                 <Medal className="w-3 h-3 text-amber-600" /> #3
               </div>
               <UserAvatar src={top3[2].avatar} name={top3[2].fullName} className="w-16 h-16 rounded-2xl mb-3 border-2 border-amber-600 shadow-md" textClassName="text-base font-black" />
-              <h4 className="font-bold text-white text-sm truncate max-w-[140px]">{top3[2].fullName}</h4>
+              <div className="flex items-center justify-center gap-1 max-w-[140px]">
+                <h4 className="font-bold text-white text-sm truncate">{top3[2].fullName}</h4>
+                <VerifiedBadge tier={top3[2].subscriptionTier} />
+              </div>
               <p className="text-[11px] text-slate-400 font-mono mt-0.5">{top3[2].stardomXP.toLocaleString()} XP</p>
               <div className="mt-3 flex items-center gap-1.5 flex-wrap justify-center">
                 <StardomBadge xp={top3[2].stardomXP} variant="compact" />
@@ -132,7 +142,10 @@ export default function LeaderboardView() {
                 </span>
                 <UserAvatar src={user.avatar} name={user.fullName} className="w-10 h-10 rounded-full shrink-0" textClassName="text-xs font-bold" />
                 <div className="min-w-0 flex-1">
-                  <h5 className="text-xs font-bold text-white truncate">{user.fullName}</h5>
+                  <div className="flex items-center gap-1">
+                    <h5 className="text-xs font-bold text-white truncate">{user.fullName}</h5>
+                    <VerifiedBadge tier={user.subscriptionTier} />
+                  </div>
                   <p className="text-[10px] text-slate-400 font-mono">{user.stardomXP.toLocaleString()} XP</p>
                 </div>
               </div>

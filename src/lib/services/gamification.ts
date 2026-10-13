@@ -1,4 +1,4 @@
-﻿import { db } from '../firebase';
+import { db } from '../firebase';
 import { 
   doc, 
   getDoc, 
@@ -379,6 +379,7 @@ export interface LeaderboardUser {
   stardomXP: number;
   stardomRank: StardomRank;
   streakCount: number;
+  subscriptionTier?: string;
 }
 
 export function subscribeToLeaderboard(callback: (users: LeaderboardUser[]) => void) {
@@ -397,6 +398,7 @@ export function subscribeToLeaderboard(callback: (users: LeaderboardUser[]) => v
         stardomXP: Number(d.stardomXP || 0),
         stardomRank: (d.stardomRank as StardomRank) || 'Explorer',
         streakCount: Number(d.streakCount || 0),
+        subscriptionTier: d.subscriptionTier || 'free',
       });
     });
     callback(list);

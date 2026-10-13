@@ -8,6 +8,7 @@ import PresenceHeartbeat from "@/components/layout/PresenceHeartbeat";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import DashboardThemeContainer from "@/components/layout/DashboardThemeContainer";
 import ScrollPaddingController from "@/components/layout/ScrollPaddingController";
+import InAppNotificationBanner from "@/components/notifications/InAppNotificationBanner";
 
 export default function DashboardLayout({
   children,
@@ -17,6 +18,7 @@ export default function DashboardLayout({
   return (
     <DashboardThemeContainer>
       <PresenceHeartbeat />
+      <InAppNotificationBanner />
       
       {/* Mobile Top Navigation Header */}
       <MobileHeader />
@@ -36,7 +38,6 @@ export default function DashboardLayout({
       {/* Mobile Bottom Navigation */}
       <MobileNav />
 
-      
       {/* Global Image Lightbox */}
       <ImageLightbox />
 
@@ -48,5 +49,3 @@ export default function DashboardLayout({
     </DashboardThemeContainer>
   );
 }
-
-

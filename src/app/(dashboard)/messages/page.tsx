@@ -40,6 +40,7 @@ import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import UserAvatar from "@/components/ui/UserAvatar";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -818,7 +819,10 @@ export default function MessagesPage() {
                     >
                       <UserAvatar src={u.avatar} name={u.fullName} className="w-10 h-10 shrink-0" textClassName="text-sm font-bold" />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-white text-sm truncate">{u.fullName}</h3>
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-semibold text-white text-sm truncate">{u.fullName}</h3>
+                          <VerifiedBadge tier={u.subscriptionTier} />
+                        </div>
                         <p className="text-xs text-slate-400 truncate">@{u.username}</p>
                       </div>
                     </button>
@@ -940,7 +944,10 @@ export default function MessagesPage() {
                           </div>
                           <div className="flex-1 min-w-0 flex flex-col justify-center">
                             <div className="flex justify-between items-baseline mb-0.5">
-                              <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
+                              <div className="flex items-center gap-1 min-w-0">
+                                <h3 className={`font-semibold truncate ${isActive || isUnread ? 'text-white' : 'text-slate-200'}`}>{otherUser.fullName}</h3>
+                                <VerifiedBadge tier={otherUser.subscriptionTier} />
+                              </div>
                               <span className="text-[10px] text-slate-400 shrink-0 ml-2">{formatMessageTime(chat.lastMessageTime)}</span>
                             </div>
                             <div className="flex items-center justify-between gap-1">
@@ -1200,7 +1207,10 @@ export default function MessagesPage() {
                       )}
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-white leading-tight group-hover:text-brand transition-colors">{otherUser.fullName}</h2>
+                      <div className="flex items-center gap-1.5">
+                        <h2 className="text-lg font-bold text-white leading-tight group-hover:text-brand transition-colors">{otherUser.fullName}</h2>
+                        <VerifiedBadge tier={otherUser.subscriptionTier} />
+                      </div>
                       <p className={`text-xs font-medium ${getUserStatus(otherUser).isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
                         {getUserStatus(otherUser).text}
                       </p>
@@ -1719,6 +1729,7 @@ export default function MessagesPage() {
                                   <div className="flex items-center gap-1.5 mb-1">
                                     <span className="text-[11px] font-bold text-brand flex items-center gap-1">
                                       {msg.senderName}
+                                      <VerifiedBadge tier={users[msg.senderId]?.subscriptionTier} size="xs" />
                                       {isCreator && (
                                         <span title="Community Creator">
                                           <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />

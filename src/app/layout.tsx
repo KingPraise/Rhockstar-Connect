@@ -7,6 +7,7 @@ import NextTopLoader from "nextjs-toploader";
 import ToastProvider from "@/components/ui/ToastProvider";
 import AIAssistantWidget from "@/components/ai/AIAssistantWidget";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
+import OfflineBanner from "@/components/ui/OfflineBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -40,8 +41,8 @@ export const metadata: Metadata = {
     title:
       "Rhockstar Connect | Network, Grow, Connect",
 
-    description:
-      "The premier hybrid professional networking and dating platform. Built for professionals to excel.",
+  description:
+    "The premier hybrid professional networking and dating platform. Built for professionals to excel.",
 
     url: "https://rhockstarconnect.netlify.app",
 
@@ -76,6 +77,7 @@ export default function RootLayout({
           {children}
 
           <ToastProvider />
+          <OfflineBanner />
 
           <AIAssistantWidget />
         </AuthProvider>
@@ -84,5 +86,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-
