@@ -11,6 +11,7 @@ import { useLightboxStore } from "@/store/useLightboxStore";
 import toast from "react-hot-toast";
 import StardomBadge from "@/components/gamification/StardomBadge";
 import StreakBadge from "@/components/gamification/StreakBadge";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 
 import { getThemeClasses } from "@/lib/constants/themes";
 
@@ -211,9 +212,7 @@ export default function ProfileHeader({
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
             <h1 className="text-xl sm:text-2xl md:text-4xl font-extrabold text-white tracking-tight flex items-center gap-2 leading-tight">
               {profile.fullName}
-              {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite' || profile.role === 'admin') && (
-                <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-brand shrink-0" />
-              )}
+              <VerifiedBadge tier={profile.subscriptionTier || (profile.role === 'admin' ? 'pro' : undefined)} size="md" />
             </h1>
             
             {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite') && (
