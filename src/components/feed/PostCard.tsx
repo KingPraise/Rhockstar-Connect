@@ -243,10 +243,27 @@ export default function PostCard({ post }: PostCardProps) {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const hash = window.location.hash;
-      const targetId = searchParams?.get("postId") || (hash.startsWith("#post-") ? hash.replace("#post-", "") : null);
+      const targetPostId = searchParams?.get("postId") || (hash.startsWith("#post-") ? hash.replace("#post-", "").split("-")[0] : null);
+      const targetCommentId = searchParams?.get("commentId") || (hash.startsWith("#comment-") ? hash.replace("#comment-", "") : null);
 
-      if (targetId === post.id) {
+      if (targetPostId === post.id) {
+        if (targetCommentId || searchParams?.get("openComments") === "true") {
+          setShowComments(true);
+        }
+
         const timer = setTimeout(() => {
+          if (targetCommentId) {
+            const commentEl = document.getElementById(`comment-${targetCommentId}`);
+            if (commentEl) {
+              commentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              commentEl.classList.add('ring-2', 'ring-brand', 'shadow-[0_0_25px_rgba(56,189,248,0.6)]', 'rounded-2xl');
+              setTimeout(() => {
+                commentEl.classList.remove('ring-2', 'ring-brand', 'shadow-[0_0_25px_rgba(56,189,248,0.6)]', 'rounded-2xl');
+              }, 4000);
+              return;
+            }
+          }
+
           const el = document.getElementById(`post-${post.id}`);
           if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -255,7 +272,7 @@ export default function PostCard({ post }: PostCardProps) {
               el.classList.remove('ring-2', 'ring-brand', 'shadow-[0_0_35px_rgba(56,189,248,0.6)]', 'scale-[1.01]');
             }, 4000);
           }
-        }, 300);
+        }, 400);
         return () => clearTimeout(timer);
       }
     }
@@ -561,7 +578,7 @@ export default function PostCard({ post }: PostCardProps) {
                 const replies = post.comments?.filter(c => c.replyToId === comment.id) || [];
                 
                 return (
-                  <div key={comment.id} className="flex flex-col gap-3">
+                  <div key={comment.id} id={`comment-${comment.id}`} className="flex flex-col gap-3 transition-all duration-300">
                     <div className="flex gap-3">
                       <Link href={`/profile?uid=${comment.userId}`}>
                         <UserAvatar src={comment.userId === profile?.uid ? profile?.avatar : comment.user.avatar} name={comment.userId === profile?.uid ? profile?.fullName : comment.user.name} className="w-10 h-10 shadow-inner" textClassName="text-xs font-bold" />
@@ -661,7 +678,7 @@ export default function PostCard({ post }: PostCardProps) {
                             rTimeAgo = formatDistanceToNow(rCreatedAt, { addSuffix: true });
                           }
                           return (
-                            <div key={reply.id} className="flex gap-3 relative before:absolute before:left-[-22px] before:top-4 before:w-4 before:h-px before:bg-white/10">
+                            <div key={reply.id} id={`comment-${reply.id}`} className="flex gap-3 relative before:absolute before:left-[-22px] before:top-4 before:w-4 before:h-px before:bg-white/10 transition-all duration-300">
                               <Link href={`/profile?uid=${reply.userId}`}>
                                 <UserAvatar src={reply.userId === profile?.uid ? profile?.avatar : reply.user.avatar} name={reply.userId === profile?.uid ? profile?.fullName : reply.user.name} className="w-8 h-8 shrink-0 shadow-inner" textClassName="text-[10px] font-bold" />
                               </Link>

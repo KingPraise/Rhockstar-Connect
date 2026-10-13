@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import PostComposer from "@/components/feed/PostComposer";
 import PostCard from "@/components/feed/PostCard";
-import { subscribeToFeed, Post } from "@/lib/services/posts";
+import { subscribeToFeed, getPostById, Post } from "@/lib/services/posts";
+import { useSearchParams } from "next/navigation";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { getJobs, JobListing } from "@/lib/services/jobs";
 import { sendConnectionRequest } from "@/lib/services/connections";
@@ -64,9 +65,30 @@ export default function FeedPage() {
     await new Promise(resolve => setTimeout(resolve, 800));
   };
 
+  const searchParams = useSearchParams();
+  const targetPostId = searchParams?.get("postId");
+
   // Subscribe to real-time posts feed
   useEffect(() => {
-    const unsubscribe = subscribeToFeed(limitCount, (newPosts) => {
+    let isCancelled = false;
+
+    const unsubscribe = subscribeToFeed(limitCount, async (newPosts) => {
+      if (isCancelled) return;
+
+      if (targetPostId && !newPosts.some(p => p.id === targetPostId)) {
+        try {
+          const res = await getPostById(targetPostId);
+          if (res.success && res.post && !isCancelled) {
+            setPosts([res.post, ...newPosts.filter(p => p.id !== targetPostId)]);
+            setLoading(false);
+            setHasMore(newPosts.length >= limitCount);
+            return;
+          }
+        } catch (err) {
+          console.error("Error fetching targeted post:", err);
+        }
+      }
+
       setPosts(newPosts);
       setLoading(false);
       if (newPosts.length < limitCount) {
@@ -76,8 +98,11 @@ export default function FeedPage() {
       }
     });
 
-    return () => unsubscribe();
-  }, [limitCount]);
+    return () => {
+      isCancelled = true;
+      unsubscribe();
+    };
+  }, [limitCount, targetPostId]);
 
   // Subscribe to real-time active sponsored ads
   useEffect(() => {
@@ -404,3 +429,4 @@ export default function FeedPage() {
     </PullToRefresh>
   );
 }
+

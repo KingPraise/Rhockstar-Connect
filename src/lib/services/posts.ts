@@ -253,6 +253,21 @@ export const getFeedPosts = async (limitCount: number = 20) => {
   }
 };
 
+// Fetch single post by ID
+export const getPostById = async (postId: string) => {
+  try {
+    const postRef = doc(db, 'posts', postId);
+    const postSnap = await getDoc(postRef);
+    if (postSnap.exists()) {
+      return { success: true, post: { id: postSnap.id, ...postSnap.data() } as Post };
+    }
+    return { success: false, error: "Post not found" };
+  } catch (error: unknown) {
+    console.error("Error getting post by ID:", error);
+    return { success: false, error: (error as Error).message };
+  }
+};
+
 // Toggle a like on a post
 export const toggleLike = async (postId: string, userId: string) => {
   try {
@@ -283,7 +298,8 @@ export const toggleLike = async (postId: string, userId: string) => {
               type: "like",
               title,
               message: messageBody,
-              link: `/feed#post-${postData.id}`,
+              link: `/feed?postId=${postData.id}#post-${postData.id}`,
+              targetId: postData.id,
               senderId: userId,
               senderName: likerName,
               senderAvatar: userRes.success && userRes.user ? userRes.user.avatar : ''
@@ -296,7 +312,7 @@ export const toggleLike = async (postId: string, userId: string) => {
                 userId: postData.userId,
                 title,
                 body: messageBody,
-                url: "/"
+                url: `/feed?postId=${postData.id}#post-${postData.id}`
               })
             }).catch(console.error);
           } catch (e) {
@@ -370,12 +386,14 @@ export const addComment = async (postId: string, user: UserProfile, content: str
               const title = "New Reply";
               const messageBody = `${user.fullName} replied to your comment.`;
               
+              const replyUrl = `/feed?postId=${postData.id}&commentId=${newComment.id}&openComments=true#comment-${newComment.id}`;
               await createNotification({
                 userId: parentComment.userId,
                 type: "comment",
                 title,
                 message: messageBody,
-                link: `/feed#post-${postData.id}`,
+                link: replyUrl,
+                targetId: postData.id,
                 senderId: user.uid,
                 senderName: user.fullName,
                 senderAvatar: user.avatar || ''
@@ -388,7 +406,7 @@ export const addComment = async (postId: string, user: UserProfile, content: str
                   userId: parentComment.userId,
                   title,
                   body: messageBody,
-                  url: "/"
+                  url: replyUrl
                 })
               }).catch(console.error);
             }
@@ -399,12 +417,14 @@ export const addComment = async (postId: string, user: UserProfile, content: str
             const title = "New Comment";
             const messageBody = `${user.fullName} commented on your post.`;
             
+            const commentUrl = `/feed?postId=${postData.id}&commentId=${newComment.id}&openComments=true#comment-${newComment.id}`;
             await createNotification({
               userId: postData.userId,
               type: "comment",
               title,
               message: messageBody,
-              link: `/feed#post-${postData.id}`,
+              link: commentUrl,
+              targetId: postData.id,
               senderId: user.uid,
               senderName: user.fullName,
               senderAvatar: user.avatar || ''
@@ -417,7 +437,7 @@ export const addComment = async (postId: string, user: UserProfile, content: str
                 userId: postData.userId,
                 title,
                 body: messageBody,
-                url: "/"
+                url: commentUrl
               })
             }).catch(console.error);
           }
@@ -438,16 +458,29 @@ export const addComment = async (postId: string, user: UserProfile, content: str
                   const title = "New Mention";
                   const messageBody = `${user.fullName} mentioned you in a comment.`;
 
+                  const mentionUrl = `/feed?postId=${postData.id}&commentId=${newComment.id}&openComments=true#comment-${newComment.id}`;
                   await createNotification({
                     userId: targetUser.uid,
                     type: "comment",
                     title,
                     message: messageBody,
-                    link: `/feed#post-${postData.id}`,
+                    link: mentionUrl,
+                    targetId: postData.id,
                     senderId: user.uid,
                     senderName: user.fullName,
                     senderAvatar: user.avatar || ''
                   });
+
+                  fetch('/api/notify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId: targetUser.uid,
+                      title,
+                      body: messageBody,
+                      url: mentionUrl
+                    })
+                  }).catch(console.error);
                 }
               }
             }
@@ -575,6 +608,9 @@ export const toggleCommentVisibility = async (postId: string, commentId: string,
     return { success: false, error: error.message };
   }
 };
+
+
+
 
 
 

@@ -152,7 +152,8 @@ export const sendMessage = async (
           type: "message",
           title,
           message: messageBody,
-          link: "/messages",
+          link: `/messages?chatId=${chatId}`,
+          targetId: chatId,
           senderId: senderId,
           senderName,
           senderAvatar
@@ -166,7 +167,7 @@ export const sendMessage = async (
             userId: recipientId,
             title,
             body: messageBody,
-            url: "/messages"
+            url: `/messages?chatId=${chatId}`
           })
         }).catch(console.error);
       }

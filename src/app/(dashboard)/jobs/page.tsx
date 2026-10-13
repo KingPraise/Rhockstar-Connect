@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { getJobs, JobListing, JobFilters, applyForJob } from "@/lib/services/jobs";
 import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2, Filter, Sparkles } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { calculateJobMatchScore } from "@/lib/utils/jobMatch";
 import { useAuthStore } from "@/store/useAuthStore";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
@@ -46,6 +47,9 @@ export default function JobsPage() {
     if (node) observer.current.observe(node);
   }, [loading, hasMore]);
 
+  const searchParams = useSearchParams();
+  const targetJobId = searchParams?.get("jobId");
+
   useEffect(() => {
     const fetchJobs = async () => {
       setLoading(true);
@@ -73,8 +77,23 @@ export default function JobsPage() {
     }, 500);
 
     return () => clearTimeout(timer);
-    return () => clearTimeout(timer);
   }, [searchQuery, activeFilter, limitCount]);
+
+  useEffect(() => {
+    if (targetJobId && jobs.length > 0) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`job-${targetJobId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-purple-500', 'shadow-[0_0_35px_rgba(168,85,247,0.5)]', 'scale-[1.01]');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-purple-500', 'shadow-[0_0_35px_rgba(168,85,247,0.5)]', 'scale-[1.01]');
+          }, 4000);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [targetJobId, jobs]);
 
   const handleRefresh = async () => {
     setLimitCount(10);
@@ -269,6 +288,7 @@ export default function JobsPage() {
                       return (
                         <div 
                           key={job.id} 
+                          id={`job-${job.id}`}
                           ref={isLastElement ? lastJobElementRef : null}
                           className="neo-card p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-white/5 flex flex-col group hover:border-purple-500/30 transition-all duration-300 shadow-xl"
                         >

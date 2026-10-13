@@ -201,10 +201,19 @@ export default function MessagesPage() {
     fetchUsers();
   }, [profile?.uid]);
 
-  // Handle URL target user param
+  // Handle URL target user param or chatId
   useEffect(() => {
     if (targetUserParam && profile?.uid) {
       const initiateChat = async () => {
+        // 1. Check if targetUserParam is directly a chat ID in existing chats
+        const existingChatById = chats.find(c => c.id === targetUserParam);
+        if (existingChatById) {
+          setActiveChat(existingChatById);
+          setMessagesMode('direct');
+          return;
+        }
+
+        // 2. Otherwise treat targetUserParam as a user ID or username
         let targetUid = targetUserParam;
         if (!users[targetUserParam]) {
           const userRes = await getUserByUsername(targetUserParam);
@@ -222,7 +231,7 @@ export default function MessagesPage() {
       };
       initiateChat();
     }
-  }, [targetUserParam, profile?.uid, users]);
+  }, [targetUserParam, profile?.uid, users, chats]);
 
   // Subscribe to DMs
   useEffect(() => {
@@ -2250,6 +2259,7 @@ export default function MessagesPage() {
     </div>
   );
 }
+
 
 
 
