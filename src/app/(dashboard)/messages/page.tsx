@@ -678,10 +678,10 @@ export default function MessagesPage() {
   });
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100dvh-5.5rem)] md:h-[calc(100vh-4rem)] max-h-[920px] gap-2 md:gap-4 p-2 md:p-3 lg:p-4 lg:gap-5 overflow-hidden">
+    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100dvh-10rem)] md:h-[calc(100vh-4rem)] max-h-[920px] gap-2 md:gap-4 p-2 md:p-3 lg:p-4 lg:gap-5 overflow-hidden">
       
       {/* SIDEBAR */}
-      <div className={`${(activeChat || activeCommunity) ? 'hidden md:flex' : 'flex'} w-full md:w-[340px] lg:w-[380px] h-full flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl shrink-0`}>
+      <div className={`${(activeChat || activeCommunity) ? 'hidden md:flex' : 'flex'} w-full md:w-[340px] lg:w-[380px] h-full flex-col neo-card bg-slate-900/60 border border-white/5 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl shrink-0`}>
         
         {/* Header & Mode Bar */}
         <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-slate-900/80 backdrop-blur-md">
@@ -1611,13 +1611,16 @@ export default function MessagesPage() {
                     if (!e.target.value) e.target.style.height = 'auto';
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+                    // On desktop physical keyboard without Shift, Enter sends.
+                    // On mobile touch keyboards (where users expect Enter to break lines) or with Shift/Ctrl, Enter inserts a new line.
+                    const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+                    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !isTouchDevice) {
                       e.preventDefault();
                       handleSendMessage(e as any);
                       e.currentTarget.style.height = 'auto';
                     }
                   }}
-                  className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand resize-none min-h-[46px] max-h-[150px] overflow-y-auto"
+                  className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand resize-none min-h-[44px] max-h-[140px] overflow-y-auto"
                 />
               )}
               
@@ -1885,13 +1888,14 @@ export default function MessagesPage() {
                        if (!e.target.value) e.target.style.height = 'auto';
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+                      const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+                      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !isTouchDevice) {
                         e.preventDefault();
                         handleSendCommunityMessage(e as any);
                         e.currentTarget.style.height = 'auto';
                       }
                     }}
-                    className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand shadow-inner resize-none min-h-[46px] max-h-[150px] overflow-y-auto"
+                    className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand shadow-inner resize-none min-h-[44px] max-h-[140px] overflow-y-auto"
                   />
                   <button
                     type="submit"
