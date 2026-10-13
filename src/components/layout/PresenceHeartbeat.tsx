@@ -81,7 +81,7 @@ export default function PresenceHeartbeat() {
       setUnreadMessages(unreadCount);
     });
 
-    // Listen to unread notifications
+    // Listen to unread notifications (excluding direct message notifications, which are tracked accurately by unreadMessages)
     const notifsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", profile.uid),
@@ -89,7 +89,9 @@ export default function PresenceHeartbeat() {
     );
 
     const unsubscribeNotifs = onSnapshot(notifsQuery, (snapshot) => {
-      setUnreadNotifications(snapshot.docs.length);
+      // Exclude "message" type notifications so DM count is not double counted
+      const nonMessageNotifs = snapshot.docs.filter((docSnap) => docSnap.data().type !== 'message');
+      setUnreadNotifications(nonMessageNotifs.length);
     });
 
     return () => {
@@ -110,12 +112,22 @@ export default function PresenceHeartbeat() {
         navigator.clearAppBadge?.().catch(() => {});
       }
 
-      // Sync count to service worker for background badge accuracy
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          type: 'SET_BADGE',
-          count: total
-        });
+      // Sync count to service worker for background badge accuracy on Android & iOS
+      if ('serviceWorker' in navigator) {
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'SET_BADGE',
+            count: total
+          });
+        }
+        navigator.serviceWorker.getRegistrations?.().then((registrations) => {
+          registrations.forEach((reg) => {
+            reg.active?.postMessage({
+              type: 'SET_BADGE',
+              count: total
+            });
+          });
+        }).catch(() => {});
       }
     };
 

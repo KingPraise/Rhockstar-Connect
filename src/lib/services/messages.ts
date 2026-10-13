@@ -49,15 +49,25 @@ export interface Message {
 // Ensure a chat exists between two users
 export const getOrCreateChat = async (userId1: string, userId2: string) => {
   try {
+    // 1. Check deterministic 1-on-1 chat ID first: [id1, id2].sort().join('_')
+    const deterministicId = [userId1, userId2].sort().join('_');
+    const deterministicDocRef = doc(db, 'chats', deterministicId);
+    const deterministicSnap = await getDoc(deterministicDocRef);
+
+    if (deterministicSnap.exists()) {
+      return { success: true, chat: { id: deterministicSnap.id, ...deterministicSnap.data() } as Chat };
+    }
+
+    // 2. Query existing chats to handle legacy non-deterministic random IDs
     const chatsRef = collection(db, 'chats');
     const q = query(chatsRef, where('participants', 'array-contains', userId1));
     const snapshot = await getDocs(q);
     
     let existingChat = null;
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (data.participants.includes(userId2)) {
-        existingChat = { id: doc.id, ...data };
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.participants && data.participants.includes(userId2)) {
+        existingChat = { id: docSnap.id, ...data };
       }
     });
 
@@ -65,8 +75,7 @@ export const getOrCreateChat = async (userId1: string, userId2: string) => {
       return { success: true, chat: existingChat as Chat };
     }
 
-    // Create new chat
-    const newChatRef = doc(collection(db, 'chats'));
+    // 3. Create new chat using deterministic ID to guarantee uniqueness across all concurrent requests
     const newChatData = {
       participants: [userId1, userId2],
       lastMessage: "",
@@ -75,9 +84,9 @@ export const getOrCreateChat = async (userId1: string, userId2: string) => {
       typingStatus: { [userId1]: false, [userId2]: false }
     };
     
-    await setDoc(newChatRef, newChatData);
+    await setDoc(deterministicDocRef, newChatData);
     
-    return { success: true, chat: { id: newChatRef.id, ...newChatData } as Chat };
+    return { success: true, chat: { id: deterministicId, ...newChatData } as Chat };
   } catch (error: unknown) {
     console.error("Error getting or creating chat:", error);
     return { success: false, error: (error as Error).message };

@@ -202,37 +202,56 @@ export default function MessagesPage() {
     fetchUsers();
   }, [profile?.uid]);
 
+  // Track already initiated target params to prevent duplicate calls / race conditions
+  const initiatedTargetParamRef = useRef<string | null>(null);
+
   // Handle URL target user param or chatId
   useEffect(() => {
-    if (targetUserParam && profile?.uid) {
-      const initiateChat = async () => {
-        // 1. Check if targetUserParam is directly a chat ID in existing chats
-        const existingChatById = chats.find(c => c.id === targetUserParam);
-        if (existingChatById) {
-          setActiveChat(existingChatById);
-          setMessagesMode('direct');
-          return;
-        }
+    if (!targetUserParam || !profile?.uid) return;
+    if (initiatedTargetParamRef.current === targetUserParam) return;
 
-        // 2. Otherwise treat targetUserParam as a user ID or username
-        let targetUid = targetUserParam;
-        if (!users[targetUserParam]) {
-          const userRes = await getUserByUsername(targetUserParam);
-          if (userRes.success && userRes.user) {
-            targetUid = userRes.user.uid;
-          }
+    const initiateChat = async () => {
+      // 1. Check if targetUserParam is directly a chat ID in existing chats
+      const existingChatById = chats.find(c => c.id === targetUserParam);
+      if (existingChatById) {
+        initiatedTargetParamRef.current = targetUserParam;
+        setActiveChat(existingChatById);
+        setMessagesMode('direct');
+        return;
+      }
+
+      // 2. Otherwise treat targetUserParam as a user ID or username
+      let targetUid = targetUserParam;
+      if (!users[targetUserParam]) {
+        const userRes = await getUserByUsername(targetUserParam);
+        if (userRes.success && userRes.user) {
+          targetUid = userRes.user.uid;
         }
-        if (targetUid !== profile.uid) {
-          const res = await getOrCreateChat(profile.uid, targetUid);
-          if (res.success && res.chat) {
-            setActiveChat(res.chat as Chat);
-            setMessagesMode('direct');
-          }
-        }
-      };
-      initiateChat();
-    }
-  }, [targetUserParam, profile?.uid, users, chats]);
+      }
+
+      if (targetUid === profile.uid) return;
+
+      // 3. First check if a chat already exists in loaded chats with this participant
+      const existingChatByParticipant = chats.find(c => c.participants && c.participants.includes(targetUid));
+      if (existingChatByParticipant) {
+        initiatedTargetParamRef.current = targetUserParam;
+        setActiveChat(existingChatByParticipant);
+        setMessagesMode('direct');
+        return;
+      }
+
+      // 4. Mark as initiated to avoid concurrent creation
+      initiatedTargetParamRef.current = targetUserParam;
+
+      const res = await getOrCreateChat(profile.uid, targetUid);
+      if (res.success && res.chat) {
+        setActiveChat(res.chat as Chat);
+        setMessagesMode('direct');
+      }
+    };
+
+    initiateChat();
+  }, [targetUserParam, profile?.uid, chats, users]);
 
   // Subscribe to DMs
   useEffect(() => {
