@@ -1,0 +1,122 @@
+### Category 4: Job Board & Applicant Tracking System (ATS)
+
+#### ATS-01: Application Tracker Displays Fabricated Statuses via Array Index Modulo
+- **Severity**: **High**
+- **Component**: Candidate Application Tracker
+- **File & Lines**: `src/components/jobs/ApplicationTracker.tsx:21-38`, `src/app/(dashboard)/jobs/page.tsx:25`
+- **User Flow / Scenario**: An applicant applies for jobs, then opens the "My Applications" tab to track their application statuses.
+- **Suspected Root Cause**: Applied job IDs are kept in ephemeral React state (`appliedJobIds`) and lost on reload. Furthermore, `ApplicationTracker.tsx` does not fetch real statuses from `job_applications`; instead, it computes status using array index modulo: `statuses[index % statuses.length]`.
+- **Evidence Snippet**:
+  ```ts
+  // src/components/jobs/ApplicationTracker.tsx:34-37
+  {appliedJobs.map((job, index) => {
+    // Assign random mock status based on index for demo purposes
+    const status = statuses[index % statuses.length];
+  ```
+- **Recommended Fix**:
+  Query `getUserApplications(profile.uid)` on mount and render real applicant status (`pending`, `reviewed`, `interviewing`, `accepted`, `rejected`) updated by employers.
+
+---
+
+#### ATS-02: Company ATS Pipeline Uses Hardcoded Mock Candidates & Never Persists
+- **Severity**: **High**
+- **Component**: Employer ATS Kanban Board
+- **File & Lines**: `src/app/(dashboard)/company/[username]/ats/page.tsx:22-28, 45-55`
+- **User Flow / Scenario**: An employer navigates to `/company/[username]/ats` to manage candidates across pipeline stages.
+- **Suspected Root Cause**: The page uses a static hardcoded array (`MOCK_CANDIDATES`: "Alex Chen", "Sarah Jenkins", "Michael Ross"). Drag-and-drop actions modify only local React state; real applications are never loaded from Firestore.
+- **Evidence Snippet**:
+  ```ts
+  // src/app/(dashboard)/company/[username]/ats/page.tsx:22-28
+  const MOCK_CANDIDATES: Candidate[] = [
+    { id: "c1", name: "Alex Chen", role: "Senior Frontend Engineer", status: "applied", avatar: "A", matchScore: 92, appliedDate: "2 days ago" },
+    { id: "c2", name: "Sarah Jenkins", role: "Senior Frontend Engineer", status: "applied", avatar: "S", matchScore: 85, appliedDate: "3 days ago" },
+  ```
+- **Recommended Fix**:
+  Fetch actual applications for the company's posted jobs from `job_applications` and update application status in Firestore on drag-and-drop.
+
+---
+
+#### ATS-03: Silent Candidate Status Transitions Without User In-App Notifications
+- **Severity**: **Medium**
+- **Component**: Job Application Lifecycle
+- **File & Lines**: `src/lib/services/jobs.ts:266-274`, `src/app/(dashboard)/settings/page.tsx:567`
+- **User Flow / Scenario**: An employer updates a candidate's status to 'reviewed', 'interviewing', or 'rejected'.
+- **Suspected Root Cause**: `updateApplicationStatus` writes to Firestore but does not call `createNotification`. The applicant is never notified of the change.
+- **Evidence Snippet**:
+  ```ts
+  // src/lib/services/jobs.ts:266-273
+  export const updateApplicationStatus = async (applicationId: string, status: JobApplication['status']) => {
+    try {
+      const appRef = doc(db, "job_applications", applicationId);
+      await updateDoc(appRef, { status });
+      return { success: true };
+  ```
+- **Recommended Fix**:
+  Fetch the application document to obtain `applicantId` and `jobTitle`, and call `createNotification({ userId: applicantId, type: 'job', title: 'Application Update', ... })`.
+
+---
+
+#### ATS-04: Tier 3 Referral Reward (+20 Job Applications) Is Ignored in Application Check
+- **Severity**: **Medium**
+- **Component**: Referral Rewards / Job Board Limits
+- **File & Lines**: `src/lib/services/referrals.ts:165`, `src/app/(dashboard)/jobs/page.tsx:86-91`
+- **User Flow / Scenario**: A user refers 5 friends, claims the Tier 3 reward ("+20 Job Applications"), and attempts to apply to a third job.
+- **Suspected Root Cause**: `claimReferralReward` increments `extraJobApps` on the user profile in Firestore, but `handleApply` in `jobs/page.tsx` checks only `appliedJobIds.size >= 2` and completely ignores `profile.extraJobApps`.
+- **Evidence Snippet**:
+  ```ts
+  // src/app/(dashboard)/jobs/page.tsx:86-90
+  const handleApply = async (job: JobListing, isFeatured?: boolean) => {
+    const isFree = !profile?.subscriptionTier || profile.subscriptionTier === 'free';
+    if (isFree && (appliedJobIds.size >= 2 || isFeatured)) {
+      setPremiumLockOpen(true);
+      return;
+    }
+  ```
+- **Recommended Fix**:
+  Update application limit check: `const allowed = 2 + (profile?.extraJobApps || 0); if (isFree && appliedJobIds.size >= allowed) ...`.
+
+---
+
+#### ATS-05: Employer Upgrade Fails to Persist `accountType` in Database
+- **Severity**: **Medium**
+- **Component**: Employer Account Transition
+- **File & Lines**: `src/lib/services/users.ts:255-257`, `src/app/(dashboard)/jobs/post/page.tsx:83-92`
+- **User Flow / Scenario**: A standard user clicks "Upgrade to Employer Account" on `/jobs/post`.
+- **Suspected Root Cause**: `becomeEmployer` writes `{ role: 'employer' }` to Firestore, but leaves `accountType` unchanged (`'standard'`). The component updates `accountType: 'employer'` only in Zustand local storage. On refresh or login, `accountType` reverts to `'standard'`, breaking employer views.
+- **Evidence Snippet**:
+  ```ts
+  // src/lib/services/users.ts:255-257
+  export const becomeEmployer = async (uid: string) => {
+    return updateUserProfile(uid, { role: 'employer' });
+  };
+  // src/app/(dashboard)/jobs/post/page.tsx:87-88
+  if (res.success) {
+    useAuthStore.getState().setProfile({ ...profile, role: 'employer', accountType: 'employer' } as any);
+  ```
+- **Recommended Fix**:
+  Update `becomeEmployer` to write `{ role: 'employer', accountType: 'employer' }` in Firestore.
+
+---
+
+#### ATS-06: Job Search "View Details" Only Triggers Ephemeral Toast
+- **Severity**: **Medium**
+- **Component**: Job Board UI
+- **File & Lines**: `src/app/(dashboard)/jobs/page.tsx:342`
+- **User Flow / Scenario**: A job seeker browses `/jobs` and clicks the "View Details" icon button on a job card.
+- **Suspected Root Cause**: The button only triggers `toast.success('Viewing details for ' + job.title)` without opening a drawer, modal, or navigating to a job detail page.
+- **Evidence Snippet**:
+  ```tsx
+  // src/app/(dashboard)/jobs/page.tsx:341-346
+  <button 
+    onClick={() => toast.success(`Viewing details for ${job.title}`)}
+    className="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors border border-white/5 text-xs font-semibold"
+  >
+    <ExternalLink className="w-4 h-4" />
+  </button>
+  ```
+- **Recommended Fix**:
+  Open a detailed job modal or navigate to `/jobs?jobId=${job.id}`.
+
+---
+
+### Category 5: Frontend Routing, Auth Guards & Hydration (ROUT)

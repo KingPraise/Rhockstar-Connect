@@ -17,12 +17,16 @@ import { getMessaging, getToken, isSupported } from 'firebase/messaging';
 export interface Notification {
   id: string;
   userId: string;
-  type: "match" | "message" | "connection" | "job" | "like" | "comment";
+  type: "match" | "message" | "connection" | "job" | "like" | "comment" | "follow";
   title: string;
   message: string;
   read: boolean;
   createdAt: any;
   link?: string;
+  targetId?: string;
+  senderId?: string;
+  senderName?: string;
+  senderAvatar?: string;
 }
 
 export const createNotification = async (notification: Omit<Notification, 'id' | 'read' | 'createdAt'>) => {
@@ -116,7 +120,7 @@ export const requestNotificationPermission = async (userId: string) => {
     if (permission === 'granted') {
       const messaging = getMessaging();
       const token = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_VAPID_KEY
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
       });
 
       if (token) {

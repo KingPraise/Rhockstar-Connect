@@ -9,9 +9,8 @@ export default function AdminProtectedLayout({
   return (
     <AdminRoute>
       <div className="flex h-screen w-screen bg-[#020617] text-white relative overflow-hidden">
-        {/* Deep Crimson Neomorphic Background Glows */}
-        <div className="neo-glow bg-rose-500/10 w-[800px] h-[800px] top-[-300px] left-[-200px]" />
-        <div className="neo-glow bg-brand-purple/5 w-[600px] h-[600px] bottom-[10%] right-[-100px]" style={{ animationDelay: '2s' }} />
+        {/* Optimized Background Radial Glows (Replaced neo-glow for better mobile performance) */}
+        <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(244,63,94,0.08),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(168,85,247,0.08),transparent_50%)] z-0" />
         
         {/* Custom Admin Sidebar Layout */}
         <AdminSidebar />

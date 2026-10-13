@@ -1,55 +1,97 @@
 "use client";
 
-import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock } from "lucide-react";
+import { MapPin, Briefcase, Link as LinkIcon, Calendar, CheckCircle2, Pencil, Camera, TrendingUp, Users, Activity, Eye, Lock, Settings, Check, Loader2, UserPlus, MessageSquare, UserCheck } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { format } from "date-fns";
+import Link from "next/link";
+import { useState } from "react";
+import { Crown } from "lucide-react";
+import PremiumLockModal from "@/components/ui/PremiumLockModal";
+import { useLightboxStore } from "@/store/useLightboxStore";
+import toast from "react-hot-toast";
+import StardomBadge from "@/components/gamification/StardomBadge";
+import StreakBadge from "@/components/gamification/StreakBadge";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
+
+import { getThemeClasses } from "@/lib/constants/themes";
 
 interface ProfileHeaderProps {
   onEditClick: () => void;
   customProfile?: any;
   isOwnProfile?: boolean;
   onConnectClick?: () => void;
+  connectionStatus?: 'pending' | 'accepted' | 'rejected' | 'none';
+  actionLoading?: boolean;
+  isFollowing?: boolean;
+  onFollowClick?: () => void;
+  followLoading?: boolean;
 }
 
-import { useState } from "react";
-import { Crown } from "lucide-react";
-import PremiumLockModal from "@/components/ui/PremiumLockModal";
-import { useLightboxStore } from "@/store/useLightboxStore";
-
-export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile = true, onConnectClick }: ProfileHeaderProps) {
+export default function ProfileHeader({ 
+  onEditClick, 
+  customProfile, 
+  isOwnProfile = true, 
+  onConnectClick, 
+  connectionStatus, 
+  actionLoading,
+  isFollowing = false,
+  onFollowClick,
+  followLoading = false
+}: ProfileHeaderProps) {
   const { profile: loggedInProfile } = useAuthStore();
   const profile = customProfile || loggedInProfile;
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
   const { openLightbox } = useLightboxStore();
 
-  if (!profile) return null; // Or a skeleton loader
+  if (!profile) return null;
 
   const isFree = !profile.subscriptionTier || profile.subscriptionTier === 'free';
+  const isLoggedInUserPremium = loggedInProfile?.subscriptionTier === 'pro' || loggedInProfile?.subscriptionTier === 'elite' || loggedInProfile?.role === 'admin';
   const locationString = typeof profile.location === 'string' ? profile.location : (profile.location?.city ? `${profile.location.city}, ${profile.location.country}` : "Earth");
+
+  const handleBoostClick = () => {
+    if (isLoggedInUserPremium) {
+      toast.success("Profile boost activated! You are now prioritized in search.", { icon: "🚀", style: { background: '#334155', color: '#fff' } });
+    } else {
+      setPremiumLockOpen(true);
+    }
+  };
+
+  const themeClasses = getThemeClasses((profile as any).profileTheme);
+
+  const followersCount = profile.followersCount ?? profile.stats?.followers ?? 0;
+  const connectionsCount = profile.connectionsCount ?? profile.connections ?? profile.stats?.connections ?? 0;
+  const profileViews = profile.profileViews ?? 0;
+  const postsCount = profile.postsCount ?? profile.stats?.posts ?? 0;
 
   return (
     <div className="neo-card p-0 overflow-hidden flex flex-col mb-6 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl group">
       {/* Cover Photo */}
-      <div className="h-64 w-full bg-gradient-to-r from-brand-purple via-brand to-brand-purple bg-[length:200%_200%] animate-gradient-x relative">
-        <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]"></div>
+      <div className={`h-36 sm:h-48 md:h-60 w-full bg-gradient-to-r ${themeClasses.cover} bg-[length:200%_200%] animate-gradient-x relative`}>
+        {profile.coverImage ? (
+          <img src={profile.coverImage} alt="Cover" className="w-full h-full object-cover absolute inset-0" />
+        ) : (
+          <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]"></div>
+        )}
         {isOwnProfile && (
-          <button onClick={onEditClick} className="absolute top-4 right-4 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white text-sm py-2 px-4 rounded-xl flex items-center gap-2 transition-all border border-white/10 shadow-lg">
-            <Camera className="w-4 h-4" />
-            Update Cover
+          <button onClick={onEditClick} className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-black/40 hover:bg-black/60 backdrop-blur-md text-white text-xs sm:text-sm py-1.5 px-3 sm:py-2 sm:px-4 rounded-xl flex items-center gap-1.5 sm:gap-2 transition-all border border-white/10 shadow-lg z-10">
+            <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Update Cover</span>
+            <span className="sm:hidden">Cover</span>
           </button>
         )}
       </div>
 
-      <div className="px-8 pb-8 relative">
+      <div className="px-4 sm:px-6 md:px-8 pb-6 md:pb-8 relative">
         {/* Avatar */}
-        <div className="absolute -top-24 left-8 rounded-full p-2 bg-slate-900 shadow-2xl z-10 transition-transform duration-300 hover:scale-[1.02]">
+        <div className="absolute -top-12 sm:-top-16 md:-top-20 left-4 sm:left-6 md:left-8 rounded-full p-1 sm:p-1.5 md:p-2 bg-slate-900 shadow-2xl z-10 transition-transform duration-300 hover:scale-[1.02]">
           <div 
             onClick={() => {
               if (profile.avatar) {
                 openLightbox([profile.avatar]);
               }
             }}
-            className={`w-40 h-40 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center text-white text-6xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-slate-800 ${profile.avatar ? 'cursor-pointer' : ''}`}
+            className={`w-20 h-20 sm:w-28 sm:h-28 md:w-36 md:h-36 rounded-full bg-gradient-to-br ${themeClasses.avatar} flex items-center justify-center text-white text-2xl sm:text-4xl md:text-5xl font-extrabold relative overflow-hidden shadow-inner ring-4 ring-slate-800 ${profile.avatar ? 'cursor-pointer' : ''}`}
           >
             {profile.avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -62,142 +104,208 @@ export default function ProfileHeader({ onEditClick, customProfile, isOwnProfile
           {isOwnProfile && (
             <button 
               onClick={(e) => { e.stopPropagation(); onEditClick(); }}
-              className="absolute bottom-2 right-2 w-10 h-10 rounded-full bg-slate-800 shadow-lg flex items-center justify-center text-white hover:text-brand-purple transition-all hover:scale-110 border border-white/10"
+              className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full bg-slate-800 shadow-lg flex items-center justify-center text-white hover:text-brand-purple transition-all hover:scale-110 border border-white/10"
             >
-              <Camera className="w-4 h-4" />
+              <Camera className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           )}
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end pt-4 pb-2 gap-2">
+        <div className="flex flex-wrap gap-2 md:gap-3 justify-end pt-12 sm:pt-16 md:pt-4 pb-2">
           {isOwnProfile ? (
             <>
               <button 
-                onClick={() => setPremiumLockOpen(true)}
-                className="py-2 px-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 text-amber-300 border border-amber-500/30 hover:border-amber-400 font-bold text-sm flex items-center gap-1.5 transition-all shadow-md"
+                onClick={handleBoostClick}
+                className="py-1.5 px-3 sm:py-2 sm:px-5 rounded-xl bg-gradient-to-r from-brand/10 to-brand-purple/10 hover:from-brand/20 hover:to-brand-purple/20 text-white font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-all border border-brand/20 shadow-[0_0_15px_rgba(56,189,248,0.1)] hover:shadow-[0_0_20px_rgba(56,189,248,0.2)]"
               >
-                {isFree ? <Lock className="w-4 h-4 text-amber-400" /> : <Crown className="w-4 h-4 text-amber-400" />}
-                <span>Boost Profile</span>
+                {isFree ? <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" /> : <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />}
+                <span>Boost</span>
               </button>
 
               <button 
                 onClick={onEditClick}
-                className="py-2 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm flex items-center gap-2 transition-all border border-white/5 shadow-lg hover:border-white/10"
+                className="py-1.5 px-3 sm:py-2 sm:px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 transition-all border border-white/5 shadow-lg hover:border-white/10"
               >
-                <Pencil className="w-4 h-4" />
+                <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Edit Profile
               </button>
+              
+              <Link 
+                href="/settings"
+                className="py-1.5 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition-all border border-white/5 shadow-lg flex items-center justify-center hover:border-white/10 md:hidden"
+                title="Settings"
+              >
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </Link>
             </>
           ) : (
-            <button 
-              onClick={onConnectClick}
-              className="py-2.5 px-6 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:scale-105"
-            >
-              <Users className="w-4 h-4" />
-              Connect
-            </button>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {/* Follow Button */}
+              {onFollowClick && (
+                <button
+                  onClick={onFollowClick}
+                  disabled={followLoading}
+                  className={`py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-lg hover:scale-105 disabled:opacity-50 ${
+                    isFollowing 
+                      ? "bg-slate-800 text-emerald-400 border border-emerald-500/30" 
+                      : "bg-brand text-white hover:bg-brand-dark"
+                  }`}
+                >
+                  {followLoading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : isFollowing ? (
+                    <>
+                      <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      Following
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="w-3.5 h-3.5" />
+                      Follow
+                    </>
+                  )}
+                </button>
+              )}
+
+              {/* Message Button */}
+              <Link 
+                href={`/messages?user=${profile.uid}`}
+                className="py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all shadow-lg hover:scale-105"
+              >
+                <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Message
+              </Link>
+
+              {/* Connect Button */}
+              {connectionStatus === 'accepted' ? (
+                <button 
+                  disabled
+                  className="py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl bg-slate-800 text-brand font-bold text-xs sm:text-sm flex items-center gap-1.5 border border-brand/20 shadow-[inset_0_0_15px_rgba(56,189,248,0.1)]"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  Connected
+                </button>
+              ) : connectionStatus === 'pending' ? (
+                <button 
+                  disabled
+                  className="py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs sm:text-sm flex items-center gap-1.5 border border-white/10"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  Pending
+                </button>
+              ) : (
+                <button 
+                  onClick={onConnectClick}
+                  disabled={actionLoading}
+                  className="py-2 px-4 sm:py-2.5 sm:px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all border border-white/10 shadow-lg hover:scale-105 disabled:opacity-50"
+                >
+                  {actionLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UserPlus className="w-3.5 h-3.5" />}
+                  Connect
+                </button>
+              )}
+            </div>
           )}
         </div>
 
-        <div className="mt-4 max-w-2xl">
-          <div className="flex flex-wrap items-center gap-3 mb-2">
-            <h1 className="text-4xl font-extrabold text-white tracking-tight flex items-center gap-3">
+        <div className="mt-2 sm:mt-4 max-w-2xl">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+            <h1 className="text-xl sm:text-2xl md:text-4xl font-extrabold text-white tracking-tight flex items-center gap-2 leading-tight">
               {profile.fullName}
-              {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite' || profile.role === 'admin') && (
-                <CheckCircle2 className="w-6 h-6 text-brand" />
-              )}
+              <VerifiedBadge tier={profile.subscriptionTier || (profile.role === 'admin' ? 'pro' : undefined)} size="md" />
             </h1>
             
-            {/* Premium Badges */}
             {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite') && (
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full text-xs font-bold flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="px-2.5 py-0.5 sm:px-3 sm:py-1 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
                   <Crown className="w-3 h-3" /> Premium Verified
                 </span>
-                {profile.accountType !== 'employer' && (
-                  <span className="px-3 py-1 bg-brand-purple/10 text-brand-purple border border-brand-purple/20 rounded-full text-xs font-bold shadow-[0_0_10px_rgba(168,85,247,0.2)]">
-                    Open to Work
-                  </span>
-                )}
               </div>
+            )}
+
+            <StardomBadge xp={profile.stardomXP || 0} variant="badge" />
+            {profile.streakCount && profile.streakCount > 0 && (
+              <StreakBadge streakCount={profile.streakCount} size="sm" showMultiplier={true} />
             )}
           </div>
           
-          <p className="text-slate-400 font-medium text-lg mt-1 mb-4">@{profile.username}</p>
+          <p className="text-slate-400 font-medium text-xs sm:text-sm md:text-base mt-0.5 mb-2">@{profile.username}</p>
           
-          <p className="text-white text-xl font-medium leading-relaxed mb-6">
+          <p className="text-slate-200 text-sm sm:text-base md:text-xl font-medium leading-relaxed mb-4 sm:mb-6">
             {profile.headline || "Add a professional headline"}
           </p>
 
-          <div className="flex flex-wrap items-center gap-y-3 gap-x-6 text-sm text-slate-300 mb-8">
-            <div className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer bg-slate-800/50 py-1.5 px-4 rounded-full border border-white/5">
-              <MapPin className="w-4 h-4 text-slate-400" />
-              {locationString}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 md:gap-6 text-xs sm:text-sm text-slate-300 mb-4 sm:mb-6">
+            <div className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer bg-slate-800/50 py-1 px-3 md:py-1.5 md:px-4 rounded-full border border-white/5">
+              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>{locationString}</span>
             </div>
-            <div className="flex items-center gap-2 hover:text-white transition-colors cursor-pointer bg-slate-800/50 py-1.5 px-4 rounded-full border border-white/5">
-              <Briefcase className="w-4 h-4 text-slate-400" />
-              {profile.relationship || "Single"}
+            <div className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer bg-slate-800/50 py-1 px-3 md:py-1.5 md:px-4 rounded-full border border-white/5">
+              <Briefcase className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span>{profile.relationship || "Single"}</span>
             </div>
             {profile.website && (
-              <a href={profile.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-brand hover:text-brand-purple transition-colors bg-brand/10 py-1.5 px-4 rounded-full border border-brand/20">
-                <LinkIcon className="w-4 h-4" />
-                {profile.website.replace(/^https?:\/\//, '')}
+              <a href={profile.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-brand hover:text-brand-purple transition-colors bg-brand/10 py-1 px-3 md:py-1.5 md:px-4 rounded-full border border-brand/20">
+                <LinkIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate max-w-[150px] sm:max-w-none">{profile.website.replace(/^https?:\/\//, '')}</span>
               </a>
             )}
-            <div className="flex items-center gap-2 text-slate-400 py-1.5 px-4 rounded-full border border-transparent">
-              <Calendar className="w-4 h-4" />
-              Joined {format(new Date(), "MMMM yyyy")} {/* Replace with actual joined date when added to auth store */}
+            <div className="flex items-center gap-1.5 text-slate-400 py-1 px-2 md:py-1.5 md:px-4 rounded-full">
+              <Calendar className="w-3.5 h-3.5 shrink-0" />
+              <span>Joined {format(new Date(), "MMMM yyyy")}</span>
             </div>
           </div>
         </div>
       </div>
       
-      {/* Stats Divider */}
+      {/* Stats Divider with Real-Time Data */}
       <div className="grid grid-cols-4 divide-x divide-white/5 border-t border-white/5 bg-slate-900/50">
-        <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
-          <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand transition-colors">
-            <Users className="w-5 h-5 text-brand" />
-            {profile.stats?.followers || 0}
+        <div className="py-3 sm:py-5 md:py-6 px-1 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
+          <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-white group-hover/stat:text-brand transition-colors">
+            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-brand shrink-0" />
+            <span>{followersCount}</span>
           </div>
-          <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Followers</span>
+          <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider truncate max-w-full text-center">Followers</span>
         </div>
-        <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
-          <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
-            <Activity className="w-5 h-5 text-brand-purple" />
-            {profile.stats?.connections || 0}
+
+        <div className="py-3 sm:py-5 md:py-6 px-1 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
+          <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
+            <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-brand-purple shrink-0" />
+            <span>{connectionsCount}</span>
           </div>
-          <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Connections</span>
+          <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider truncate max-w-full text-center">Connections</span>
         </div>
-        <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
-          <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand transition-colors">
-            <TrendingUp className="w-5 h-5 text-brand" />
-            {profile.stats?.posts || 0}
+
+        <div className="py-3 sm:py-5 md:py-6 px-1 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat">
+          <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-white group-hover/stat:text-brand transition-colors">
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-brand shrink-0" />
+            <span>{postsCount}</span>
           </div>
-          <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Posts</span>
+          <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider truncate max-w-full text-center">Posts</span>
         </div>
-        <div className="py-6 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat relative">
-          {(profile.subscriptionTier === 'pro' || profile.subscriptionTier === 'elite' || profile.role === 'admin') ? (
+
+        <div className="py-3 sm:py-5 md:py-6 px-1 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer group/stat relative">
+          {isLoggedInUserPremium || isOwnProfile ? (
             <>
-              <div className="flex items-center gap-2 text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
-                <Eye className="w-5 h-5 text-brand-purple" />
-                24 {/* Views placeholder */}
+              <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-white group-hover/stat:text-brand-purple transition-colors">
+                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-brand-purple shrink-0" />
+                <span>{profileViews}</span>
               </div>
-              <span className="text-xs font-bold text-slate-500 mt-1 uppercase tracking-wider">Views</span>
+              <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-500 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider truncate max-w-full text-center">Views</span>
             </>
           ) : (
             <>
-              <div className="flex items-center gap-2 text-2xl font-bold text-slate-600 blur-[2px]">
-                <Eye className="w-5 h-5" />
-                24
+              <div className="flex items-center gap-1 sm:gap-2 text-base sm:text-xl md:text-2xl font-bold text-slate-600 blur-[2px]">
+                <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+                <span>{profileViews}</span>
               </div>
-              <span className="text-xs font-bold text-slate-600 mt-1 uppercase tracking-wider blur-[1px]">Views</span>
+              <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-slate-600 mt-0.5 sm:mt-1 uppercase tracking-tight sm:tracking-wider blur-[1px] truncate max-w-full text-center">Views</span>
               <div 
                 onClick={() => setPremiumLockOpen(true)}
                 className="absolute inset-0 flex items-center justify-center bg-slate-900/40 backdrop-blur-[1px] cursor-pointer"
               >
-                <div className="bg-slate-800/80 p-2 rounded-full border border-white/5 hover:border-amber-500/50 transition-colors">
-                  <Lock className="w-4 h-4 text-amber-400" />
+                <div className="bg-slate-800/80 p-1.5 rounded-full border border-white/5 hover:border-amber-500/50 transition-colors">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
                 </div>
               </div>
             </>

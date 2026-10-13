@@ -36,22 +36,46 @@ export default function NotificationsPage() {
     }
 
     if (notification.link) {
-      router.push(notification.link);
+      if (notification.link === "/") {
+        router.push("/feed");
+      } else {
+        router.push(notification.link);
+      }
       return;
     }
 
     switch (notification.type) {
-      case "match":
-        router.push("/dating");
+      case "like":
+      case "comment":
+        if (notification.targetId) {
+          router.push(`/feed?postId=${notification.targetId}#post-${notification.targetId}`);
+        } else {
+          router.push("/feed");
+        }
         break;
       case "message":
-        router.push("/messages");
+        if (notification.targetId || notification.senderId) {
+          router.push(`/messages?chatId=${notification.targetId || notification.senderId}`);
+        } else {
+          router.push("/messages");
+        }
         break;
       case "connection":
-        router.push("/network");
+        if (notification.senderId) {
+          router.push(`/profile?uid=${notification.senderId}`);
+        } else {
+          router.push("/network");
+        }
         break;
       case "job":
-        router.push("/jobs");
+        if (notification.targetId) {
+          router.push(`/jobs?jobId=${notification.targetId}`);
+        } else {
+          router.push("/jobs");
+        }
+        break;
+      case "match":
+        router.push("/dating");
         break;
       default:
         router.push("/feed");
@@ -111,13 +135,25 @@ export default function NotificationsPage() {
                   : "bg-slate-800/80 border-brand/30 shadow-[0_0_20px_rgba(56,189,248,0.1)] hover:border-brand/60"
               }`}
             >
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${bg} ${color}`}>
-                <Icon className="w-6 h-6" />
-              </div>
+              {notification.senderAvatar ? (
+                <img 
+                  src={notification.senderAvatar} 
+                  alt={notification.senderName || 'Sender'} 
+                  className="w-12 h-12 rounded-xl object-cover shrink-0 border border-white/10"
+                />
+              ) : notification.senderName ? (
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-bold text-white text-lg ${bg}`}>
+                  {notification.senderName.charAt(0).toUpperCase()}
+                </div>
+              ) : (
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${bg} ${color}`}>
+                  <Icon className="w-6 h-6" />
+                </div>
+              )}
               
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start mb-1">
-                  <h3 className={`font-bold text-lg truncate ${notification.read ? "text-slate-200" : "text-white"}`}>
+                  <h3 className={`font-bold text-base leading-snug break-words pr-2 ${notification.read ? "text-slate-200" : "text-white"}`}>
                     {notification.title}
                   </h3>
                   <span className="text-xs font-medium text-slate-500 whitespace-nowrap ml-4">{timeString}</span>

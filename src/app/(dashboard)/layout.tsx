@@ -2,9 +2,13 @@ import Sidebar from "@/components/layout/Sidebar";
 import MobileNav from "@/components/layout/MobileNav";
 import MobileHeader from "@/components/layout/MobileHeader";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import AIAssistantWidget from "@/components/ai/AIAssistantWidget";
 import ImageLightbox from "@/components/ui/ImageLightbox";
 import GlobalSearchModal from "@/components/ui/GlobalSearchModal";
+import PresenceHeartbeat from "@/components/layout/PresenceHeartbeat";
+import OnboardingTour from "@/components/onboarding/OnboardingTour";
+import DashboardThemeContainer from "@/components/layout/DashboardThemeContainer";
+import ScrollPaddingController from "@/components/layout/ScrollPaddingController";
+import InAppNotificationBanner from "@/components/notifications/InAppNotificationBanner";
 
 export default function DashboardLayout({
   children,
@@ -12,18 +16,20 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col md:flex-row h-screen w-screen overflow-hidden bg-[#020617] text-white relative pb-16 md:pb-0">
-      {/* Optimized Background Radial Glows */}
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.08),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(139,92,246,0.08),transparent_50%)] z-0" />
+    <DashboardThemeContainer>
+      <PresenceHeartbeat />
+      <InAppNotificationBanner />
       
       {/* Mobile Top Navigation Header */}
       <MobileHeader />
+      <ScrollPaddingController />
 
       {/* Sidebar Layout for Desktop (Stationary) */}
       <Sidebar />
 
       {/* Main Content Area (Independently Scrollable) */}
-      <main className="flex-1 h-full overflow-y-auto w-full max-w-4xl mx-auto p-4 md:p-8 relative z-10 custom-scrollbar">
+      <main id="main-scroll-container" className="flex-1 h-full overflow-y-auto w-full p-0 pt-20 md:p-8 md:pt-8 md:pb-8 relative z-10 custom-scrollbar"
+        style={{ paddingBottom: "var(--dynamic-bottom-padding, 6rem)" }}>
         <ProtectedRoute>
           {children}
         </ProtectedRoute>
@@ -32,14 +38,14 @@ export default function DashboardLayout({
       {/* Mobile Bottom Navigation */}
       <MobileNav />
 
-      {/* Global AI Assistant */}
-      <AIAssistantWidget />
-
       {/* Global Image Lightbox */}
       <ImageLightbox />
 
       {/* Global Search Modal */}
       <GlobalSearchModal />
-    </div>
+      
+      {/* Onboarding Tour */}
+      <OnboardingTour />
+    </DashboardThemeContainer>
   );
 }

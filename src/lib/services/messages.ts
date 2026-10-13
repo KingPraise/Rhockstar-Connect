@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 
 import { createNotification } from './notifications';
+import { getUserById } from './users';
 
 export interface Chat {
   id: string;
@@ -24,6 +25,8 @@ export interface Chat {
   lastMessageTime: unknown;
   unreadCount: Record<string, number>;
   typingStatus?: Record<string, boolean>;
+  archivedFor?: string[];
+  deletedFor?: string[];
 }
 
 export interface Message {
@@ -34,6 +37,7 @@ export interface Message {
   type?: 'text' | 'image' | 'audio' | 'document';
   mediaUrl?: string;
   status?: 'sent' | 'delivered' | 'read';
+  readAt?: unknown;
   createdAt: unknown;
   replyToId?: string;
   replyToText?: string;
@@ -114,26 +118,45 @@ export const sendMessage = async (
 
     await addDoc(messagesRef, messageData);
     
-    await updateDoc(chatRef, {
-      lastMessage: text,
-      lastMessageTime: serverTimestamp()
-    });
-
-    // Notify recipient
+    // Get chat to find recipient
     const chatSnap = await getDoc(chatRef);
     if (chatSnap.exists()) {
       const participants: string[] = chatSnap.data().participants || [];
       const recipientId = participants.find(p => p !== senderId);
+      
+      const { increment, arrayRemove } = await import('firebase/firestore');
+
+      await updateDoc(chatRef, {
+        lastMessage: text,
+        lastMessageTime: serverTimestamp(),
+        ...(recipientId ? { 
+          [`unreadCount.${recipientId}`]: increment(1),
+          deletedFor: arrayRemove(recipientId)
+        } : {})
+      });
+
       if (recipientId) {
-        const title = "New Message";
-        const messageBody = type === 'text' ? (text.length > 50 ? `${text.substring(0, 50)}...` : text) : `Sent an ${type}`;
+        // Fetch sender profile to include in notification
+        const { user: senderProfile } = await getUserById(senderId);
+        const senderName = senderProfile?.fullName || 'Someone';
+        const senderAvatar = senderProfile?.avatar || '';
+
+        const currentUnread = chatSnap.data().unreadCount?.[recipientId] || 0;
+        const newUnread = currentUnread + 1;
+
+        const title = newUnread > 1 ? `${newUnread} New Messages from ${senderName}` : `New Message from ${senderName}`;
+        const messageBody = newUnread > 1 ? `You have ${newUnread} unread messages.` : (type === 'text' ? (text.length > 50 ? `${text.substring(0, 50)}...` : text) : `Sent an ${type}`);
         
         await createNotification({
           userId: recipientId,
           type: "message",
           title,
           message: messageBody,
-          link: "/messages"
+          link: `/messages?chatId=${chatId}`,
+          targetId: chatId,
+          senderId: senderId,
+          senderName,
+          senderAvatar
         });
 
         // Trigger FCM Push Notification
@@ -144,7 +167,7 @@ export const sendMessage = async (
             userId: recipientId,
             title,
             body: messageBody,
-            url: "/messages"
+            url: `/messages?chatId=${chatId}`
           })
         }).catch(console.error);
       }
@@ -167,13 +190,66 @@ export const markMessagesAsRead = async (chatId: string, currentUserId: string) 
     const updatePromises: Promise<void>[] = [];
     snapshot.forEach((docSnap) => {
       if (docSnap.data().status !== 'read') {
-        updatePromises.push(updateDoc(doc(db, `chats/${chatId}/messages`, docSnap.id), { status: 'read' }));
+        updatePromises.push(updateDoc(doc(db, `chats/${chatId}/messages`, docSnap.id), { 
+          status: 'read',
+          readAt: serverTimestamp()
+        }));
       }
     });
+
+    // Also clear unreadCount on the chat document
+    updatePromises.push(updateDoc(doc(db, 'chats', chatId), {
+      [`unreadCount.${currentUserId}`]: 0
+    }));
 
     await Promise.all(updatePromises);
   } catch (error) {
     console.error("Error marking messages read:", error);
+  }
+};
+
+// Mark chat as unread
+export const markChatAsUnread = async (chatId: string, userId: string) => {
+  try {
+    const chatRef = doc(db, 'chats', chatId);
+    await updateDoc(chatRef, {
+      [`unreadCount.${userId}`]: 1
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error marking chat unread:", error);
+    return { success: false };
+  }
+};
+
+// Archive / Unarchive chat
+export const toggleArchiveChat = async (chatId: string, userId: string, isCurrentlyArchived: boolean) => {
+  try {
+    const chatRef = doc(db, 'chats', chatId);
+    const { arrayUnion, arrayRemove } = await import('firebase/firestore');
+    await updateDoc(chatRef, {
+      archivedFor: isCurrentlyArchived ? arrayRemove(userId) : arrayUnion(userId)
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error toggling archive status:", error);
+    return { success: false };
+  }
+};
+
+// Delete chat conversation for user
+export const deleteChatForUser = async (chatId: string, userId: string) => {
+  try {
+    const chatRef = doc(db, 'chats', chatId);
+    const { arrayUnion } = await import('firebase/firestore');
+    await updateDoc(chatRef, {
+      deletedFor: arrayUnion(userId),
+      [`unreadCount.${userId}`]: 0
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting chat:", error);
+    return { success: false };
   }
 };
 

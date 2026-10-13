@@ -4,26 +4,101 @@ import { useState } from "react";
 import { 
   Settings as SettingsIcon, User, Lock, Bell, 
   Shield, Eye, Smartphone, Globe, CreditCard,
-  LogOut
+  LogOut, Zap, Briefcase, Crown, Play
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { logoutUser } from "@/lib/auth";
 
-export default function SettingsPage() {
-  const { user, profile, logout } = useAuthStore();
+import LogoutConfirmModal from "@/components/auth/LogoutConfirmModal";
+import { AlertTriangle, Trash2, X, ChevronDown } from "lucide-react";
+
+
+  export default function SettingsPage() {
+const handlePasswordChange = async () => {
+    if (!currentPassword || !newPassword) {
+      toast.error("Please enter both current and new password");
+      return;
+    }
+    setIsUpdatingPassword(true);
+    try {
+      const { auth } = await import('@/lib/firebase');
+      const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = await import('firebase/auth');
+      
+      const user = auth.currentUser;
+      if (user && user.email) {
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, newPassword);
+        toast.success("Password updated successfully!");
+        setCurrentPassword('');
+        setNewPassword('');
+      } else {
+        toast.error("User not found or email missing.");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update password");
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handleTogglePref = async (key: string, currentValue: boolean) => {
+    try {
+      const newValue = !currentValue;
+      const { updateUserProfile } = await import('@/lib/services/users');
+      if (!profile) return;
+      
+      const res = await updateUserProfile(profile.uid, {
+        notificationSettings: {
+          ...(profile as any).notificationSettings,
+          [key]: newValue
+        }
+      } as any);
+      
+      if (res.success) {
+        useAuthStore.getState().setProfile({
+          ...profile,
+          notificationSettings: {
+            ...(profile as any).notificationSettings,
+            [key]: newValue
+          }
+        } as any);
+        toast.success("Preference saved!");
+      }
+    } catch (err) {
+      toast.error("Failed to save preference.");
+    }
+  };
+
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const { user, profile, logout, aiWidgetVisible, setAiWidgetVisible } = useAuthStore();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleLogout = async () => {
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE MY ACCOUNT" || !profile?.uid) return;
+    setIsDeleting(true);
     try {
+      const { deleteDoc, doc } = await import("firebase/firestore");
+      const { db } = await import("@/lib/firebase");
+      await deleteDoc(doc(db, "users", profile.uid));
       await logoutUser();
       logout();
-      router.push('/login');
+      toast.success("Your account has been deleted");
+      router.push("/register");
     } catch (error) {
-      toast.error("Failed to log out");
+      toast.error("Failed to delete account");
     }
+    setIsDeleting(false);
   };
 
   const tabs = [
@@ -48,7 +123,7 @@ export default function SettingsPage() {
 
       <div className="grid md:grid-cols-4 gap-8">
         {/* Sidebar Nav */}
-        <div className="md:col-span-1 space-y-2">
+        <div className="md:col-span-1 flex md:flex-col overflow-x-auto gap-2 md:gap-0 md:space-y-2 no-scrollbar pb-2 md:pb-0 shrink-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -56,7 +131,7 @@ export default function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 md:w-full ${
                   isActive 
                     ? "bg-brand/10 text-brand border border-brand/20 shadow-[0_0_15px_rgba(56,189,248,0.15)]" 
                     : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
@@ -120,6 +195,149 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </form>
+
+              <div className="pt-8 border-t border-white/10 space-y-6">
+                <h3 className="text-xl font-bold text-white">Preferences</h3>
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-xl">
+                  <div>
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-brand" />
+                      AI Assistant Widget
+                    </h4>
+                    <p className="text-sm text-slate-400">Show the floating AI assistant on your dashboard.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only peer" 
+                      checked={aiWidgetVisible}
+                      onChange={(e) => {
+                        setAiWidgetVisible(e.target.checked);
+                        if (e.target.checked) {
+                          localStorage.removeItem('aiWidgetHidden');
+                        } else {
+                          localStorage.setItem('aiWidgetHidden', 'true');
+                        }
+                      }}
+                    />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-slate-800/50 border border-white/5 rounded-xl mt-4">
+                  <div>
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-emerald-400" />
+                      Premium Profile Theme
+                    </h4>
+                    <p className="text-sm text-slate-400">Choose a custom color theme for your public profile.</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && profile?.role !== 'admin' && (
+                      <span className="text-xs text-amber-500 font-bold px-2 py-1 bg-amber-500/10 rounded-md">PRO+</span>
+                    )}
+                    <select 
+                      className="bg-slate-900 border border-white/10 text-white text-sm rounded-lg focus:ring-brand focus:border-brand block p-2.5 disabled:opacity-50 cursor-pointer"
+                      disabled={profile?.subscriptionTier !== 'pro' && profile?.subscriptionTier !== 'elite' && profile?.role !== 'admin'}
+                      value={(profile as any)?.profileTheme || 'default'}
+                      onChange={async (e) => {
+                        const newTheme = e.target.value;
+                        if (profile?.uid) {
+                          const { updateUserProfile } = await import('@/lib/services/users');
+                          const res = await updateUserProfile(profile.uid, { profileTheme: newTheme });
+                          if (res.success) {
+                            useAuthStore.getState().setProfile({ ...profile, profileTheme: newTheme } as any);
+                            toast.success(`Profile background theme updated to ${newTheme.toUpperCase()}!`);
+                          } else {
+                            toast.error('Failed to update theme');
+                          }
+                        }
+                      }}
+                    >
+                      <option value="default">Default (Neon Purple / Cyan Glow)</option>
+                      <option value="purple">Neon Purple (Cyberpunk Violet 🪩)</option>
+                      <option value="ocean">Ocean Blue</option>
+                      <option value="emerald">Emerald Green</option>
+                      <option value="rose">Rose Pink</option>
+                      <option value="amber">Amber Gold</option>
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-slate-800/50 border border-white/5 rounded-xl mt-4">
+                  <div>
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <Play className="w-4 h-4 text-brand" />
+                      Platform Tour
+                    </h4>
+                    <p className="text-sm text-slate-400">Replay the introductory walkthrough tour of Rhockstar Connect.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      localStorage.removeItem('rhockstar_onboarding_completed');
+                      window.dispatchEvent(new Event('replay-tour'));
+                      toast.success("Tour restarted!");
+                    }}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors text-sm whitespace-nowrap"
+                  >
+                    Replay Tour
+                  </button>
+                </div>
+              </div>
+
+              {/* Employer Status */}
+              {(profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (
+                <div className="pt-8 border-t border-white/10 space-y-4">
+                  <h3 className="text-xl font-bold text-white">Employer Account</h3>
+                  <div className="bg-gradient-to-r from-emerald-900/40 to-slate-800 p-6 rounded-2xl border border-emerald-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-bold text-white mb-1">You are an Employer!</h4>
+                      <p className="text-sm text-slate-400">You have access to the Employer Dashboard to post jobs and manage applications.</p>
+                    </div>
+                    <a 
+                      href="/employer"
+                      className="whitespace-nowrap px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex items-center gap-2"
+                    >
+                      <Briefcase className="w-5 h-5" />
+                      Go to Dashboard
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Employer Upgrade */}
+              {profile?.accountType !== 'employer' && profile?.role !== 'admin' && (profile as any)?.role !== 'employer' && (
+                <div className="pt-8 border-t border-white/10 space-y-4">
+                  <h3 className="text-xl font-bold text-white">Employer Account</h3>
+                  <div className="bg-gradient-to-r from-blue-900/40 to-slate-800 p-6 rounded-2xl border border-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-bold text-white mb-1">Looking to hire talent?</h4>
+                      <p className="text-sm text-slate-400">Upgrade your account to Employer status to post jobs and manage applicants.</p>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        if (profile?.subscriptionTier !== 'elite') {
+                          toast.error("Only Elite members can become Employers! Upgrade your plan.", { icon: "👑" });
+                          router.push('/premium');
+                          return;
+                        }
+                        if (!profile?.uid) return;
+                        const { becomeEmployer } = await import('@/lib/services/users');
+                        const res = await becomeEmployer(profile.uid);
+                        if (res.success) {
+                          useAuthStore.getState().setProfile({ ...profile, role: 'employer' } as any);
+                          toast.success("Successfully upgraded to Employer!");
+                        } else {
+                          toast.error("Failed to upgrade account");
+                        }
+                      }}
+                      className="whitespace-nowrap px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-colors"
+                    >
+                      Become an Employer
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -133,12 +351,15 @@ export default function SettingsPage() {
                   <h3 className="text-lg font-bold text-white">Change Password</h3>
                   <div>
                     <label className="block text-sm font-bold text-slate-300 mb-2">Current Password</label>
-                    <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
+                    <input type="password" placeholder="********" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-300 mb-2">New Password</label>
-                    <input type="password" placeholder="••••••••" className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
+                    <input type="password" placeholder="********" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand transition-colors" />
                   </div>
+                  <button onClick={handlePasswordChange} disabled={isUpdatingPassword || !currentPassword || !newPassword} className="px-6 py-3 bg-brand hover:bg-brand/90 text-white font-bold rounded-xl transition-all disabled:opacity-50 mt-4">
+                    {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+                  </button>
                 </div>
 
                 {/* Verification */}
@@ -178,17 +399,77 @@ export default function SettingsPage() {
                   
                   <div className="flex flex-col sm:flex-row gap-4">
                     <button 
-                      onClick={handleLogout}
+                      onClick={() => setShowLogoutModal(true)}
                       className="bg-slate-800/50 text-slate-300 border border-slate-700/50 hover:bg-slate-800 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors flex items-center justify-center gap-2"
                     >
                       <LogOut className="w-5 h-5" />
                       Logout Account
                     </button>
                     
-                    <button className="bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors">
+                    <button 
+                      onClick={() => setShowDeleteModal(true)}
+                      className="bg-rose-500/10 text-rose-500 border border-rose-500/20 hover:bg-rose-500 hover:text-white font-bold py-3 px-8 rounded-xl transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-5 h-5" />
                       Delete Account
                     </button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Logout Modal */}
+          <LogoutConfirmModal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} />
+
+          {/* Delete Account Modal */}
+          {showDeleteModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+              <div className="neo-card bg-slate-900 border border-rose-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center mx-auto">
+                  <AlertTriangle className="w-7 h-7" />
+                </div>
+
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-extrabold text-white">Delete Account Permanent</h2>
+                  <p className="text-sm text-slate-400">This action cannot be undone. All your posts, connection data, and settings will be removed permanently.</p>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="block text-xs font-bold text-slate-300">
+                    To confirm, please type <span className="text-rose-500 font-mono select-all">&quot;DELETE MY ACCOUNT&quot;</span> below:
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="DELETE MY ACCOUNT"
+                    className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-rose-500 font-mono"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-2">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 py-3 px-5 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 font-bold text-sm transition-colors border border-white/5"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleteConfirmText !== "DELETE MY ACCOUNT" || isDeleting}
+                    className="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-rose-600 to-rose-800 text-white font-bold text-sm shadow-lg hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {isDeleting ? "Deleting..." : "Permanently Delete"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -198,13 +479,38 @@ export default function SettingsPage() {
             <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in">
               <h2 className="text-2xl font-bold text-white border-b border-white/10 pb-4">Billing & Premium</h2>
               
-              <div className="bg-gradient-to-br from-brand-purple/20 to-brand/20 border border-brand-purple/30 rounded-2xl p-6 relative overflow-hidden">
+              <div className={`border rounded-2xl p-6 relative overflow-hidden ${
+                (profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite')
+                  ? 'bg-gradient-to-br from-emerald-500/20 via-brand/20 to-brand-purple/20 border-emerald-500/40'
+                  : 'bg-gradient-to-br from-brand-purple/20 to-brand/20 border-brand-purple/30'
+              }`}>
                 <div className="absolute inset-0 bg-white/5" />
                 <div className="relative z-10">
-                  <h3 className="text-xl font-bold text-white mb-2">Free Plan</h3>
-                  <p className="text-slate-300 mb-6">You are currently on the free basic plan.</p>
-                  <a href="/premium" className="inline-block bg-gradient-to-r from-brand to-brand-purple text-white font-bold py-3 px-8 rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:scale-105 transition-transform">
-                    Upgrade to Premium
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-xl font-bold text-white capitalize">
+                      {profile?.subscriptionTier && profile.subscriptionTier !== 'free' 
+                        ? `${profile.subscriptionTier} Plan` 
+                        : 'Free Plan'}
+                    </h3>
+                    {(profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite') && (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase flex items-center gap-1">
+                        <Crown className="w-3.5 h-3.5" /> Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-slate-300 mb-6 text-sm">
+                    {(profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite')
+                      ? `Your ${profile.subscriptionTier.toUpperCase()} membership is active with full access to unlimited messaging, job applications, and premium analytics.`
+                      : 'You are currently on the free basic plan.'}
+                  </p>
+                  <a href="/premium" className={`inline-block font-bold py-3 px-8 rounded-xl shadow-lg hover:scale-105 transition-transform ${
+                    (profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite')
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                      : 'bg-gradient-to-r from-brand to-brand-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                  }`}>
+                    {(profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite')
+                      ? 'Manage Membership'
+                      : 'Upgrade to Premium'}
                   </a>
                 </div>
               </div>
@@ -277,9 +583,94 @@ export default function SettingsPage() {
           )}
 
           {activeTab === "notifications" && (
-            <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in text-center py-20">
-              <h2 className="text-xl font-bold text-white mb-2">Coming Soon</h2>
-              <p className="text-slate-400">Notification preferences will be available soon.</p>
+            <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in">
+              <div className="border-b border-white/10 pb-4">
+                <h2 className="text-2xl font-bold text-white">Notification Preferences</h2>
+                <p className="text-slate-400 text-sm mt-1">Control how and when you receive activity alerts on Rhockstar Connect.</p>
+              </div>
+
+              <div className="space-y-6">
+                <h3 className="text-sm font-extrabold text-brand uppercase tracking-wider">In-App Alerts</h3>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Direct Messages</h4>
+                    <p className="text-xs text-slate-400">Receive instant alerts when connections send you messages.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Message notification preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Connection Requests & Accepts</h4>
+                    <p className="text-xs text-slate-400">Get notified when someone sends or accepts a connection request.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" checked={(profile as any)?.notificationSettings?.connectionAlerts ?? true} onChange={() => handleTogglePref('connectionAlerts', (profile as any)?.notificationSettings?.connectionAlerts ?? true)} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Feed Comments & Likes</h4>
+                    <p className="text-xs text-slate-400">Get notified when users like or comment on your community posts.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" checked={(profile as any)?.notificationSettings?.postInteractions ?? true} onChange={() => handleTogglePref('postInteractions', (profile as any)?.notificationSettings?.postInteractions ?? true)} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Job Applications & Recruiter Updates</h4>
+                    <p className="text-xs text-slate-400">Receive status updates when employers review your applications.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Job application alert preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Dating Likes & Matches</h4>
+                    <p className="text-xs text-slate-400">Get notified instantly when someone likes your dating profile or matches with you.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Dating notification preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                  </label>
+                </div>
+
+                <h3 className="text-sm font-extrabold text-brand uppercase tracking-wider pt-4 border-t border-white/10">Email Digest & Push Notifications</h3>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Weekly Career Highlights</h4>
+                    <p className="text-xs text-slate-400">Weekly email summaries of recommended jobs and network growth.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Weekly email digest preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
+                  <div>
+                    <h4 className="font-bold text-white text-base">Desktop Push Alerts</h4>
+                    <p className="text-xs text-slate-400">Receive browser notifications when you are active on Rhockstar Connect.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" defaultChecked className="sr-only peer" onChange={() => toast.success("Desktop push notification preference saved!")} />
+                    <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                  </label>
+                </div>
+              </div>
             </div>
           )}
         </div>

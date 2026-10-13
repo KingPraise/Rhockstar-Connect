@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { updateUserProfile } from "@/lib/services/users";
-import { storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { Heart, Loader2, Save, Upload, Plus, Trash2, Mic, Settings, X } from "lucide-react";
+import { uploadMediaToCloudinary } from "@/lib/services/cloudinary";
+import { Heart, Loader2, Save, Upload, Plus, Trash2, Mic, Settings, X, ChevronDown, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
@@ -25,6 +24,27 @@ const GOALS = [
   "Networking",
   "Not sure yet"
 ];
+
+
+const ObjectUrlImage = ({ file, alt, className }: { file: File, alt: string, className: string }) => {
+  const [url, setUrl] = useState<string>('');
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+  return url ? <img src={url} alt={alt} className={className} /> : null;
+};
+
+const ObjectUrlAudio = ({ file, className }: { file: File, className: string }) => {
+  const [url, setUrl] = useState<string>('');
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(file);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [file]);
+  return url ? <audio controls src={url} className={className} /> : null;
+};
 
 export default function DatingProfileSetup() {
   const { profile, setProfile } = useAuthStore();
@@ -104,18 +124,14 @@ export default function DatingProfileSetup() {
       // 1. Upload new photos
       const uploadedPhotoUrls: string[] = [];
       for (const file of newPhotos) {
-        const storageRef = ref(storage, `dating_photos/${profile.uid}_${Date.now()}_${file.name}`);
-        const snapshot = await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(snapshot.ref);
+        const url = await uploadMediaToCloudinary(file, 'dating_photos', 'image');
         uploadedPhotoUrls.push(url);
       }
 
       // 2. Upload voice intro if exists
       let finalVoiceIntro = existingVoiceIntro;
       if (voiceIntroFile) {
-        const storageRef = ref(storage, `dating_voice/${profile.uid}_${Date.now()}_${voiceIntroFile.name}`);
-        const snapshot = await uploadBytes(storageRef, voiceIntroFile);
-        finalVoiceIntro = await getDownloadURL(snapshot.ref);
+        finalVoiceIntro = await uploadMediaToCloudinary(voiceIntroFile, 'dating_voice', 'auto');
       }
 
       const allPhotos = [...existingPhotos, ...uploadedPhotoUrls];
@@ -180,7 +196,7 @@ export default function DatingProfileSetup() {
               ))}
               {newPhotos.map((file, i) => (
                 <div key={`new-${i}`} className="relative aspect-[3/4] rounded-2xl overflow-hidden group/photo">
-                  <img src={URL.createObjectURL(file)} alt="New Dating Photo" className="w-full h-full object-cover" />
+                  <ObjectUrlImage file={file} alt="New Dating Photo" className="w-full h-full object-cover" />
                   <button onClick={() => removeNewPhoto(i)} className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500/80 text-white flex items-center justify-center opacity-0 group-hover/photo:opacity-100 transition-opacity">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -214,7 +230,7 @@ export default function DatingProfileSetup() {
               {voiceIntroFile && (
                 <div className="p-4 rounded-xl bg-brand-purple/10 border border-brand-purple/20">
                   <p className="text-brand-purple font-medium mb-2 text-sm">New recording ready to save:</p>
-                  <audio controls src={URL.createObjectURL(voiceIntroFile)} className="w-full" />
+                  <ObjectUrlAudio file={voiceIntroFile} className="w-full" />
                 </div>
               )}
 
@@ -246,15 +262,18 @@ export default function DatingProfileSetup() {
                   <button onClick={() => removePrompt(i)} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center hover:scale-110 transition-transform">
                     <X className="w-3 h-3" />
                   </button>
-                  <select 
-                    value={p.prompt} 
-                    onChange={(e) => updatePrompt(i, 'prompt', e.target.value)}
-                    className="neo-input bg-slate-900 text-brand-purple font-bold border-transparent"
-                  >
-                    {PROMPTS.map(pr => (
-                      <option key={pr} value={pr}>{pr}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select 
+                      value={p.prompt} 
+                      onChange={(e) => updatePrompt(i, 'prompt', e.target.value)}
+                      className="neo-input pr-10 bg-slate-900 text-brand-purple font-bold border-transparent appearance-none cursor-pointer"
+                    >
+                      {PROMPTS.map(pr => (
+                        <option key={pr} value={pr} className="bg-slate-900 text-brand-purple">{pr}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                   <textarea 
                     value={p.answer}
                     onChange={(e) => updatePrompt(i, 'answer', e.target.value)}
@@ -294,15 +313,19 @@ export default function DatingProfileSetup() {
             
             <div className="flex flex-col gap-1 mb-6">
               <label className="text-sm font-medium text-secondary ml-1">Relationship Goals</label>
-              <select 
-                value={goal} 
-                onChange={(e) => setGoal(e.target.value)}
-                className="neo-input bg-slate-900 cursor-pointer"
-              >
-                {GOALS.map(g => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <Target className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 z-10" />
+                <select 
+                  value={goal} 
+                  onChange={(e) => setGoal(e.target.value)}
+                  className="neo-input pl-11 pr-10 bg-slate-900 cursor-pointer appearance-none text-white"
+                >
+                  {GOALS.map(g => (
+                    <option key={g} value={g} className="bg-slate-900 text-white">{g}</option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
 
             <div className="flex flex-col gap-1">
@@ -335,3 +358,4 @@ export default function DatingProfileSetup() {
     </div>
   );
 }
+

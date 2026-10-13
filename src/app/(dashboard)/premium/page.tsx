@@ -3,49 +3,105 @@
 import { Check, Crown, Star, Shield, Zap, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { updateUserProfile } from "@/lib/services/users";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
+
+import CurrencySelector from "@/components/ui/CurrencySelector";
+import { useCurrencyStore, CURRENCIES } from "@/store/useCurrencyStore";
+
+
+const PaymentButton = ({ tier, profile, currency, formatPrice, onSuccess, disabled, className, children }: any) => {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const baseUSD = tier === 'pro' ? 2 : 5;
+  
+  // Calculate NGN amount explicitly for Flutterwave checkout
+  const ngnRate = (CURRENCIES as any)['NGN']?.rateFromUSD || 1500;
+  const chargeAmountNGN = baseUSD * ngnRate;
+
+  const config = {
+    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || '',
+    tx_ref: `rhockstar_${tier}_${Date.now()}`,
+    amount: chargeAmountNGN,
+    currency: 'NGN', // Always pass NGN to satisfy Flutterwave restrictions
+    payment_options: 'card,mobilemoney,ussd',
+    customer: {
+      email: profile?.email || 'user@rhockstar.com',
+      phone_number: profile?.phone || '',
+      name: profile?.fullName || profile?.username || 'Rhockstar User',
+    },
+    customizations: {
+      title: `Rhockstar Connect ${tier.toUpperCase()}`,
+      description: `Payment for ${tier.toUpperCase()} membership`,
+      logo: typeof window !== 'undefined' ? `${window.location.origin}/icon.png` : '',
+    },
+  };
+
+  const handleFlutterPayment = useFlutterwave(config);
+
+  const handleClick = () => {
+    setIsProcessing(true);
+    handleFlutterPayment({
+      callback: (response) => {
+        if (response.status === 'successful' || response.status === 'completed') {
+          onSuccess(tier, response.transaction_id);
+        } else {
+          setIsProcessing(false);
+          toast.error("Payment was not successful.");
+        }
+        closePaymentModal();
+      },
+      onClose: () => {
+        setIsProcessing(false);
+      },
+    });
+  };
+
+  return (
+    <button onClick={handleClick} disabled={disabled || isProcessing} className={className}>
+      {isProcessing && <Loader2 className="w-5 h-5 animate-spin" />}
+      {children}
+    </button>
+  );
+};
 
 export default function PremiumPage() {
   const { profile, setProfile } = useAuthStore();
-  const router = useRouter();
-  const [processingTier, setProcessingTier] = useState<string | null>(null);
+  const { formatPrice, currency } = useCurrencyStore();
+  const [processingTier, setProcessingTier] = useState<'pro' | 'elite' | null>(null);
 
   const handleSubscribe = async (tier: 'pro' | 'elite') => {
-    if (!profile) return;
+    if (!profile?.uid) return;
     setProcessingTier(tier);
-
     try {
-      // Mock payment delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
+      const { updateUserProfile } = await import('@/lib/services/users');
       const res = await updateUserProfile(profile.uid, {
         subscriptionTier: tier,
-        subscriptionStatus: "active"
+        subscriptionStatus: 'active'
       });
-
       if (res.success) {
-        setProfile({ ...profile, subscriptionTier: tier } as any);
-        toast.success(`Successfully upgraded to ${tier.toUpperCase()}!`);
-        router.push('/feed');
+        setProfile({ ...profile, subscriptionTier: tier, subscriptionStatus: 'active' } as any);
+        toast.success(`Successfully upgraded to ${tier.toUpperCase()} plan!`);
       } else {
-        toast.error("Failed to process subscription.");
+        toast.error("Failed to upgrade plan.");
       }
     } catch (error) {
-      console.error("Subscription error:", error);
-      toast.error("Failed to process subscription.");
-    } finally {
-      setProcessingTier(null);
+      toast.error("An error occurred during upgrade.");
     }
+    setProcessingTier(null);
   };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-10 pb-20">
+    <div className="max-w-5xl mx-auto space-y-12 py-8 px-4">
       
       {/* HEADER */}
-      <div className="text-center max-w-2xl mx-auto space-y-4 pt-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-amber-400/20 to-amber-600/20 border border-amber-500/20 shadow-[0_0_30px_rgba(245,158,11,0.3)] mb-4">
-          <Crown className="w-8 h-8 text-amber-500" />
+      <div className="text-center space-y-4 max-w-2xl mx-auto relative">
+        <div className="flex justify-center mb-2">
+          <CurrencySelector />
+        </div>
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm font-bold shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+          <Crown className="w-4 h-4" />
+          Rhockstar Connect Membership
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">Upgrade to <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-600">Premium</span></h1>
         <p className="text-lg text-slate-400">Unlock the full power of Rhockstar Connect. Get verified, increase your visibility, and build meaningful relationships faster.</p>
@@ -63,7 +119,7 @@ export default function PremiumPage() {
           <p className="text-slate-400 text-sm mb-6 h-10">Essential tools to stand out and connect.</p>
           
           <div className="mb-8">
-            <span className="text-4xl font-extrabold text-white">₦2,000</span>
+            <span className="text-4xl font-extrabold text-white">{formatPrice(2)}</span>
             <span className="text-slate-500 font-medium"> / month</span>
           </div>
           
@@ -73,6 +129,8 @@ export default function PremiumPage() {
               "Advanced Search Filters & Global Smart Search",
               "See who viewed your profile",
               "Enhanced Media Lightbox Viewer",
+              "Message Editing & Deletion",
+              "Chat Media Uploads",
               "Unlimited messaging",
               "Priority support"
             ].map((feature, i) => (
@@ -85,14 +143,17 @@ export default function PremiumPage() {
             ))}
           </div>
           
-          <button 
-            onClick={() => handleSubscribe('pro')}
+          <PaymentButton 
+            tier="pro"
+            profile={profile}
+            currency={currency}
+            formatPrice={formatPrice}
+            onSuccess={handleSubscribe}
             disabled={processingTier !== null || profile?.subscriptionTier === 'pro'}
             className="w-full neo-button-secondary py-4 text-white font-bold hover:bg-white/10 transition-colors mt-auto flex items-center justify-center gap-2"
           >
-            {processingTier === 'pro' ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
             {profile?.subscriptionTier === 'pro' ? 'Current Plan' : 'Choose Pro'}
-          </button>
+          </PaymentButton>
         </div>
 
         {/* ELITE PLAN (HIGHLIGHTED) */}
@@ -108,7 +169,7 @@ export default function PremiumPage() {
           <p className="text-brand-purple/80 text-sm mb-6 h-10">Ultimate visibility for serious networking & dating.</p>
           
           <div className="mb-8">
-            <span className="text-4xl font-extrabold text-white">₦5,000</span>
+            <span className="text-4xl font-extrabold text-white">{formatPrice(5)}</span>
             <span className="text-slate-400 font-medium"> / month</span>
           </div>
           
@@ -119,7 +180,8 @@ export default function PremiumPage() {
               "Maximum visibility in feed & matching",
               "Access to exclusive communities",
               "Advanced profile customization",
-              "Incognito browsing mode"
+              "Incognito browsing mode",
+              "Hide Online Status & Read Receipts"
             ].map((feature, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-5 h-5 rounded-full bg-brand-purple/20 flex items-center justify-center shrink-0">
@@ -132,16 +194,19 @@ export default function PremiumPage() {
           
           <div className="w-full relative group overflow-hidden rounded-xl bg-gradient-to-r from-brand to-brand-purple p-[1px] transition-all hover:shadow-[0_0_20px_rgba(168,85,247,0.4)] mt-auto cursor-pointer">
             <div className="absolute inset-0 bg-white/20 group-hover:bg-transparent transition-colors z-0" />
-            <button 
-              onClick={() => handleSubscribe('elite')}
+            <PaymentButton 
+              tier="elite"
+              profile={profile}
+              currency={currency}
+              formatPrice={formatPrice}
+              onSuccess={handleSubscribe}
               disabled={processingTier !== null || profile?.subscriptionTier === 'elite'}
               className="relative z-10 w-full flex items-center justify-center gap-2 bg-slate-900 px-6 py-4 rounded-xl group-hover:bg-opacity-0 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {processingTier === 'elite' ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
               <span className="font-bold text-white tracking-wide">
                 {profile?.subscriptionTier === 'elite' ? 'Current Plan' : 'Upgrade to Elite'}
               </span>
-            </button>
+            </PaymentButton>
           </div>
         </div>
 

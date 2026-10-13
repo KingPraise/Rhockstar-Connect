@@ -2,12 +2,14 @@
 
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthStore, UserProfile } from '@/store/useAuthStore';
 
+import SplashScreen from '@/components/layout/SplashScreen';
+
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setProfile, setLoading } = useAuthStore();
+  const { setUser, setProfile, setLoading, isLoading } = useAuthStore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -15,29 +17,53 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       
       if (firebaseUser) {
         // Fetch user profile from Firestore
-        try {
-          const docRef = doc(db, 'users', firebaseUser.uid);
-          const docSnap = await getDoc(docRef);
-          
+        const docRef = doc(db, 'users', firebaseUser.uid);
+        const unsubscribeProfile = onSnapshot(docRef, (docSnap) => {
           if (docSnap.exists()) {
             setProfile(docSnap.data() as UserProfile);
           } else {
             console.warn("User profile document not found!");
             setProfile(null);
           }
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setProfile(null);
+          // Hold the splash screen until we actually have the profile data!
+          setLoading(false);
+        }, (error) => {
+          console.error("Error listening to user profile:", error);
+          setLoading(false);
+        });
+        
+        // Clean up profile listener when auth state changes
+        if ((window as any)._profileUnsub) {
+          (window as any)._profileUnsub();
         }
+        (window as any)._profileUnsub = unsubscribeProfile;
       } else {
         setProfile(null);
+        // Only dismiss loading immediately if there is absolutely no logged-in user
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if ((window as any)._profileUnsub) {
+        (window as any)._profileUnsub();
+      }
+    };
   }, [setUser, setProfile, setLoading]);
 
-  return <>{children}</>;
+  // Fallback: forcefully drop splash screen after 10 seconds to prevent indefinite hanging on very slow networks
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      setLoading(false);
+    }, 10000);
+
+    return () => clearTimeout(safetyTimer);
+  }, [setLoading]);
+
+  return (
+    <>
+      {children}
+    </>
+  );
 }

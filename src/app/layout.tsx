@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -6,12 +6,22 @@ import AuthProvider from "@/components/providers/AuthProvider";
 import NextTopLoader from "nextjs-toploader";
 import ToastProvider from "@/components/ui/ToastProvider";
 import AIAssistantWidget from "@/components/ai/AIAssistantWidget";
+import AnalyticsProvider from "@/components/AnalyticsProvider";
+import OfflineBanner from "@/components/ui/OfflineBanner";
 
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",
 });
+
+
+export const viewport: Viewport = {
+  themeColor: "#8b5cf6",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
 
 export const metadata: Metadata = {
   title:
@@ -31,8 +41,8 @@ export const metadata: Metadata = {
     title:
       "Rhockstar Connect | Network, Grow, Connect",
 
-    description:
-      "The premier hybrid professional networking and dating platform. Built for professionals to excel.",
+  description:
+    "The premier hybrid professional networking and dating platform. Built for professionals to excel.",
 
     url: "https://rhockstarconnect.netlify.app",
 
@@ -40,9 +50,10 @@ export const metadata: Metadata = {
 
     images: [
       {
-        url: "/logo-dark.png",
-        width: 800,
-        height: 600,
+        url: "https://rhockstarconnect.com/og-image.jpg",
+        width: 1792,
+        height: 1024,
+        alt: "Rhockstar Connect Preview",
       },
     ],
 
@@ -66,9 +77,11 @@ export default function RootLayout({
           {children}
 
           <ToastProvider />
+          <OfflineBanner />
 
           <AIAssistantWidget />
         </AuthProvider>
+        <AnalyticsProvider />
       </body>
     </html>
   );

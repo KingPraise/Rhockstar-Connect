@@ -7,9 +7,11 @@ import { Mail, Lock, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
 import { loginUser } from "@/lib/auth";
 import Image from "next/image";
 import ResetPasswordModal from "@/components/auth/ResetPasswordModal";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { profile } = useAuthStore();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -19,12 +21,16 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
+    if (profile) {
+      router.push("/feed");
+      return;
+    }
     const savedEmail = localStorage.getItem("rhockstar_remembered_email");
     if (savedEmail) {
       setEmail(savedEmail);
       setRememberMe(true);
     }
-  }, []);
+  }, [profile, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

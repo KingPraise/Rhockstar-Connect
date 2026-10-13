@@ -1,9 +1,12 @@
 "use client";
 
-import { BookOpen, GraduationCap, FileText, Target, PlayCircle, ExternalLink } from "lucide-react";
+import { BookOpen, GraduationCap, FileText, Target, PlayCircle, ExternalLink, Sparkles, Crown } from "lucide-react";
 import Link from "next/link";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function CareerHubPage() {
+  const { profile } = useAuthStore();
+  const isPro = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
   const categories = [
     {
       title: "CV Writing",
@@ -62,7 +65,7 @@ export default function CareerHubPage() {
       </div>
 
       {/* Featured Video */}
-      <div className="neo-card p-6 bg-slate-900/40 rounded-3xl border border-white/5 group cursor-pointer hover:border-brand/30 transition-all">
+      <div onClick={(e) => { e.preventDefault(); import("react-hot-toast").then(m => m.toast.success("Opening Masterclass...")); }} className="neo-card p-6 bg-slate-900/40 rounded-3xl border border-white/5 group cursor-pointer hover:border-brand/30 transition-all">
         <div className="aspect-video w-full bg-slate-800 rounded-2xl relative overflow-hidden flex items-center justify-center border border-white/5 shadow-inner mb-4">
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent z-0" />
           <PlayCircle className="w-16 h-16 text-white/50 group-hover:text-brand group-hover:scale-110 transition-all z-10 relative" />
@@ -91,17 +94,6 @@ export default function CareerHubPage() {
             </ul>
           </div>
         ))}
-      </div>
-
-      {/* Pro Upsell */}
-      <div className="mt-12 bg-gradient-to-r from-brand/10 to-brand-purple/10 border border-brand/20 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div>
-          <h3 className="text-xl font-bold text-white mb-2">Want personalized career advice?</h3>
-          <p className="text-slate-400">Upgrade to Pro to unlock AI Resume Reviews and Interview Prep tailored just for you.</p>
-        </div>
-        <Link href="/premium" className="shrink-0 px-8 py-3 bg-brand text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(56,189,248,0.3)]">
-          Upgrade to Pro
-        </Link>
       </div>
     </div>
   );

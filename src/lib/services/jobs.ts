@@ -1,6 +1,5 @@
 import { db } from "../firebase";
-import { collection, doc, getDoc, getDocs, setDoc, serverTimestamp, query, orderBy, limit } from "firebase/firestore";
-
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, serverTimestamp, query, orderBy, limit, where, increment } from "firebase/firestore";
 export interface JobListing {
   id: string;
   title: string;
@@ -12,6 +11,7 @@ export interface JobListing {
   description: string;
   postedAt: any;
   logo: string;
+  applicantsCount?: number;
 }
 
 // Keep mock jobs as a fallback/seed
@@ -91,7 +91,7 @@ export interface JobFilters {
   limitCount?: number;
 }
 
-export const createJob = async (jobData: Omit<JobListing, "id" | "postedAt" | "logo">, employerId: string) => {
+export const createJob = async (jobData: Omit<JobListing, "id" | "postedAt" | "logo"> & { customLogo?: string, customCompany?: string }, employerId: string) => {
   try {
     const jobsRef = collection(db, "jobs");
     const newJobRef = doc(jobsRef);
@@ -99,18 +99,21 @@ export const createJob = async (jobData: Omit<JobListing, "id" | "postedAt" | "l
     const employerDoc = await getDoc(doc(db, "users", employerId));
     const employerData = employerDoc.data();
     
-    let logo = employerData?.fullName?.substring(0, 1).toUpperCase() || "B";
-    if (employerData?.avatar) {
-      logo = employerData.avatar;
-    }
+    let logo = jobData.customLogo || employerData?.avatar || employerData?.fullName?.substring(0, 1).toUpperCase() || "B";
+    let companyName = jobData.customCompany || jobData.company || employerData?.fullName || "Company";
 
     const job: JobListing = {
       ...jobData,
+      company: companyName,
       id: newJobRef.id,
       companyId: employerId,
       postedAt: serverTimestamp(),
       logo
     };
+    
+    // Remove custom fields before saving
+    delete (job as any).customLogo;
+    delete (job as any).customCompany;
 
     await setDoc(newJobRef, job);
     return { success: true, job };
@@ -147,6 +150,8 @@ export const getJobs = async (filters?: JobFilters): Promise<{ success: boolean;
           postedAt: postedAtStr
         } as JobListing;
       });
+    } else {
+      fetchedJobs = [...MOCK_JOBS];
     }
     
     // Apply filters
@@ -170,6 +175,152 @@ export const getJobs = async (filters?: JobFilters): Promise<{ success: boolean;
     
     return { success: true, jobs: fetchedJobs };
   } catch {
-    return { success: false, error: "Failed to fetch jobs" };
+    return { success: true, jobs: MOCK_JOBS };
+  }
+};
+
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  jobTitle?: string;
+  company?: string;
+  logo?: string;
+  employerId?: string;
+  applicantId: string;
+  applicantName: string;
+  applicantAvatar?: string;
+  applicantTitle?: string;
+  resumeUrl?: string;
+  coverLetter?: string;
+  status: 'pending' | 'screening' | 'reviewed' | 'interviewing' | 'accepted' | 'hired' | 'rejected';
+  appliedAt: any;
+}
+
+export const applyForJob = async (job: JobListing, applicantId: string, applicationData: Partial<JobApplication>) => {
+  try {
+    const appsRef = collection(db, "job_applications");
+    const newAppRef = doc(appsRef);
+    
+    const applicantDoc = await getDoc(doc(db, "users", applicantId));
+    const applicantUser = applicantDoc.data();
+    
+    const app: JobApplication = {
+      id: newAppRef.id,
+      jobId: job.id,
+      jobTitle: job.title,
+      company: job.company,
+      logo: job.logo,
+      employerId: job.companyId,
+      applicantId,
+      applicantName: applicantUser?.fullName || 'Unknown',
+      applicantAvatar: applicantUser?.avatar || '',
+      applicantTitle: applicantUser?.jobTitle || '',
+      resumeUrl: applicantUser?.resumeUrl || applicationData.resumeUrl || '',
+      coverLetter: applicationData.coverLetter || '',
+      status: 'pending',
+      appliedAt: serverTimestamp(),
+    };
+    await setDoc(newAppRef, app);
+    
+    // Increment the applicantsCount on the job listing
+    const jobRef = doc(db, "jobs", job.id);
+    await updateDoc(jobRef, {
+      applicantsCount: increment(1)
+    });
+
+    return { success: true, application: app };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const getApplicationsForJob = async (jobId: string, employerId?: string): Promise<{ success: boolean; applications?: JobApplication[]; error?: string }> => {
+  try {
+    const appsRef = collection(db, "job_applications");
+    // Removed orderBy to prevent composite index requirement in Firestore
+    let q;
+    if (employerId) {
+      q = query(appsRef, where("jobId", "==", jobId), where("employerId", "==", employerId));
+    } else {
+      q = query(appsRef, where("jobId", "==", jobId));
+    }
+    const snapshot = await getDocs(q);
+    
+    const applications = snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id
+    } as JobApplication)).sort((a, b) => {
+      const timeA = a.appliedAt?.toMillis ? a.appliedAt.toMillis() : 0;
+      const timeB = b.appliedAt?.toMillis ? b.appliedAt.toMillis() : 0;
+      return timeB - timeA;
+    });
+    
+    return { success: true, applications };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const getUserApplications = async (applicantId: string): Promise<{ success: boolean; applications?: JobApplication[]; error?: string }> => {
+  try {
+    const appsRef = collection(db, "job_applications");
+    const q = query(appsRef, where("applicantId", "==", applicantId));
+    const snapshot = await getDocs(q);
+    
+    const applications = snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id
+    } as JobApplication));
+    
+    return { success: true, applications };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+export const updateApplicationStatus = async (applicationId: string, status: JobApplication['status']) => {
+  try {
+    const appRef = doc(db, "job_applications", applicationId);
+    
+    // Fetch current app to get applicantId for notification
+    const { getDoc } = await import('firebase/firestore');
+    const appSnap = await getDoc(appRef);
+    if (appSnap.exists()) {
+      const data = appSnap.data() as JobApplication;
+      
+      await updateDoc(appRef, { status });
+      
+      // Notify candidate
+      const { createNotification } = await import('./notifications');
+      await createNotification({
+        userId: data.applicantId,
+        type: 'job',
+        title: 'Application Update',
+        message: `Your application for ${data.jobTitle} has been updated to: ${status}.`,
+        link: '/jobs'
+      });
+      
+      return { success: true };
+    }
+    
+    return { success: false, error: "Application not found" };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+};
+
+
+export const getEmployerApplications = async (employerId: string): Promise<{ success: boolean; applications?: JobApplication[]; error?: string }> => {
+  try {
+    const appsRef = collection(db, "job_applications");
+    const q = query(appsRef, where("employerId", "==", employerId));
+    const snapshot = await getDocs(q);
+    const applications = snapshot.docs.map(doc => ({
+      ...doc.data(),
+      id: doc.id
+    } as JobApplication));
+    return { success: true, applications };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 };

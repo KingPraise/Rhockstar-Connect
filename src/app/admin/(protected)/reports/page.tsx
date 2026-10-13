@@ -118,7 +118,7 @@ export default function AdminReportsPage() {
           {filteredReports.map((report) => (
             <div 
               key={report.id}
-              className="p-5 rounded-2xl bg-slate-900/60 border border-amber-500/20 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4"
+              className="p-5 rounded-2xl bg-slate-900/60 border border-amber-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
               <div className="space-y-2 max-w-2xl">
                 <div className="flex items-center gap-2">

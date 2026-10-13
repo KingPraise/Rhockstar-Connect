@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { Loader2, Search, Building2, MapPin } from "lucide-react";
 import Link from "next/link";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export default function CompaniesPage() {
   const [companies, setCompanies] = useState<UserBasic[]>([]);
@@ -73,9 +74,7 @@ export default function CompaniesPage() {
             <div key={company.uid} className="neo-card p-6 rounded-3xl bg-slate-900/60 border border-white/5 flex flex-col group hover:-translate-y-1 transition-all duration-300">
               <Link href={`/company/${company.username}`} className="flex flex-col w-full block">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center shadow-lg border border-white/10 group-hover:border-blue-500/50 transition-all">
-                    <span className="text-2xl font-bold text-white">{company.avatar || company.fullName.substring(0, 1).toUpperCase()}</span>
-                  </div>
+                  <UserAvatar src={company.avatar} name={company.fullName} className="w-16 h-16 border border-white/10 group-hover:border-blue-500/50 transition-all" textClassName="text-2xl font-bold" />
                   {company.industry && (
                     <span className="text-xs font-bold px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full border border-blue-500/20">
                       {company.industry}

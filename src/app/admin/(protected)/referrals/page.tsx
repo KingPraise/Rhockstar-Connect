@@ -120,7 +120,7 @@ export default function AdminReferralsPage() {
 
       {/* KPI METRICS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="neo-card p-6 bg-slate-900/40 backdrop-blur-md border border-white/5 shadow-xl relative overflow-hidden">
+        <div className="neo-card p-6 bg-slate-900/95 border border-white/5 shadow-xl relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Referrals</span>
             <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
@@ -133,7 +133,7 @@ export default function AdminReferralsPage() {
           </p>
         </div>
 
-        <div className="neo-card p-6 bg-slate-900/40 backdrop-blur-md border border-white/5 shadow-xl relative overflow-hidden">
+        <div className="neo-card p-6 bg-slate-900/95 border border-white/5 shadow-xl relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Top Promoters</span>
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -144,7 +144,7 @@ export default function AdminReferralsPage() {
           <p className="text-xs text-amber-400 mt-2 font-medium">Active referral creators</p>
         </div>
 
-        <div className="neo-card p-6 bg-slate-900/40 backdrop-blur-md border border-white/5 shadow-xl relative overflow-hidden">
+        <div className="neo-card p-6 bg-slate-900/95 border border-white/5 shadow-xl relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Granted Free Days</span>
             <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
@@ -155,7 +155,7 @@ export default function AdminReferralsPage() {
           <p className="text-xs text-purple-400 mt-2 font-medium">Distributed across users</p>
         </div>
 
-        <div className="neo-card p-6 bg-slate-900/40 backdrop-blur-md border border-white/5 shadow-xl relative overflow-hidden">
+        <div className="neo-card p-6 bg-slate-900/95 border border-white/5 shadow-xl relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Top Influencer</span>
             <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
@@ -172,7 +172,7 @@ export default function AdminReferralsPage() {
       </div>
 
       {/* TOP REFERRERS LEADERBOARD */}
-      <div className="neo-card p-6 bg-slate-900/40 backdrop-blur-md border border-white/5 shadow-2xl">
+      <div className="neo-card p-6 bg-slate-900/95 border border-white/5 shadow-2xl">
         <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
           <Trophy className="w-5 h-5 text-amber-400" />
           Top Referrers Leaderboard
@@ -225,7 +225,7 @@ export default function AdminReferralsPage() {
       </div>
 
       {/* RECENT REFERRAL LOGS */}
-      <div className="neo-card p-6 bg-slate-900/40 backdrop-blur-md border border-white/5 shadow-2xl">
+      <div className="neo-card p-6 bg-slate-900/95 border border-white/5 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Calendar className="w-5 h-5 text-rose-400" />

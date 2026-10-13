@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { getJobs, JobListing, JobFilters } from "@/lib/services/jobs";
-import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2, Filter } from "lucide-react";
+import { getJobs, JobListing, JobFilters, applyForJob } from "@/lib/services/jobs";
+import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2, Filter, Sparkles } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { calculateJobMatchScore } from "@/lib/utils/jobMatch";
 import { useAuthStore } from "@/store/useAuthStore";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import ApplicationTracker from "@/components/jobs/ApplicationTracker";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import toast from "react-hot-toast";
 
 export default function JobsPage() {
   const { profile } = useAuthStore();
@@ -23,6 +26,8 @@ export default function JobsPage() {
   const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [isApplying, setIsApplying] = useState<string | null>(null);
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
+  const [applyModalJob, setApplyModalJob] = useState<JobListing | null>(null);
+  const [coverLetter, setCoverLetter] = useState("");
 
   const [limitCount, setLimitCount] = useState(10);
   const [hasMore, setHasMore] = useState(true);
@@ -41,6 +46,9 @@ export default function JobsPage() {
     
     if (node) observer.current.observe(node);
   }, [loading, hasMore]);
+
+  const searchParams = useSearchParams();
+  const targetJobId = searchParams?.get("jobId");
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -69,8 +77,23 @@ export default function JobsPage() {
     }, 500);
 
     return () => clearTimeout(timer);
-    return () => clearTimeout(timer);
   }, [searchQuery, activeFilter, limitCount]);
+
+  useEffect(() => {
+    if (targetJobId && jobs.length > 0) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`job-${targetJobId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-purple-500', 'shadow-[0_0_35px_rgba(168,85,247,0.5)]', 'scale-[1.01]');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-purple-500', 'shadow-[0_0_35px_rgba(168,85,247,0.5)]', 'scale-[1.01]');
+          }, 4000);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [targetJobId, jobs]);
 
   const handleRefresh = async () => {
     setLimitCount(10);
@@ -78,7 +101,7 @@ export default function JobsPage() {
     await new Promise(resolve => setTimeout(resolve, 800));
   };
 
-  const handleApply = async (jobId: string, isFeatured?: boolean) => {
+  const handleApply = async (job: JobListing, isFeatured?: boolean) => {
     const isFree = !profile?.subscriptionTier || profile.subscriptionTier === 'free';
     
     if (isFree && (appliedJobIds.size >= 2 || isFeatured)) {
@@ -86,14 +109,27 @@ export default function JobsPage() {
       return;
     }
 
-    setIsApplying(jobId);
-    // Simulate application process
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setAppliedJobIds(prev => {
-      const newSet = new Set(prev);
-      newSet.add(jobId);
-      return newSet;
-    });
+    setApplyModalJob(job);
+  };
+
+  const submitApplication = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profile || !applyModalJob) return;
+
+    setIsApplying(applyModalJob.id);
+    const res = await applyForJob(applyModalJob, profile.uid, { coverLetter });
+    
+    if (res.success) {
+      setAppliedJobIds(prev => {
+        const newSet = new Set(prev);
+        newSet.add(applyModalJob.id);
+        return newSet;
+      });
+      setApplyModalJob(null);
+      setCoverLetter("");
+    } else {
+      // Could show error toast here
+    }
     setIsApplying(null);
   };
 
@@ -106,11 +142,35 @@ export default function JobsPage() {
     return jobs.filter(job => job.title.includes('Senior') || job.title.includes('Lead'));
   }, [jobs]);
 
-  const displayedJobs = activeTab === 'recommended' ? recommendedJobsList : jobs;
+  const displayedJobs = useMemo(() => {
+    let list = activeTab === 'recommended' ? recommendedJobsList : jobs;
+    
+    // Apply search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(job => 
+        job.title.toLowerCase().includes(q) || 
+        job.company.toLowerCase().includes(q) ||
+        (job.location && typeof job.location === 'string' && job.location.toLowerCase().includes(q))
+      );
+    }
+    
+    // Apply active filter (All, Remote, Full-time, etc.)
+    if (activeFilter !== 'All') {
+      list = list.filter(job => {
+        if (activeFilter === 'Remote') {
+          return job.type?.toLowerCase() === 'remote' || (typeof job.location === 'string' && job.location.toLowerCase().includes('remote'));
+        }
+        return job.type?.toLowerCase() === activeFilter?.toLowerCase();
+      });
+    }
+    
+    return list;
+  }, [jobs, activeTab, recommendedJobsList, searchQuery, activeFilter]);
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-8 space-y-8">
+      <div className="flex-1 max-w-[1600px] mx-auto w-full p-4 lg:p-8 space-y-8">
         
         {/* HEADER & SEARCH */}
         <div className="neo-card p-6 rounded-3xl flex flex-col gap-6 bg-slate-900/60 backdrop-blur-xl border border-white/5">
@@ -186,12 +246,12 @@ export default function JobsPage() {
 
         {/* CONTENT AREA */}
         {activeTab === 'applications' ? (
-          <ApplicationTracker appliedJobs={appliedJobsList} />
+          <ApplicationTracker />
         ) : (
           <>
             {loading && jobs.length === 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {[1, 2, 3, 4].map(i => (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map(i => (
                   <div key={i} className="neo-card p-6 rounded-3xl bg-slate-900/60 flex flex-col">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-4">
@@ -220,7 +280,7 @@ export default function JobsPage() {
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {displayedJobs.length > 0 ? (
                   <>
                     {displayedJobs.map((job, index) => {
@@ -228,63 +288,83 @@ export default function JobsPage() {
                       return (
                         <div 
                           key={job.id} 
+                          id={`job-${job.id}`}
                           ref={isLastElement ? lastJobElementRef : null}
-                          className="neo-card p-6 rounded-3xl bg-slate-900/60 border border-white/5 flex flex-col group hover:border-brand/30 transition-all duration-300"
+                          className="neo-card p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-white/5 flex flex-col group hover:border-purple-500/30 transition-all duration-300 shadow-xl"
                         >
-                    
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center border border-white/5 shadow-inner group-hover:scale-105 transition-transform">
-                          <span className="text-2xl font-bold text-white">{job.logo}</span>
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-bold text-white group-hover:text-brand transition-colors">{job.title}</h3>
-                          <p className="text-brand-purple font-medium flex items-center gap-1">
-                            <Building2 className="w-4 h-4" /> {job.company}
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-12 h-12 rounded-xl bg-slate-800/80 flex items-center justify-center border border-white/10 shadow-inner group-hover:scale-105 transition-transform overflow-hidden shrink-0">
+                                {job.logo?.startsWith('http') ? (
+                                  <img src={job.logo} alt={job.company} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span className="text-base font-bold text-white">{job.logo?.substring(0, 2).toUpperCase() || 'J'}</span>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <h3 className="text-[15px] leading-tight mb-1 font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-2">{job.title}</h3>
+                                <p className="text-xs font-semibold text-purple-400 flex items-start gap-1">
+                                  <Building2 className="w-3.5 h-3.5 shrink-0 mt-0.5" /> <span className="line-clamp-2 leading-tight">{job.company}</span>
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col gap-1.5 items-end shrink-0">
+                              <div className="px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold text-slate-300">
+                                {job.type}
+                              </div>
+                              {(() => {
+                                const matchScore = calculateJobMatchScore(job, profile?.skills);
+                                const matchColor = matchScore >= 80 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 
+                                                  matchScore >= 60 ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 
+                                                  'text-slate-400 bg-slate-500/10 border-slate-500/20';
+                                return (
+                                  <div className={`px-2 py-0.5 rounded-full border text-[10px] font-bold flex items-center gap-1 ${matchColor}`}>
+                                    <Sparkles className="w-3 h-3" /> {matchScore}% Match
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 text-xs text-slate-400 mb-3 font-medium">
+                            <div className="flex items-center gap-1 bg-slate-800/60 px-2.5 py-1 rounded-lg border border-white/5">
+                              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" /> <span>{job.location}</span>
+                            </div>
+                            <div className="flex items-center gap-1 bg-emerald-950/30 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                              <DollarSign className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> <span className="text-emerald-400 font-bold">{job.salary}</span>
+                            </div>
+                            <div className="flex items-center gap-1 bg-slate-800/60 px-2.5 py-1 rounded-lg border border-white/5">
+                              <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" /> <span>{job.postedAt}</span>
+                            </div>
+                          </div>
+
+                          <p className="text-xs text-slate-300 mb-4 line-clamp-2 leading-relaxed flex-1">
+                            {job.description}
                           </p>
-                        </div>
-                      </div>
-                      
-                      <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
-                        {job.type}
-                      </div>
-                    </div>
 
-                    <div className="flex flex-wrap gap-4 text-sm text-slate-400 mb-6 font-medium">
-                      <div className="flex items-center gap-1.5 bg-slate-800/50 px-3 py-1.5 rounded-lg">
-                        <MapPin className="w-4 h-4 text-slate-500" /> {job.location}
-                      </div>
-                      <div className="flex items-center gap-1.5 bg-slate-800/50 px-3 py-1.5 rounded-lg">
-                        <DollarSign className="w-4 h-4 text-emerald-500" /> <span className="text-emerald-400">{job.salary}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 bg-slate-800/50 px-3 py-1.5 rounded-lg">
-                        <Clock className="w-4 h-4 text-slate-500" /> {job.postedAt}
-                      </div>
-                    </div>
-
-                    <p className="text-slate-300 mb-6 line-clamp-2 leading-relaxed flex-1">
-                      {job.description}
-                    </p>
-
-                    <div className="mt-auto pt-4 border-t border-white/5 flex gap-4">
-                      {appliedJobIds.has(job.id) ? (
-                        <button disabled className="flex-1 py-3 rounded-xl bg-emerald-500/10 text-emerald-500 font-bold flex items-center justify-center gap-2 border border-emerald-500/20">
-                          <CheckCircle2 className="w-5 h-5" /> Applied
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => handleApply(job.id)}
-                          disabled={isApplying === job.id}
-                          className="flex-1 py-3 rounded-xl bg-brand/10 text-brand font-bold hover:bg-brand hover:text-white transition-all flex items-center justify-center gap-2 border border-brand/20 hover:border-transparent disabled:opacity-50"
-                        >
-                          {isApplying === job.id ? <Loader2 className="w-5 h-5 animate-spin" /> : "Easy Apply"}
-                        </button>
-                      )}
-                      
-                      <button className="px-4 py-3 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors border border-white/5">
-                        <ExternalLink className="w-5 h-5" />
-                      </button>
-                    </div>
+                          <div className="mt-auto pt-3 border-t border-white/5 flex gap-2.5">
+                            {appliedJobIds.has(job.id) ? (
+                              <button disabled className="flex-1 py-2 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-500/30">
+                                <CheckCircle2 className="w-4 h-4" /> Applied
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleApply(job)}
+                                disabled={isApplying === job.id}
+                                className="flex-1 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-purple-600/20 disabled:opacity-50"
+                              >
+                                {isApplying === job.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Easy Apply"}
+                              </button>
+                            )}
+                            
+                            <button 
+                              onClick={() => setApplyModalJob(job)}
+                              className="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors border border-white/5 text-xs font-semibold"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -319,7 +399,57 @@ export default function JobsPage() {
           title="Unlock Unlimited Job Applications"
           description="Free tier members are limited to 2 job applications per session. Upgrade to Pro or Elite for unlimited job applications and priority routing!"
         />
+
+        {/* Apply Modal */}
+        {applyModalJob && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-[#1C1C1E] rounded-2xl max-w-lg w-full border border-gray-800 shadow-2xl overflow-hidden">
+              <div className="p-6 border-b border-gray-800 flex justify-between items-start">
+                <div>
+                  <h2 className="text-xl font-bold text-white mb-1">Apply for {applyModalJob.title}</h2>
+                  <p className="text-gray-400 text-sm">at {applyModalJob.company}</p>
+                </div>
+                <button onClick={() => setApplyModalJob(null)} className="text-gray-500 hover:text-white">
+                  ×
+                </button>
+              </div>
+              <form onSubmit={submitApplication} className="p-0 overflow-y-auto max-h-[70vh]"><div className="p-6 space-y-4"><div><h3 className="text-sm font-semibold text-white mb-2 uppercase tracking-wider">Job Details</h3><div className="bg-[#2C2C2E]/50 p-4 rounded-xl border border-gray-700/50 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto custom-scrollbar">{applyModalJob.description}</div></div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Cover Letter (Optional)</label>
+                  <textarea
+                    value={coverLetter}
+                    onChange={(e) => setCoverLetter(e.target.value)}
+                    placeholder="Tell the employer why you're a great fit..."
+                    rows={4}
+                    className="w-full px-4 py-3 bg-[#2C2C2E] border border-gray-700 rounded-xl text-white focus:outline-none focus:border-brand resize-none"
+                  ></textarea>
+                </div>
+                <div className="bg-gray-800/50 p-4 rounded-xl flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-brand shrink-0 mt-0.5" />
+                  <p className="text-sm text-gray-300">
+                    Your Rhockstar Connect profile and uploaded resume will be automatically attached to this application.
+                  </p>
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                  <button type="button" onClick={() => setApplyModalJob(null)} className="px-5 py-2 text-gray-400 hover:text-white font-medium transition-colors">
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isApplying === applyModalJob.id}
+                    className="px-6 py-2 bg-brand text-white font-bold rounded-xl hover:bg-brand/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isApplying === applyModalJob.id ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Application"}
+                  </button>
+                </div>
+              </div></form>
+            </div>
+          </div>
+        )}
       </div>
     </PullToRefresh>
   );
 }
+
+
+

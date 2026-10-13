@@ -16,6 +16,24 @@ export default function CompanyPage() {
   const [company, setCompany] = useState<UserBasic | null>(null);
   const [loading, setLoading] = useState(true);
   const [jobs, setJobs] = useState<any[]>([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const handleFollow = async () => {
+    if (!loggedInProfile || !company) return;
+    try {
+      const { followUser, unfollowUser } = await import('@/lib/services/follows');
+      if (isFollowing) {
+        await unfollowUser(loggedInProfile.uid, company.uid);
+        setIsFollowing(false);
+        import('react-hot-toast').then(({ toast }) => toast.success(`Unfollowed ${company.fullName}`));
+      } else {
+        await followUser(loggedInProfile.uid, company.uid);
+        setIsFollowing(true);
+        import('react-hot-toast').then(({ toast }) => toast.success(`Following ${company.fullName}`));
+      }
+    } catch (err) {
+      import('react-hot-toast').then(({ toast }) => toast.error("Action failed"));
+    }
+  };
 
   useEffect(() => {
     const fetchCompanyAndJobs = async () => {
@@ -24,12 +42,10 @@ export default function CompanyPage() {
       if (res.success && res.user && res.user.accountType === 'employer') {
         setCompany(res.user);
         
-        // Fetch jobs posted by this company (mock for now)
-        const jobsRes = await getJobs();
-        if (jobsRes.success) {
-          // In a real scenario, we would filter by jobsRes.jobs.filter(j => j.companyId === res.user.uid)
-          // For now, we'll just show a couple of mock jobs
-          setJobs(jobsRes.jobs?.slice(0, 3) || []);
+        // Fetch real jobs posted by this company
+        const jobsRes = await getJobs({ companyId: res.user.uid });
+        if (jobsRes.success && jobsRes.jobs) {
+          setJobs(jobsRes.jobs);
         }
       }
       setLoading(false);
@@ -108,8 +124,8 @@ export default function CompanyPage() {
                 Edit Company Profile
               </Link>
             ) : (
-              <button className="py-2.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-500/20">
-                Follow Company
+              <button onClick={handleFollow} className="py-2.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm flex items-center gap-2 transition-all shadow-lg hover:shadow-blue-500/20">
+                {isFollowing ? 'Following' : 'Follow Company'}
               </button>
             )}
           </div>

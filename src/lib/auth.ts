@@ -12,6 +12,16 @@ import { auth, db } from "./firebase";
 
 import { recordReferral } from "./services/referrals";
 
+const RESERVED_USERNAMES = [
+  'admin', 'administrator', 'support', 'help', 'team', 'official', 'verified', 'verify', 
+  'security', 'system', 'moderator', 'mod', 'staff', 'founder', 'ceo', 'owner', 'developer', 
+  'dev', 'news', 'updates', 'blog', 'careers', 'jobs', 'ads', 'advertise', 'business', 
+  'press', 'media', 'privacy', 'legal', 'terms', 'community', 'events', 'feedback', 
+  'report', 'appeal', 'notifications', 'api', 'bot', 'ai', 'assistant', 'store', 'market', 
+  'payments', 'wallet', 'rhockstarconnect', 'rhockstarnation', 
+  'rhockstar_support', 'rhockstar_help', 'rhockstar_official', 'connectsupport', 'connectadmin'
+];
+
 export const registerUser = async (
   email: string, 
   password: string, 
@@ -21,6 +31,11 @@ export const registerUser = async (
   accountType: 'standard' | 'employer' = 'standard'
 ) => {
   try {
+    const cleanUsername = username.toLowerCase().replace('@', '');
+    if (RESERVED_USERNAMES.includes(cleanUsername)) {
+      return { user: null, error: "This username is reserved and cannot be used." };
+    }
+
     // 1. Create user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
@@ -105,6 +120,14 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
     try {
       const userCredential = await signInWithEmailAndPassword(auth, emailToUse, password);
       
+      // Check if banned
+      const userDocRef = doc(db, "users", userCredential.user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists() && userDocSnap.data().isBanned) {
+        await signOut(auth);
+        return { user: null, error: "Your account has been banned due to policy violations." };
+      }
+
       const updateData: any = { lastLogin: serverTimestamp() };
       if (emailToUse.toLowerCase() === "elijah@rhockstarconnect.com") {
         updateData.role = "admin";
@@ -115,38 +138,6 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
 
       return { user: userCredential.user, error: null };
     } catch (authErr: any) {
-      // Check if user recently reset password directly in Firestore
-      const usersRef = collection(db, "users");
-      let q = query(usersRef, where("email", "==", emailToUse.toLowerCase()));
-      let snapshot = await getDocs(q);
-
-      if (snapshot.empty) {
-        q = query(usersRef, where("username", "==", inputClean.toLowerCase().replace('@', '')));
-        snapshot = await getDocs(q);
-      }
-
-      if (!snapshot.empty) {
-        const userDoc = snapshot.docs[0];
-        const userData = userDoc.data();
-
-        if (userData.updatedPasswordHint && userData.updatedPasswordHint === password) {
-          const fakeUser: any = {
-            uid: userDoc.id,
-            email: userData.email,
-            displayName: userData.fullName
-          };
-
-          const updateData: any = { lastLogin: serverTimestamp() };
-          if (userData.email?.toLowerCase() === "elijah@rhockstarconnect.com") {
-            updateData.role = "admin";
-          }
-          await setDoc(doc(db, "users", userDoc.id), updateData, { merge: true });
-          await syncAuthStore(userDoc.id, fakeUser);
-
-          return { user: fakeUser, error: null };
-        }
-      }
-
       throw authErr;
     }
   } catch (error: unknown) {
@@ -154,35 +145,6 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
   }
 };
 
-export const resetPasswordDirect = async (identifier: string, newPassword: string) => {
-  try {
-    const cleanId = identifier.trim().toLowerCase().replace('@', '');
-    const usersRef = collection(db, "users");
-    
-    // Search by username or email
-    let q = query(usersRef, where("username", "==", cleanId));
-    let snapshot = await getDocs(q);
-    
-    if (snapshot.empty) {
-      q = query(usersRef, where("email", "==", identifier.trim().toLowerCase()));
-      snapshot = await getDocs(q);
-    }
-    
-    if (snapshot.empty) {
-      return { success: false, error: "No account found matching that email or username." };
-    }
-    
-    const userDoc = snapshot.docs[0];
-    await updateDoc(doc(db, "users", userDoc.id), {
-      passwordUpdated: serverTimestamp(),
-      updatedPasswordHint: newPassword
-    });
-
-    return { success: true, email: userDoc.data().email };
-  } catch (error: unknown) {
-    return { success: false, error: (error as Error).message };
-  }
-};
 
 export const logoutUser = async () => {
   try {

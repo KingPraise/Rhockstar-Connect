@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import PremiumLockModal from "@/components/ui/PremiumLockModal";
 import { useLightboxStore } from "@/store/useLightboxStore";
 import { Skeleton } from "@/components/ui/Skeleton";
+import UserAvatar from "@/components/ui/UserAvatar";
 import toast from "react-hot-toast";
 
 export default function DatingPage() {
@@ -111,6 +112,20 @@ export default function DatingPage() {
     }
   };
 
+  const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
+
+  const handleSeeWhoLikedYouClick = () => {
+    if (isPremium) {
+      setViewMode('grid');
+      toast.success("Premium Dating Unlocked! Viewing all matching profiles.", {
+        icon: "👑",
+        style: { background: '#1e293b', color: '#fff' }
+      });
+    } else {
+      openLock("See Who Liked Your Profile", "Upgrade to Premium or Elite to see who already liked your profile and match with them instantly!");
+    }
+  };
+
   const currentProspect = prospects.length > 0 ? prospects[0] : null;
 
   if (loading || !profile) {
@@ -176,47 +191,64 @@ export default function DatingPage() {
         </div>
       </div>
 
-      {/* WHO LIKED YOU - PREMIUM LOCKED BANNER */}
+      {/* WHO LIKED YOU - BANNER */}
       <div 
-        onClick={() => openLock("See Who Liked Your Profile", "Upgrade to Premium or Elite to see who already liked your profile and match with them instantly!")}
-        className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-brand-purple/10 border border-amber-500/30 backdrop-blur-md flex items-center justify-between cursor-pointer hover:border-amber-500/60 transition-all group"
+        onClick={handleSeeWhoLikedYouClick}
+        className={`mb-8 p-4 rounded-2xl bg-gradient-to-r ${
+          isPremium 
+            ? 'from-emerald-500/10 via-brand/10 to-brand-purple/10 border-emerald-500/30 hover:border-emerald-500/60' 
+            : 'from-amber-500/10 via-rose-500/10 to-brand-purple/10 border-amber-500/30 hover:border-amber-500/60'
+        } border backdrop-blur-md flex items-center justify-between cursor-pointer transition-all group`}
       >
         <div className="flex items-center gap-3">
           <div className="relative flex -space-x-3">
-            <div className="w-10 h-10 rounded-full bg-slate-800 border-2 border-amber-500/50 flex items-center justify-center font-extrabold text-amber-400 text-xs blur-[2px]">
-              ?
+            <div className={`w-10 h-10 rounded-full bg-slate-800 border-2 ${isPremium ? 'border-emerald-400' : 'border-amber-500/50'} flex items-center justify-center font-extrabold ${isPremium ? 'text-emerald-400' : 'text-amber-400 text-xs blur-[2px]'}`}>
+              {isPremium ? '★' : '?'}
             </div>
-            <div className="w-10 h-10 rounded-full bg-slate-800 border-2 border-rose-500/50 flex items-center justify-center font-extrabold text-rose-400 text-xs blur-[2px]">
-              ?
+            <div className={`w-10 h-10 rounded-full bg-slate-800 border-2 ${isPremium ? 'border-brand' : 'border-rose-500/50'} flex items-center justify-center font-extrabold ${isPremium ? 'text-brand' : 'text-rose-400 text-xs blur-[2px]'}`}>
+              {isPremium ? '💖' : '?'}
             </div>
-            <div className="w-10 h-10 rounded-full bg-amber-500/20 border-2 border-amber-400 flex items-center justify-center text-amber-400 font-bold">
-              <Lock className="w-4 h-4" />
+            <div className={`w-10 h-10 rounded-full ${isPremium ? 'bg-emerald-500/20 border-2 border-emerald-400 text-emerald-400' : 'bg-amber-500/20 border-2 border-amber-400 text-amber-400'} flex items-center justify-center font-bold`}>
+              {isPremium ? <Sparkles className="w-4 h-4 text-emerald-400" /> : <Lock className="w-4 h-4" />}
             </div>
           </div>
           <div>
             <h3 className="font-extrabold text-white text-sm flex items-center gap-1.5">
               <span>See Who Liked You</span>
-              <Crown className="w-3.5 h-3.5 text-amber-400" />
+              <Crown className={`w-3.5 h-3.5 ${isPremium ? 'text-emerald-400' : 'text-amber-400'}`} />
             </h3>
-            <p className="text-xs text-slate-400">2 people already liked your dating profile today</p>
+            <p className="text-xs text-slate-400">
+              {isPremium 
+                ? "You have full Premium & Elite Dating Access unlocked!" 
+                : "2 people already liked your dating profile today"}
+            </p>
           </div>
         </div>
 
-        <button className="px-3.5 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs group-hover:scale-105 transition-transform flex items-center gap-1">
-          <Eye className="w-3.5 h-3.5" /> Unlock Now
+        <button className={`px-3.5 py-1.5 rounded-xl ${isPremium ? 'bg-emerald-500 text-slate-950 font-black' : 'bg-amber-500 text-slate-950 font-black'} text-xs group-hover:scale-105 transition-transform flex items-center gap-1`}>
+          <Eye className="w-3.5 h-3.5" /> {isPremium ? "View Matches" : "Unlock Now"}
         </button>
       </div>
 
       {/* CONTENT AREA */}
-      {prospects.length === 0 ? (
+      {!profile?.datingActive ? (
+          <div className="neo-card w-full max-w-md mx-auto min-h-[400px] p-10 flex flex-col items-center justify-center text-center bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-[3rem]">
+            <Heart className="w-16 h-16 text-rose-500 mb-6 opacity-80" />
+            <h2 className="text-2xl font-bold text-white mb-2">Activate Dating</h2>
+            <p className="text-slate-400 mb-6">Set up your dating profile to start finding matches in your professional network!</p>
+            <button onClick={() => router.push('/dating/profile')} className="px-6 py-3 bg-gradient-to-r from-rose-500 to-rose-600 text-white font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
+              Set Up Profile
+            </button>
+          </div>
+        ) : prospects.length === 0 ? (
         <div className="neo-card w-full max-w-md mx-auto min-h-[400px] p-10 flex flex-col items-center justify-center text-center bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-[3rem]">
           <Sparkles className="w-16 h-16 text-brand-purple mb-6 opacity-50" />
           <h2 className="text-2xl font-bold text-white mb-2">You&apos;re all caught up!</h2>
-          <p className="text-slate-400">Check back later for new potential matches in your professional network.</p>
+          <p className="text-slate-400">There are currently no other users active in dating, or you've already interacted with everyone. Share the app to get more people on board!</p>
         </div>
       ) : viewMode === 'swipe' ? (
         /* SWIPE STACK */
-        <div className="relative w-full max-w-md mx-auto h-[650px] flex items-center justify-center">
+        <div className="relative w-full max-w-md mx-auto h-[500px] sm:h-[600px] flex items-center justify-center">
           <div className="relative w-full h-full">
             {/* NEXT CARD (Background) */}
             {prospects.length > 1 && (
@@ -249,13 +281,7 @@ export default function DatingPage() {
                       />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-brand-purple to-brand flex items-center justify-center shadow-[0_0_50px_rgba(168,85,247,0.3)] overflow-hidden">
-                          {currentProspect.avatar?.startsWith('http') || currentProspect.avatar?.startsWith('/') ? (
-                            <img src={currentProspect.avatar} alt={currentProspect.fullName} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="text-5xl font-extrabold text-white">{currentProspect.avatar}</span>
-                          )}
-                        </div>
+                        <UserAvatar src={currentProspect.avatar} name={currentProspect.fullName} className="w-32 h-32" textClassName="text-5xl font-extrabold" />
                       </div>
                     )}
                     
@@ -328,7 +354,7 @@ export default function DatingPage() {
                     )}
 
                     {currentProspect.datingPrompts && currentProspect.datingPrompts.length > 0 && (
-                      <div className="flex flex-col gap-4">
+                      <div className="grid grid-cols-2 gap-3">
                         {currentProspect.datingPrompts.map((p, i) => (
                           <div key={i} className="p-4 rounded-2xl bg-slate-800/50 border border-white/5">
                             <p className="text-sm font-bold text-brand-purple mb-1">{p.prompt}</p>
@@ -340,9 +366,9 @@ export default function DatingPage() {
 
                     {/* Additional Photos */}
                     {currentProspect.datingPhotos && currentProspect.datingPhotos.length > 1 && (
-                      <div className="flex flex-col gap-4">
+                      <div className="grid grid-cols-2 gap-3">
                          {currentProspect.datingPhotos.slice(1).map((photoUrl, i) => (
-                           <div key={i} className="w-full aspect-square rounded-3xl overflow-hidden border border-white/5">
+                           <div key={i} className="w-full aspect-square rounded-2xl overflow-hidden border border-white/5 shadow-md">
                              <img 
                                src={photoUrl} 
                                alt={`Dating Photo ${i+2}`} 
@@ -382,7 +408,7 @@ export default function DatingPage() {
         </div>
       ) : (
         /* GRID VIEW */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in zoom-in-95 duration-300">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 animate-in fade-in zoom-in-95 duration-300">
           {prospects.map((prospect) => (
             <div key={prospect.uid} className="neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden flex flex-col group hover:border-brand-purple/30 transition-all duration-300">
               <div className="w-full aspect-[4/5] bg-slate-800 relative overflow-hidden">
@@ -395,7 +421,7 @@ export default function DatingPage() {
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                    <span className="text-4xl font-extrabold text-white opacity-50">{prospect.avatar}</span>
+                    <UserAvatar src={prospect.avatar} name={prospect.fullName} className="w-24 h-24 opacity-80" textClassName="text-4xl font-extrabold" />
                   </div>
                 )}
                 
@@ -500,3 +526,9 @@ export default function DatingPage() {
     </div>
   );
 }
+
+
+
+
+
+

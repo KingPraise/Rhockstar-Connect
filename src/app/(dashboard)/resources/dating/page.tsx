@@ -1,9 +1,12 @@
 "use client";
 
-import { Heart, ShieldCheck, Sparkles, MessageCircle, PlayCircle, ExternalLink } from "lucide-react";
+import { Heart, ShieldCheck, Sparkles, MessageCircle, PlayCircle, ExternalLink, Crown } from "lucide-react";
 import Link from "next/link";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function DatingHubPage() {
+  const { profile } = useAuthStore();
+  const isPro = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
   const categories = [
     {
       title: "Dating Tips",
@@ -91,17 +94,6 @@ export default function DatingHubPage() {
             </ul>
           </div>
         ))}
-      </div>
-
-      {/* Pro Upsell */}
-      <div className="mt-12 bg-gradient-to-r from-rose-500/10 to-purple-500/10 border border-rose-500/20 rounded-3xl p-8 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div>
-          <h3 className="text-xl font-bold text-white mb-2">Want to boost your dating profile?</h3>
-          <p className="text-slate-400">Upgrade to Premium for AI Match Recommendations and Profile Optimization.</p>
-        </div>
-        <Link href="/premium" className="shrink-0 px-8 py-3 bg-rose-500 text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(244,63,94,0.3)]">
-          Upgrade to Premium
-        </Link>
       </div>
     </div>
   );

@@ -4,28 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Briefcase, ChevronDown, Search, ArrowRight, UserPlus, GripVertical, CheckCircle2, PhoneCall, Loader2 } from "lucide-react";
-import { getJobs, JobListing } from "@/lib/services/jobs";
-
-// Mock ATS Data
-type CandidateStatus = "applied" | "interviewing" | "hired";
-
-interface Candidate {
-  id: string;
-  name: string;
-  role: string;
-  status: CandidateStatus;
-  avatar: string;
-  matchScore: number;
-  appliedDate: string;
-}
-
-const MOCK_CANDIDATES: Candidate[] = [
-  { id: "c1", name: "Alex Chen", role: "Senior Frontend Engineer", status: "applied", avatar: "A", matchScore: 92, appliedDate: "2 days ago" },
-  { id: "c2", name: "Sarah Jenkins", role: "Senior Frontend Engineer", status: "applied", avatar: "S", matchScore: 85, appliedDate: "3 days ago" },
-  { id: "c3", name: "Michael Ross", role: "Senior Frontend Engineer", status: "interviewing", avatar: "M", matchScore: 98, appliedDate: "1 week ago" },
-  { id: "c4", name: "Emma Wilson", role: "Product Designer", status: "applied", avatar: "E", matchScore: 78, appliedDate: "Yesterday" },
-  { id: "c5", name: "James Carter", role: "Senior Frontend Engineer", status: "hired", avatar: "J", matchScore: 95, appliedDate: "3 weeks ago" },
-];
+import { getJobs, JobListing, getEmployerApplications, JobApplication, updateApplicationStatus } from "@/lib/services/jobs";
+import toast from "react-hot-toast";
+import { formatDistanceToNow } from "date-fns";
 
 export default function ATSDashboard() {
   const params = useParams();
@@ -33,165 +14,185 @@ export default function ATSDashboard() {
   const username = params.username as string;
   const { profile } = useAuthStore();
   
+  const [candidates, setCandidates] = useState<JobApplication[]>([]);
   const [jobs, setJobs] = useState<JobListing[]>([]);
-  const [selectedJob, setSelectedJob] = useState<string>("all");
-  const [candidates, setCandidates] = useState<Candidate[]>(MOCK_CANDIDATES);
+  const [activeJobId, setActiveJobId] = useState<string>("all");
   const [loading, setLoading] = useState(true);
-  
-  // Drag and drop state
-  const [draggedCandidate, setDraggedCandidate] = useState<string | null>(null);
+  const [draggedAppId, setDraggedAppId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Basic authorization check
-    if (!profile) {
-      router.push("/login");
+    if (profile?.username !== username && profile?.role !== 'admin') {
+      router.push('/feed');
       return;
     }
-    if (profile.username !== username || profile.accountType !== 'employer') {
-      router.push("/");
-      return;
-    }
-
-    const fetchCompanyJobs = async () => {
-      const res = await getJobs({ companyId: profile.uid });
-      if (res.success && res.jobs) {
-        setJobs(res.jobs);
+    
+    const loadData = async () => {
+      setLoading(true);
+      const [jobsRes, appsRes] = await Promise.all([
+        getJobs(), // Ideally getEmployerJobs, but getJobs works for now if we filter
+        getEmployerApplications(profile.uid)
+      ]);
+      
+      if (jobsRes.success && jobsRes.jobs) {
+        setJobs(jobsRes.jobs.filter(j => j.companyId === profile.uid));
+      }
+      
+      if (appsRes.success && appsRes.applications) {
+        setCandidates(appsRes.applications);
       }
       setLoading(false);
     };
     
-    fetchCompanyJobs();
+    loadData();
   }, [profile, username, router]);
 
-  // Handle Drag and Drop
+  const filteredCandidates = activeJobId === "all" 
+    ? candidates 
+    : candidates.filter(c => c.jobId === activeJobId);
+
   const handleDragStart = (e: React.DragEvent, id: string) => {
-    e.dataTransfer.setData("candidateId", id);
-    setDraggedCandidate(id);
+    setDraggedAppId(id);
+    e.dataTransfer.effectAllowed = "move";
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
   };
 
-  const handleDrop = (e: React.DragEvent, newStatus: CandidateStatus) => {
+  const handleDrop = async (e: React.DragEvent, newStatus: JobApplication['status']) => {
     e.preventDefault();
-    const candidateId = e.dataTransfer.getData("candidateId");
-    if (!candidateId) return;
+    if (!draggedAppId) return;
 
-    setCandidates(prev => prev.map(c => 
-      c.id === candidateId ? { ...c, status: newStatus } : c
-    ));
-    setDraggedCandidate(null);
+    const originalCandidates = [...candidates];
+    
+    // Optimistic update
+    setCandidates(prev => 
+      prev.map(c => c.id === draggedAppId ? { ...c, status: newStatus } : c)
+    );
+    setDraggedAppId(null);
+
+    const res = await updateApplicationStatus(draggedAppId, newStatus);
+    if (!res.success) {
+      toast.error("Failed to update status");
+      setCandidates(originalCandidates);
+    } else {
+      toast.success("Candidate moved successfully");
+    }
   };
 
   if (loading) {
     return (
-      <div className="flex-1 flex justify-center items-center h-[calc(100vh-100px)]">
-        <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
       </div>
     );
   }
 
-  const columns: { id: CandidateStatus; label: string; icon: any; color: string }[] = [
-    { id: "applied", label: "New Applications", icon: UserPlus, color: "text-blue-400" },
-    { id: "interviewing", label: "Interviewing", icon: PhoneCall, color: "text-amber-400" },
-    { id: "hired", label: "Hired", icon: CheckCircle2, color: "text-emerald-400" },
+  const columns: { id: JobApplication['status']; label: string; icon: any; color: string; border: string }[] = [
+    { id: "pending", label: "New Applied", icon: Briefcase, color: "text-blue-400", border: "border-blue-500/20" },
+    { id: "interviewing", label: "Interviewing", icon: PhoneCall, color: "text-amber-400", border: "border-amber-500/20" },
+    { id: "hired", label: "Hired", icon: CheckCircle2, color: "text-emerald-400", border: "border-emerald-500/20" },
   ];
 
-  const filteredCandidates = selectedJob === "all" 
-    ? candidates 
-    : candidates.filter(c => c.role === jobs.find(j => j.id === selectedJob)?.title);
-
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full p-4 lg:p-8 space-y-8 flex flex-col h-[calc(100vh-80px)] overflow-hidden">
-      
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
+    <div className="max-w-7xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/60 p-6 rounded-3xl border border-white/5 neo-card shadow-lg">
         <div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-            <Briefcase className="w-8 h-8 text-emerald-500" />
+          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+            <UserPlus className="w-6 h-6 text-brand" />
             Applicant Tracking
           </h1>
-          <p className="text-slate-400 font-medium">Manage and review your potential candidates.</p>
+          <p className="text-slate-400 mt-1">Manage your hiring pipeline</p>
         </div>
-
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          {/* Job Filter Dropdown */}
-          <div className="relative min-w-[200px] w-full md:w-auto">
+        
+        <div className="flex items-center gap-3">
+          <div className="relative">
             <select 
-              className="w-full appearance-none bg-slate-900 border border-white/10 text-white font-medium py-3 pl-4 pr-10 rounded-xl focus:outline-none focus:border-emerald-500/50 shadow-inner"
-              value={selectedJob}
-              onChange={(e) => setSelectedJob(e.target.value)}
+              value={activeJobId}
+              onChange={(e) => setActiveJobId(e.target.value)}
+              className="appearance-none bg-slate-800 border border-white/10 text-white text-sm font-semibold rounded-xl pl-4 pr-10 py-2.5 outline-none focus:border-brand/50"
             >
-              <option value="all">All Open Roles</option>
+              <option value="all">All Active Roles</option>
               {jobs.map(job => (
                 <option key={job.id} value={job.id}>{job.title}</option>
               ))}
             </select>
-            <ChevronDown className="w-5 h-5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
+          
+          <button className="p-2.5 bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-white/10">
+            <Search className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* KANBAN BOARD */}
-      <div className="flex-1 flex gap-6 overflow-x-auto pb-4 snap-x hide-scrollbar">
+      {/* Kanban Board */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 overflow-x-auto pb-8">
         {columns.map(col => {
-          const colCandidates = filteredCandidates.filter(c => c.status === col.id);
+          const colCandidates = filteredCandidates.filter(c => c.status === col.id || (col.id === 'pending' && (c.status === 'pending' || c.status === 'screening' || c.status === 'reviewed')));
           
           return (
             <div 
               key={col.id} 
-              className="flex flex-col min-w-[320px] max-w-[350px] w-full bg-slate-900/40 rounded-3xl border border-white/5 snap-center"
+              className={`bg-slate-900/40 rounded-3xl border border-white/5 p-4 flex flex-col min-h-[600px] ${draggedAppId ? 'border-dashed border-white/20 bg-slate-800/30' : ''}`}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, col.id)}
             >
-              <div className="p-4 border-b border-white/5 flex justify-between items-center bg-slate-800/30 rounded-t-3xl">
-                <h3 className="font-bold text-white flex items-center gap-2">
-                  <col.icon className={`w-5 h-5 ${col.color}`} />
-                  {col.label}
-                </h3>
-                <span className="bg-slate-800 text-slate-300 text-xs font-bold px-2.5 py-1 rounded-full border border-white/10">
+              <div className="flex items-center justify-between mb-4 px-2">
+                <div className="flex items-center gap-2">
+                  <col.icon className={`w-4 h-4 ${col.color}`} />
+                  <h3 className="font-bold text-white">{col.label}</h3>
+                </div>
+                <span className="bg-slate-800 text-slate-300 text-xs font-bold px-2.5 py-1 rounded-lg">
                   {colCandidates.length}
                 </span>
               </div>
-
-              <div className="flex-1 p-4 overflow-y-auto space-y-4 hide-scrollbar">
-                {colCandidates.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm border-2 border-dashed border-white/5 rounded-2xl min-h-[100px]">
-                    Drag candidates here
-                  </div>
-                ) : (
-                  colCandidates.map(candidate => (
-                    <div 
-                      key={candidate.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, candidate.id)}
-                      className={`neo-card p-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-white/5 cursor-grab active:cursor-grabbing transition-all hover:border-emerald-500/30 shadow-lg ${draggedCandidate === candidate.id ? 'opacity-50' : 'opacity-100'}`}
-                    >
-                      <div className="flex gap-3">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-white font-bold shrink-0">
-                          {candidate.avatar}
+              
+              <div className="space-y-3 flex-1">
+                {colCandidates.map(candidate => (
+                  <div 
+                    key={candidate.id} 
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, candidate.id)}
+                    className="bg-slate-800/80 p-4 rounded-2xl border border-white/5 hover:border-white/10 cursor-grab active:cursor-grabbing hover:shadow-xl transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand/20 to-brand-purple/20 flex items-center justify-center text-brand font-bold text-sm shrink-0 overflow-hidden">
+                          {candidate.applicantAvatar ? <img src={candidate.applicantAvatar} className="w-full h-full object-cover" /> : candidate.applicantName.charAt(0)}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-bold text-white truncate">{candidate.name}</h4>
-                          <p className="text-xs text-slate-400 truncate mt-0.5">{candidate.role}</p>
-                          <div className="flex items-center gap-2 mt-3">
-                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded-md border border-emerald-500/20">
-                              {candidate.matchScore}% Match
-                            </span>
-                            <span className="text-[10px] text-slate-500">
-                              {candidate.appliedDate}
-                            </span>
-                          </div>
+                        <div>
+                          <h4 className="font-bold text-white text-sm">{candidate.applicantName}</h4>
+                          <p className="text-xs text-slate-400">{candidate.jobTitle}</p>
                         </div>
-                        <GripVertical className="w-4 h-4 text-slate-600 shrink-0 mt-1 cursor-grab" />
                       </div>
+                      <GripVertical className="w-4 h-4 text-slate-600 cursor-grab" />
                     </div>
-                  ))
+                    
+                    <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        {candidate.appliedAt?.toDate ? formatDistanceToNow(candidate.appliedAt.toDate(), { addSuffix: true }) : 'Recently'}
+                      </div>
+                      <button 
+                        onClick={() => router.push(`/employer/${candidate.jobId}`)}
+                        className="text-xs font-bold text-brand hover:text-brand-purple flex items-center gap-1"
+                      >
+                        View Profile <ArrowRight className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {colCandidates.length === 0 && (
+                  <div className="h-24 flex items-center justify-center border-2 border-dashed border-white/5 rounded-2xl">
+                    <p className="text-sm text-slate-500 font-medium">Drop candidate here</p>
+                  </div>
                 )}
               </div>
             </div>
-          )
+          );
         })}
       </div>
     </div>

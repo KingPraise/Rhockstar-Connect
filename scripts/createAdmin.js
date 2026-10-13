@@ -17,7 +17,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const email = 'elijah@rhockstarconnect.com';
-const password = 'RhockstarAdmin2026';
+const password = 'process.env.ADMIN_PASSWORD || 'fallback-pass-change-me'';
 
 async function createAdmin() {
   try {

@@ -10,6 +10,7 @@ export interface UserProfile {
   headline?: string;
   location?: { city?: string; state?: string; country?: string } | string;
   avatar?: string;
+  coverImage?: string;
   stats?: { posts: number; followers: number; following: number; connections: number };
   phone?: string;
   dob?: string;
@@ -33,6 +34,8 @@ export interface UserProfile {
   visibility?: 'public' | 'connections' | 'private';
   role?: 'admin' | 'user';
   accountType?: 'standard' | 'employer';
+  isBanned?: boolean;
+  notificationSettings?: { connectionAlerts?: boolean; postInteractions?: boolean; };
   
   // Employer Fields
   companySize?: string;
@@ -42,11 +45,20 @@ export interface UserProfile {
 
   subscriptionTier?: 'free' | 'pro' | 'elite';
   subscriptionStatus?: 'active' | 'inactive';
+  premiumUntil?: string;
   savedPosts?: string[];
   referralCode?: string;
   referralCount?: number;
   referredFriends?: Array<{ uid: string; name: string; joinedAt: string }>;
   claimedRewards?: string[];
+  
+  // Gamification Fields
+  stardomXP?: number;
+  stardomRank?: string;
+  streakCount?: number;
+  longestStreak?: number;
+  lastActiveDate?: string;
+  specialRoles?: string[];
 }
 
 interface AuthState {
@@ -56,6 +68,12 @@ interface AuthState {
   setUser: (user: FirebaseUser | null) => void;
   setProfile: (profile: UserProfile | null) => void;
   setLoading: (isLoading: boolean) => void;
+  unreadNotifications: number;
+  setUnreadNotifications: (count: number) => void;
+  unreadMessages: number;
+  setUnreadMessages: (count: number) => void;
+  aiWidgetVisible: boolean;
+  setAiWidgetVisible: (visible: boolean) => void;
   logout: () => void;
 }
 
@@ -63,8 +81,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   profile: null,
   isLoading: true,
+  unreadNotifications: 0,
+  unreadMessages: 0,
+  aiWidgetVisible: true,
   setUser: (user) => set({ user }),
   setProfile: (profile) => set({ profile }),
   setLoading: (isLoading) => set({ isLoading }),
-  logout: () => set({ user: null, profile: null, isLoading: false })
+  setUnreadNotifications: (count) => set({ unreadNotifications: count }),
+  setUnreadMessages: (count) => set({ unreadMessages: count }),
+  setAiWidgetVisible: (visible) => set({ aiWidgetVisible: visible }),
+  logout: () => set({ user: null, profile: null, isLoading: false, unreadNotifications: 0, unreadMessages: 0, aiWidgetVisible: true })
 }));

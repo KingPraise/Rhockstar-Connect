@@ -14,7 +14,7 @@ export default function AuthRequiredModal({ isOpen, onClose, actionName = "inter
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-md bg-slate-900 border border-white/10 neo-card p-6 md:p-8 flex flex-col items-center text-center shadow-2xl rounded-3xl">
         <button 
           onClick={onClose}

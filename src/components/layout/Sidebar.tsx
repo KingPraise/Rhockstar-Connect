@@ -13,44 +13,45 @@ import {
   Bell, 
   Settings, 
   Heart,
-  LogOut,
   Sparkles,
+  TrendingUp,
   ChevronLeft,
   ChevronRight,
   Gift,
   Shield,
-  Search
-} from "lucide-react";
+  Search,
+  Building2,
+  Plus
+, Megaphone } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
-import { logoutUser } from "@/lib/auth";
+import QuickCreateModal from "@/components/layout/QuickCreateModal";
+import UserAvatar from "@/components/ui/UserAvatar";
 
 export default function Sidebar() {
-  const { profile, logout } = useAuthStore();
+  const { profile, logout, unreadNotifications, unreadMessages } = useAuthStore();
   const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
+  const isEmployer = (profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (profile?.subscriptionTier === 'elite' || profile?.role === 'admin');
 
-  const handleLogout = async () => {
-    await logoutUser();
-    logout();
-    router.push('/login');
-  };
 
   const primaryNavItems = [
-    { name: "Feed", href: "/feed", icon: Home },
+    { name: "Home", href: "/feed", icon: Home },
     { name: "Network", href: "/network", icon: Users },
     { name: "Jobs", href: "/jobs", icon: Briefcase },
-    { name: "Messages", href: "/messages", icon: MessageSquare },
+    ...(isEmployer ? [{ name: "Employer Portal", href: "/employer", icon: Building2 }] : []),
+    { name: "Messages", href: "/messages", icon: MessageSquare, badge: unreadMessages > 0 ? unreadMessages.toString() : undefined },
     { name: "Dating", href: "/dating", icon: Heart },
-    { name: "Notifications", href: "/notifications", icon: Bell },
+    { name: "Notifications", href: "/notifications", icon: Bell, badge: unreadNotifications > 0 ? unreadNotifications.toString() : undefined },
   ].filter(item => !(item.name === "Dating" && profile?.accountType === 'employer'));
 
   const secondaryNavItems = [
     { name: "Search", href: "/search", icon: Search },
-    { name: "Insights", href: "/insights", icon: Sparkles }, // Wait, BarChart2 is not imported. Use Sparkles or Bell
+    { name: "Insights", href: "/insights", icon: TrendingUp },
     { name: "Career Hub", href: "/resources/career", icon: Briefcase },
     { name: "Rewards", href: "/referrals", icon: Gift },
     { name: "Settings", href: "/settings", icon: Settings },
@@ -67,13 +68,12 @@ export default function Sidebar() {
       {/* Header / Logo */}
       <div className={`p-6 flex items-center ${isMinimized ? "justify-center" : "justify-between"}`}>
         {!isMinimized ? (
-          <Link href="/feed" className="flex items-center gap-3 group pl-2 mt-2">
-            <Image src="/icon.png" alt="Rhockstar Connect" width={40} height={40} className="object-contain group-hover:opacity-80 transition-opacity" />
-            <span className="font-extrabold text-2xl tracking-tight text-white hidden xl:block">Rhockstar <span className="text-brand">Connect</span></span>
+          <Link href="/feed" className="flex items-center justify-center group pl-2 mt-2 w-full">
+            <Image src="/icon.png" alt="Rhockstar Connect" width={140} height={140} className="object-contain group-hover:opacity-80 transition-opacity" />
           </Link>
         ) : (
           <Link href="/feed" className="flex justify-center group">
-            <Image src="/icon.png" alt="RC" width={40} height={40} className="group-hover:opacity-80 transition-opacity" />
+            <Image src="/icon.png" alt="RC" width={56} height={56} className="group-hover:opacity-80 transition-opacity" />
           </Link>
         )}
         
@@ -101,23 +101,39 @@ export default function Sidebar() {
       {/* Profile on Top */}
       <div className="px-6 mb-6">
         <Link href="/profile" className={`block neo-card p-3 flex items-center ${isMinimized ? "justify-center" : "gap-3"} bg-gradient-to-br from-slate-800/80 to-slate-900/80 border-white/5 hover:border-brand/30 transition-all group cursor-pointer`}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-purple flex items-center justify-center font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] shrink-0 group-hover:scale-105 transition-transform">
-            {profile?.fullName?.charAt(0) || 'U'}
-          </div>
+          <UserAvatar 
+            src={profile?.avatar} 
+            name={profile?.fullName || 'User'} 
+            className="w-10 h-10 rounded-xl shrink-0 group-hover:scale-105 transition-transform" 
+            textClassName="font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]"
+          />
           {!isMinimized && (
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-white truncate group-hover:text-brand transition-colors">{profile?.fullName || 'User'}</p>
+              <div className="flex items-start gap-1.5 flex-col xl:flex-row xl:items-center">
+                <p className="text-sm font-bold text-white line-clamp-2 leading-tight group-hover:text-brand transition-colors">{profile?.fullName || 'User'}</p>
                 {isPremium && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase shrink-0">
                     {profile.subscriptionTier}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400 truncate">@{profile?.username || 'user'}</p>
+              <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">@{profile?.username || 'user'}</p>
             </div>
           )}
         </Link>
+
+        {/* Quick Create Action Button */}
+        <button
+          onClick={() => setIsCreateOpen(true)}
+          className={`w-full flex items-center ${isMinimized ? "justify-center px-0" : "gap-3 px-5"} py-3 mt-3 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg transition-all active:scale-95 group`}
+          title="Create New Content"
+          id="tour-create-btn"
+        >
+          <div className="p-1 rounded-lg bg-white/20 text-white group-hover:scale-110 transition-transform">
+            <Plus className="w-4 h-4" />
+          </div>
+          {!isMinimized && <span>Create</span>}
+        </button>
       </div>
 
       <nav className="flex flex-col gap-2 px-4 flex-1">
@@ -129,6 +145,7 @@ export default function Sidebar() {
           return (
             <Link
               key={item.name}
+              id={`tour-${item.name.toLowerCase()}-nav`}
               href={item.href}
               prefetch={true}
               className={`flex items-center ${isMinimized ? "justify-center px-0" : "gap-4 px-5"} py-3 rounded-xl font-semibold transition-all group relative ${
@@ -241,16 +258,17 @@ export default function Sidebar() {
           </Link>
         )}
 
-        {/* LOGOUT */}
-        <button 
-          onClick={handleLogout}
-          title={isMinimized ? "Log Out" : undefined}
-          className={`w-full p-3 rounded-xl flex items-center ${isMinimized ? "justify-center" : "justify-center gap-2"} text-rose-500 bg-rose-500/10 hover:bg-rose-500 hover:text-white transition-all border border-rose-500/20 shadow-lg`}
-        >
-          <LogOut className="w-5 h-5" />
-          {!isMinimized && <span className="text-sm font-bold">Log Out</span>}
-        </button>
       </div>
+
+      {/* Quick Create Action Modal */}
+      <QuickCreateModal 
+        isOpen={isCreateOpen} 
+        onClose={() => setIsCreateOpen(false)} 
+      />
     </aside>
   );
 }
+
+
+
+

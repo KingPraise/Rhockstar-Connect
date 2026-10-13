@@ -77,7 +77,7 @@ export default function AdminSettingsPage() {
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* MAINTENANCE MODE TOGGLE */}
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 backdrop-blur-md space-y-4">
+        <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center">
@@ -101,7 +101,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* ANNOUNCEMENT BANNER */}
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 backdrop-blur-md space-y-3">
+        <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 space-y-3">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-brand-purple/20 text-brand-purple flex items-center justify-center">
               <Megaphone className="w-5 h-5" />
@@ -121,7 +121,7 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* REGISTRATION TOGGLE */}
-        <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 backdrop-blur-md space-y-4">
+        <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
@@ -146,7 +146,7 @@ export default function AdminSettingsPage() {
 
         {/* REFERRAL MULTIPLIER & SPOTLIGHT PRICE */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 backdrop-blur-md space-y-3">
+          <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 space-y-3">
             <div className="flex items-center gap-3">
               <Gift className="w-5 h-5 text-amber-400" />
               <h4 className="font-bold text-white text-sm">Referral Point Multiplier</h4>
@@ -161,7 +161,7 @@ export default function AdminSettingsPage() {
             />
           </div>
 
-          <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 backdrop-blur-md space-y-3">
+          <div className="p-6 rounded-2xl bg-slate-900/60 border border-rose-500/20 space-y-3">
             <div className="flex items-center gap-3">
               <Settings className="w-5 h-5 text-rose-400" />
               <h4 className="font-bold text-white text-sm">Featured Spotlight Price ($)</h4>

@@ -5,11 +5,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { User, Mail, Lock, UserPlus, Loader2, AtSign, Gift, Eye, EyeOff, Calendar } from "lucide-react";
 import { registerUser } from "@/lib/auth";
+import { trackEvent } from "@/lib/analytics";
 import Image from "next/image";
+import { useAuthStore } from "@/store/useAuthStore";
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { profile } = useAuthStore();
 
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
@@ -29,11 +32,15 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (profile) {
+      router.push("/feed");
+      return;
+    }
     const ref = searchParams.get("ref") || searchParams.get("code") || searchParams.get("referral");
     if (ref) {
       setReferralCode(ref);
     }
-  }, [searchParams]);
+  }, [searchParams, profile, router]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +88,8 @@ function RegisterForm() {
       setError(error);
       setLoading(false);
     } else if (user) {
-      router.push("/feed");
+        trackEvent('sign_up', { method: 'email', account_type: accountType });
+        router.push("/feed");
     }
   };
 
@@ -275,7 +283,7 @@ function RegisterForm() {
               </div>
               <div className="flex justify-between items-center ml-1">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Referral Code (Optional)</label>
-                {referralCode && <span className="text-xs text-amber-400 font-bold">Applied! ✨</span>}
+                {referralCode && <span className="text-xs text-amber-400 font-bold">Applied! ✓</span>}
               </div>
               <input
                 type="text"
@@ -356,3 +364,6 @@ export default function RegisterPage() {
     </Suspense>
   );
 }
+
+
+
