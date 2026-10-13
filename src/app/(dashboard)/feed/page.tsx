@@ -16,7 +16,21 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { useSearchStore } from "@/store/useSearchStore";
 import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
+import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import toast from "react-hot-toast";
+
+const FALLBACK_SUGGESTED_PEOPLE: UserBasic[] = [
+  { uid: "vVGsCR7knwVrxIMYK8pmHDlVjho2", fullName: "Adewale Sunday", username: "fadasunday", avatar: "", headline: "Automobile Specialist", industry: "Automobiles", connections: 12, subscriptionTier: "pro" },
+  { uid: "yY1Jk5UWZhNHXXYOVlfe5gmqCUx1", fullName: "Chinedu Emmanuel", username: "brazil", avatar: "", headline: "Fullstack Developer", industry: "Technology", connections: 8 },
+  { uid: "DoLqoHeILXQygrgMJjQMOD6SWoo1", fullName: "Kemisola Adebayo", username: "wonuolami", avatar: "https://res.cloudinary.com/dkayul64b/image/upload/q_auto,f_auto/v1791388104/avatars/v0x4tmp8ctgmy6lcsa9a.jpg", headline: "Product Designer & UI Specialist", industry: "Tech & Career", connections: 15, subscriptionTier: "pro" },
+  { uid: "0sBerfsz51XTXjngFJio2RgnAmb2", fullName: "Rhockstar Nation", username: "rnation", avatar: "https://res.cloudinary.com/dkayul64b/image/upload/q_auto,f_auto/v1791235215/avatars/wbboy1qsbzzz5pl5datq.jpg", headline: "Media & Creator Community", industry: "General", connections: 45, subscriptionTier: "elite" },
+];
+
+const FALLBACK_FEATURED_JOBS: JobListing[] = [
+  { id: "GqRuqiXiK4L9yQaG9ofs", title: "Virtual Assistant", company: "Rhockstar Nation", location: "Lagos (Remote)", type: "Remote", salary: "₦50,000 / mo", postedAt: "Recently", logo: "https://res.cloudinary.com/dkayul64b/image/upload/q_auto,f_auto/v1791235215/avatars/wbboy1qsbzzz5pl5datq.jpg" },
+  { id: "I4lkQDqmIsof3KzZhlU6", title: "Full-Stack Engineer (Next.js)", company: "Techstars Africa", location: "Remote", type: "Contract", salary: "$2,000 - $4,000/mo", postedAt: "Recently", logo: "T" },
+  { id: "MDJ4NrfEukGyQ0L4HJr3", title: "Senior Product Designer", company: "Rhockstar Connect", location: "Lagos (Hybrid)", type: "Full-time", salary: "₦500k - ₦800k/mo", postedAt: "Recently", logo: "R" },
+];
 
 const COMMUNITY_CHIPS = [
   { name: "Football", category: "Sports", icon: "⚽", color: "from-green-600/20 to-emerald-600/20 border-green-500/30 text-green-300" },
@@ -38,9 +52,9 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(true);
   const { openSearch } = useSearchStore();
 
-  // Dynamic Real Time DB State
-  const [suggestedPeople, setSuggestedPeople] = useState<UserBasic[]>([]);
-  const [featuredJobs, setFeaturedJobs] = useState<JobListing[]>([]);
+  // Dynamic Real Time DB State with guaranteed fallbacks
+  const [suggestedPeople, setSuggestedPeople] = useState<UserBasic[]>(FALLBACK_SUGGESTED_PEOPLE);
+  const [featuredJobs, setFeaturedJobs] = useState<JobListing[]>(FALLBACK_FEATURED_JOBS);
   const [activeAds, setActiveAds] = useState<Advertisement[]>([]);
   const [connectingUserIds, setConnectingUserIds] = useState<Set<string>>(new Set());
   const [sentRequestIds, setSentRequestIds] = useState<Set<string>>(new Set());
@@ -117,12 +131,14 @@ export default function FeedPage() {
     const fetchSidebarData = async () => {
       // 1. Fetch Real Users from Firestore
       try {
-        const userRes = await getAllUsers(true);
-        if (userRes.success && userRes.users) {
+        const userRes = await getAllUsers(false);
+        if (userRes.success && userRes.users && userRes.users.length > 0) {
           const filtered = userRes.users
-            .filter(u => u.uid !== profile?.uid)
+            .filter(u => u.uid !== profile?.uid && u.fullName && u.fullName !== "Unknown User")
             .slice(0, 5);
-          setSuggestedPeople(filtered);
+          if (filtered.length > 0) {
+            setSuggestedPeople(filtered);
+          }
         }
       } catch (err) {
         console.error("Failed to load suggested users:", err);
@@ -239,9 +255,12 @@ export default function FeedPage() {
                   <div key={user.uid} className="p-2.5 bg-slate-800/40 border border-white/5 rounded-xl flex items-center gap-2 shrink-0 min-w-[210px]">
                     <UserAvatar name={user.fullName} src={user.avatar} className="w-8 h-8 text-xs font-bold shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <Link href={`/profile?uid=${user.uid}`} className="font-bold text-white text-xs truncate block hover:underline">
-                        {user.fullName}
-                      </Link>
+                      <div className="flex items-center gap-1">
+                        <Link href={`/profile?uid=${user.uid}`} className="font-bold text-white text-xs truncate block hover:underline">
+                          {user.fullName}
+                        </Link>
+                        <VerifiedBadge tier={user.subscriptionTier} />
+                      </div>
                       <p className="text-[10px] text-purple-300/80 truncate">{user.headline || user.industry || user.accountType || "Member"}</p>
                     </div>
                     {sentRequestIds.has(user.uid) ? (
@@ -346,9 +365,12 @@ export default function FeedPage() {
                       <div className="flex items-center gap-2.5 min-w-0">
                         <UserAvatar name={user.fullName} src={user.avatar} className="w-8 h-8 text-xs font-bold shrink-0" />
                         <div className="min-w-0">
-                          <Link href={`/profile?uid=${user.uid}`} className="font-bold text-white text-xs truncate block hover:underline">
-                            {user.fullName}
-                          </Link>
+                          <div className="flex items-center gap-1">
+                            <Link href={`/profile?uid=${user.uid}`} className="font-bold text-white text-xs truncate block hover:underline">
+                              {user.fullName}
+                            </Link>
+                            <VerifiedBadge tier={user.subscriptionTier} />
+                          </div>
                           <p className="text-[11px] text-purple-300/80 truncate">{user.headline || user.industry || user.accountType || "Member"}</p>
                         </div>
                       </div>

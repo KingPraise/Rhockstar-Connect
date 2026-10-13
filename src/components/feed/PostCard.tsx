@@ -287,7 +287,7 @@ export default function PostCard({ post }: PostCardProps) {
           <div className="min-w-0">
             <h4 className="font-bold text-sm text-white group-hover:text-purple-300 transition-colors flex items-center gap-1.5 truncate">
               <span className="truncate">{post.userId === profile?.uid ? profile?.fullName : post.user.name}</span>
-              <VerifiedBadge tier={post.userId === profile?.uid ? (profile as any)?.subscriptionTier : (post.user as any)?.subscriptionTier} />
+              <VerifiedBadge tier={post.userId === profile?.uid ? (profile as any)?.subscriptionTier : ((post.user as any)?.subscriptionTier || (post.user?.handle === 'Rhockstar' || (post.user as any)?.role === 'admin' ? 'elite' : undefined))} />
             </h4>
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
               <span className="truncate">@{post.user.handle}</span>
@@ -587,7 +587,7 @@ export default function PostCard({ post }: PostCardProps) {
                         <div className="flex items-center justify-between mb-1">
                           <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors flex items-center gap-1">
                               {comment.userId === profile?.uid ? profile?.fullName : comment.user.name}
-                              <VerifiedBadge tier={comment.userId === profile?.uid ? (profile as any)?.subscriptionTier : (comment.user as any)?.subscriptionTier} />
+                              <VerifiedBadge tier={comment.userId === profile?.uid ? (profile as any)?.subscriptionTier : ((comment.user as any)?.subscriptionTier || (comment.user?.name?.includes('Elijah') ? 'elite' : undefined))} />
                             </Link>
                           <span className="text-xs text-slate-500">{cTimeAgo}</span>
                         </div>
@@ -686,7 +686,7 @@ export default function PostCard({ post }: PostCardProps) {
                                 <div className="flex items-center justify-between mb-1">
                                   <Link href={`/profile?uid=${reply.userId}`} className="font-bold text-white text-xs hover:text-brand transition-colors flex items-center gap-1">
                                     <span>{reply.userId === profile?.uid ? profile?.fullName : reply.user.name}</span>
-                                    <VerifiedBadge tier={reply.userId === profile?.uid ? (profile as any)?.subscriptionTier : (reply.user as any)?.subscriptionTier} />
+                                    <VerifiedBadge tier={reply.userId === profile?.uid ? (profile as any)?.subscriptionTier : ((reply.user as any)?.subscriptionTier || (reply.user?.name?.includes('Elijah') ? 'elite' : undefined))} />
                                   </Link>
                                   <span className="text-[10px] text-slate-500">{rTimeAgo}</span>
                                 </div>
