@@ -678,10 +678,10 @@ export default function MessagesPage() {
   });
 
   return (
-    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100vh-100px)] gap-2 md:gap-4 p-2 md:p-4 lg:p-6 lg:gap-6">
+    <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100dvh-5.5rem)] md:h-[calc(100vh-4rem)] max-h-[920px] gap-2 md:gap-4 p-2 md:p-3 lg:p-4 lg:gap-5 overflow-hidden">
       
       {/* SIDEBAR */}
-      <div className={`${(activeChat || activeCommunity) ? 'hidden md:flex' : 'flex'} w-full md:w-[350px] lg:w-[400px] flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl`}>
+      <div className={`${(activeChat || activeCommunity) ? 'hidden md:flex' : 'flex'} w-full md:w-[340px] lg:w-[380px] h-full flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl shrink-0`}>
         
         {/* Header & Mode Bar */}
         <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-slate-900/80 backdrop-blur-md">
@@ -1201,10 +1201,10 @@ export default function MessagesPage() {
 
       {/* VIEW 1: ACTIVE DM CHAT */}
       {messagesMode === 'direct' && activeChat && (
-        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
+        <div className="flex-1 h-full flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative min-w-0">
           
           {/* DM Header */}
-          <div className="p-6 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-4">
+          <div className="p-4 sm:p-5 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-4 shrink-0">
             <div className="flex items-center gap-4 min-w-0">
               <button 
                 className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
@@ -1527,7 +1527,7 @@ export default function MessagesPage() {
             </div>
           )}
           {/* DM Input Bar */}
-          <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-slate-900/90 flex flex-col gap-3">
+          <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-white/5 bg-slate-900/95 flex flex-col gap-2.5 shrink-0">
             {/* Media Preview Box */}
             {mediaFile && !isRecording && (
               <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl relative self-start">
@@ -1635,10 +1635,10 @@ export default function MessagesPage() {
 
       {/* VIEW 2: ACTIVE PUBLIC COMMUNITY CHAT */}
       {messagesMode === 'communities' && activeCommunity && (
-        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative">
+        <div className="flex-1 h-full flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative min-w-0">
           
           {/* Community Header */}
-          <div className="p-4 sm:p-5 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-3">
+          <div className="p-4 sm:p-5 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-3 min-w-0">
               <button 
                 className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
