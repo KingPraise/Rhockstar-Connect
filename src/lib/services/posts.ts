@@ -13,7 +13,8 @@ import {
   getDoc,
   deleteDoc,
   getDocs,
-  limit
+  limit,
+  where
 } from 'firebase/firestore';
 import { uploadMediaToCloudinary } from './cloudinary';
 import { UserProfile } from '../../store/useAuthStore';
@@ -230,6 +231,30 @@ export const subscribeToFeed = (limitCount: number, callback: (posts: Post[]) =>
       posts.push({ id: doc.id, ...doc.data() } as Post);
     });
     callback(posts);
+  });
+};
+
+// Subscribe to real-time posts authored by a specific user
+export const subscribeToUserPosts = (userId: string, callback: (posts: Post[]) => void) => {
+  const q = query(
+    collection(db, 'posts'), 
+    where('userId', '==', userId)
+  );
+  
+  return onSnapshot(q, (querySnapshot) => {
+    const posts: Post[] = [];
+    querySnapshot.forEach((doc) => {
+      posts.push({ id: doc.id, ...doc.data() } as Post);
+    });
+    // In-memory sort by createdAt descending to avoid composite index requirement
+    posts.sort((a, b) => {
+      const timeA = (a.createdAt as any)?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
+      const timeB = (b.createdAt as any)?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
+      return timeB - timeA;
+    });
+    callback(posts);
+  }, (error) => {
+    console.error("Error subscribing to user posts:", error);
   });
 };
 
