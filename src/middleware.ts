@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Sliding-window rate-limiter for API routes: 60 requests per minute per IP
+// Local fallback sliding-window rate-limiter: 60 requests per minute per IP
 const apiRateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-// Periodic cleanup of expired rate-limit buckets every 5 minutes
 const CLEANUP_INTERVAL = 5 * 60 * 1000;
 let lastCleanup = Date.now();
 
-function isRateLimited(ip: string, limit = 60, windowMs = 60000): boolean {
+function isMemoryRateLimited(ip: string, limit = 60, windowMs = 60000): boolean {
   const now = Date.now();
 
   if (now - lastCleanup > CLEANUP_INTERVAL) {
@@ -34,6 +33,44 @@ function isRateLimited(ip: string, limit = 60, windowMs = 60000): boolean {
   return false;
 }
 
+/**
+ * Distributed Edge Rate Limiter via Upstash Redis REST API
+ * Seamlessly falls back to in-memory LRU token bucket if Upstash env credentials are not set.
+ */
+async function checkRateLimit(ip: string, limit = 60, windowSec = 60): Promise<boolean> {
+  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (upstashUrl && upstashToken) {
+    try {
+      const bucket = Math.floor(Date.now() / (windowSec * 1000));
+      const key = `rhockstar:ratelimit:${ip}:${bucket}`;
+
+      const res = await fetch(`${upstashUrl.replace(/\/$/, '')}/pipeline`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${upstashToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([
+          ['INCR', key],
+          ['EXPIRE', key, windowSec],
+        ]),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const currentCount = Number(data?.[0]?.result || 0);
+        return currentCount > limit;
+      }
+    } catch {
+      // Fallback to local memory limiter if Redis is unreachable
+    }
+  }
+
+  return isMemoryRateLimited(ip, limit, windowSec * 1000);
+}
+
 // Dangerous malicious string patterns
 const DANGEROUS_PATTERNS = [
   /(\.\.|\%2e\%2e)(\/|\\)/i, // Path traversal
@@ -44,7 +81,7 @@ const DANGEROUS_PATTERNS = [
   /(union(\s+all)?\s+select|select\s+.*\s+from)/i // Basic SQL injection probe
 ];
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   // 1. URL Path Traversal & Injection Check
@@ -56,12 +93,13 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 2. API Rate Limiting Defense
+  // 2. Distributed / Hybrid API Rate Limiting Defense
   if (pathname.startsWith('/api/')) {
     const forwardedFor = request.headers.get('x-forwarded-for');
     const clientIp = forwardedFor ? forwardedFor.split(',')[0].trim() : '127.0.0.1';
 
-    if (isRateLimited(clientIp, 60, 60000)) {
+    const limited = await checkRateLimit(clientIp, 60, 60);
+    if (limited) {
       console.warn(`[Security Alert] Rate limit exceeded for IP: ${clientIp} on ${pathname}`);
       return new NextResponse(
         JSON.stringify({ error: 'Too many requests. Please slow down and try again shortly.' }),

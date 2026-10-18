@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Settings as SettingsIcon, User, Lock, Bell, 
   Shield, Eye, Smartphone, Globe, CreditCard,
-  LogOut, Zap, Briefcase, Crown, Play
+  LogOut, Zap, Briefcase, Crown, Play, Volume2
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
 import { logoutUser } from "@/lib/auth";
+import { 
+  isNotificationSoundEnabled, 
+  setNotificationSoundEnabled, 
+  playNotificationChime 
+} from "@/lib/audioNotifications";
 
 import LogoutConfirmModal from "@/components/auth/LogoutConfirmModal";
 import { AlertTriangle, Trash2, X, ChevronDown } from "lucide-react";
@@ -83,6 +88,11 @@ const handlePasswordChange = async () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+
+  useEffect(() => {
+    setSoundEnabled(isNotificationSoundEnabled());
+  }, []);
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== "DELETE MY ACCOUNT" || !profile?.uid) return;
@@ -590,7 +600,47 @@ const handlePasswordChange = async () => {
               </div>
 
               <div className="space-y-6">
-                <h3 className="text-sm font-extrabold text-brand uppercase tracking-wider">In-App Alerts</h3>
+                <h3 className="text-sm font-extrabold text-brand uppercase tracking-wider">In-App Alerts & Audio</h3>
+
+                {/* In-App Web Audio Notification Chime */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gradient-to-r from-brand/10 to-brand-purple/10 border border-brand/30 rounded-2xl transition-all">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Volume2 className="w-4 h-4 text-brand" />
+                      <h4 className="font-bold text-white text-base">In-App Notification Sound Chime</h4>
+                    </div>
+                    <p className="text-xs text-slate-300 mt-0.5">
+                      Play a soft harmonic chime when new messages or dating matches arrive while you are active.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        playNotificationChime(true);
+                        toast.success("Playing harmonic notification chime 🔔");
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-brand border border-brand/30 transition-colors"
+                    >
+                      Test Chime
+                    </button>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={soundEnabled}
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          setSoundEnabled(next);
+                          setNotificationSoundEnabled(next);
+                          if (next) playNotificationChime(true);
+                          toast.success(next ? "Notification sound enabled!" : "Notification sound muted.");
+                        }}
+                      />
+                      <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand"></div>
+                    </label>
+                  </div>
+                </div>
 
                 <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-white/5 rounded-2xl hover:border-brand/30 transition-all">
                   <div>

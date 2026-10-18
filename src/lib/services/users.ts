@@ -32,6 +32,8 @@ export interface UserBasic {
   datingPhotos?: string[];
   datingPrompts?: Array<{ prompt: string; answer: string }>;
   datingVoiceIntro?: string;
+  datingIncognito?: boolean;
+  datingIcebreaker?: { prompt: string; audioUrl: string; duration?: number };
   subscriptionTier?: string;
   subscriptionStatus?: string;
   connections: number;
@@ -77,6 +79,8 @@ export const getAllUsers = async (excludeAdmins = true): Promise<{ success: bool
           datingPhotos: data.datingPhotos,
           datingPrompts: data.datingPrompts,
           datingVoiceIntro: data.datingVoiceIntro,
+          datingIncognito: data.datingIncognito,
+          datingIcebreaker: data.datingIcebreaker,
           subscriptionTier: data.subscriptionTier,
           subscriptionStatus: data.subscriptionStatus,
           connections: data.connections || 0,

@@ -30,6 +30,8 @@ export interface UserProfile {
   datingPhotos?: string[];
   datingPrompts?: Array<{ prompt: string; answer: string }>;
   datingVoiceIntro?: string;
+  datingIncognito?: boolean;
+  datingIcebreaker?: { prompt: string; audioUrl: string; duration?: number };
 
   visibility?: 'public' | 'connections' | 'private';
   role?: 'admin' | 'user';

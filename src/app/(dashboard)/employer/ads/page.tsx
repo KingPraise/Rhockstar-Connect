@@ -24,16 +24,27 @@ import {
   Pause,
   ExternalLink
 } from "lucide-react";
+import { 
+  SUPPORTED_CURRENCIES, 
+  SupportedCurrency, 
+  convertFromNGN, 
+  formatCurrencyAmount 
+} from "@/lib/currency";
 import toast from "react-hot-toast";
 
 
 const AdPaymentButton = ({ ad, profile, onComplete }: any) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<SupportedCurrency>('NGN');
+
+  const baseNGNPrice = ad.price || 15000;
+  const localizedAmount = convertFromNGN(baseNGNPrice, selectedCurrency);
+
   const config = {
     public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || '',
     tx_ref: `rhockstar_ad_${ad.id}_${Date.now()}`,
-    amount: ad.price || 15000,
-    currency: 'NGN',
+    amount: localizedAmount,
+    currency: selectedCurrency,
     payment_options: 'card,mobilemoney,ussd',
     customer: {
       email: profile?.email || 'user@rhockstar.com',
@@ -88,20 +99,36 @@ const AdPaymentButton = ({ ad, profile, onComplete }: any) => {
   };
 
   return (
-    <button
-      onClick={handlePayment}
-      disabled={isProcessing}
-      className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-2 border border-blue-500/30 disabled:opacity-50"
-    >
-      {isProcessing ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <>
-          <CreditCard className="w-4 h-4" />
-          Pay ₦{(ad.price || 15000).toLocaleString()} to Activate
-        </>
-      )}
-    </button>
+    <div className="flex flex-col gap-2 w-full">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] text-slate-400 font-semibold">Billing Currency:</span>
+        <select
+          value={selectedCurrency}
+          onChange={(e) => setSelectedCurrency(e.target.value as SupportedCurrency)}
+          className="px-2 py-1 rounded-lg bg-slate-900 border border-white/10 text-xs font-bold text-white cursor-pointer"
+        >
+          {Object.values(SUPPORTED_CURRENCIES).map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.code} ({c.symbol})
+            </option>
+          ))}
+        </select>
+      </div>
+      <button
+        onClick={handlePayment}
+        disabled={isProcessing}
+        className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-2 border border-blue-500/30 disabled:opacity-50"
+      >
+        {isProcessing ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <>
+            <CreditCard className="w-4 h-4" />
+            Pay {formatCurrencyAmount(localizedAmount, selectedCurrency)} to Activate
+          </>
+        )}
+      </button>
+    </div>
   );
 };
 

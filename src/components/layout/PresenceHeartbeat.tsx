@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { doc, updateDoc, serverTimestamp, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { playNotificationChime } from "@/lib/audioNotifications";
 
 // Badging API type declarations (not yet in default TypeScript lib)
 declare global {
@@ -15,6 +16,8 @@ declare global {
 
 export default function PresenceHeartbeat() {
   const { profile, setUnreadMessages, setUnreadNotifications } = useAuthStore();
+  const prevMessagesRef = useRef<number | null>(null);
+  const prevNotifsRef = useRef<number | null>(null);
 
   // 1. Online Presence Heartbeat
   useEffect(() => {
@@ -78,6 +81,11 @@ export default function PresenceHeartbeat() {
           unreadCount += data.unreadCount[profile.uid];
         }
       });
+
+      if (prevMessagesRef.current !== null && unreadCount > prevMessagesRef.current) {
+        playNotificationChime();
+      }
+      prevMessagesRef.current = unreadCount;
       setUnreadMessages(unreadCount);
     });
 
@@ -91,7 +99,13 @@ export default function PresenceHeartbeat() {
     const unsubscribeNotifs = onSnapshot(notifsQuery, (snapshot) => {
       // Exclude "message" type notifications so DM count is not double counted
       const nonMessageNotifs = snapshot.docs.filter((docSnap) => docSnap.data().type !== 'message');
-      setUnreadNotifications(nonMessageNotifs.length);
+      const count = nonMessageNotifs.length;
+
+      if (prevNotifsRef.current !== null && count > prevNotifsRef.current) {
+        playNotificationChime();
+      }
+      prevNotifsRef.current = count;
+      setUnreadNotifications(count);
     });
 
     return () => {

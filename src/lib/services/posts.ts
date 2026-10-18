@@ -19,6 +19,7 @@ import {
 import { uploadMediaToCloudinary } from './cloudinary';
 import { UserProfile } from '../../store/useAuthStore';
 import { sanitizeText } from '../sanitizer';
+import { checkContentSafety, logFlaggedContent } from './moderation';
 
 export interface PollOption {
   id: string;
@@ -129,6 +130,23 @@ export const createPost = async (
   pollData?: PollData | null
 ) => {
   try {
+    // 1. Two-Tier Automated Content Safety Screening
+    const modResult = checkContentSafety(content);
+    if (!modResult.isSafe && modResult.severity === 'severe') {
+      await logFlaggedContent({
+        authorId: user.uid,
+        authorName: user.fullName || user.username,
+        contentType: 'post',
+        contentSnippet: content,
+        severity: 'severe',
+        reason: modResult.flaggedReason || 'Severe safety violation',
+      });
+      return {
+        success: false,
+        error: `Safety Policy Violation: ${modResult.flaggedReason || 'Prohibited content detected.'}`,
+      };
+    }
+
     let imageUrl = null;
     let videoUrl = null;
     let documentUrl = null;
@@ -160,12 +178,27 @@ export const createPost = async (
       ...(videoUrl && { videoUrl }),
       ...(documentUrl && { documentUrl, documentName }),
       ...(pollData && { poll: pollData }),
+      ...(modResult.severity === 'ambiguous' && { isFlaggedForReview: true }),
       createdAt: serverTimestamp(),
       likes: [],
       commentsCount: 0
     };
 
     const docRef = await addDoc(collection(db, 'posts'), postData);
+
+    // 2. If ambiguous (e.g. external Telegram/WhatsApp link), publish but queue in SuperAdmin flagged_content
+    if (modResult.severity === 'ambiguous') {
+      await logFlaggedContent({
+        authorId: user.uid,
+        authorName: user.fullName || user.username,
+        contentType: 'post',
+        targetId: docRef.id,
+        contentSnippet: content,
+        severity: 'ambiguous',
+        reason: modResult.flaggedReason || 'Ambiguous external link solicitation',
+      });
+    }
+
     return { success: true, postId: docRef.id };
   } catch (error: any) {
     console.error("Error creating post:", error);

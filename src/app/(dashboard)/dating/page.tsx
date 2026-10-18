@@ -7,13 +7,17 @@ import {
   getDatingProspects, 
   recordDatingAction, 
   getInterestedUsers, 
-  getDatingMatches 
+  getDatingMatches,
+  reactivateExpiredMatch,
+  getSharedCommunities,
+  MatchDetail
 } from "@/lib/services/dating";
+import { calculateStardom } from "@/lib/services/gamification";
 import { 
   Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, 
   Settings, LayoutGrid, Layers, MapPin, MoreHorizontal, Flag, 
   Volume2, ExternalLink, ChevronRight, ChevronLeft, User, MessageSquare, 
-  Flame, CheckCircle2 
+  Flame, CheckCircle2, Clock, RotateCcw, Users, Shield
 } from "lucide-react";
 import { getOrCreateChat } from "@/lib/services/messages";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -51,18 +55,34 @@ export default function DatingPage() {
 
   // Mutual Matches State
   const [matches, setMatches] = useState<UserBasic[]>([]);
+  const [matchDetails, setMatchDetails] = useState<MatchDetail[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
+  const [expiredDrawerOpen, setExpiredDrawerOpen] = useState(false);
 
-  // Modals
+  // Modals & Shared Circles
   const [matchModal, setMatchModal] = useState<UserBasic | null>(null);
   const [inspectingProspect, setInspectingProspect] = useState<UserBasic | null>(null);
   const [inspectingPhotoIndex, setInspectingPhotoIndex] = useState(0);
+  const [sharedCircles, setSharedCircles] = useState<Array<{ id: string; name: string; category: string }>>([]);
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
   const [lockDetails, setLockDetails] = useState<{ title: string; desc: string }>({
     title: "Unlock Unlimited Dating Swipes",
-    desc: "You've reached your daily free limit of 5 swipes. Upgrade to Premium for unlimited matches & swipes!"
+    desc: "You've reached your daily free limit of swipes. Upgrade to Premium or level up your Stardom XP for more daily swipes!"
   });
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
+  const stardomProgress = calculateStardom(profile?.stardomXP || 0);
+  const stardomLevel = stardomProgress.currentTier.level;
+
+  // Tiered Stardom XP Swipe Allowance: Explorer (5), Insider/Connector (10), Buzzmaker/Trendsetter (20), Influencer+ (Unlimited)
+  const dailySwipeLimit = (isPremium || stardomLevel >= 6)
+    ? Infinity
+    : stardomLevel >= 4
+      ? 20
+      : stardomLevel >= 2
+        ? 10
+        : 5;
 
   // Load swipes from local storage
   useEffect(() => {
@@ -70,6 +90,21 @@ export default function DatingPage() {
     const saved = localStorage.getItem(`dating_swipes_${dateKey}`);
     if (saved) setSwipesToday(parseInt(saved, 10));
   }, []);
+
+  // Fetch Shared Community Circles when inspecting a prospect
+  useEffect(() => {
+    if (!profile?.uid || !inspectingProspect?.uid) {
+      setSharedCircles([]);
+      return;
+    }
+    let active = true;
+    getSharedCommunities(profile.uid, inspectingProspect.uid).then(res => {
+      if (active && res.success) {
+        setSharedCircles(res.shared);
+      }
+    });
+    return () => { active = false; };
+  }, [profile?.uid, inspectingProspect?.uid]);
 
   // Fetch Discover Prospects
   const fetchProspects = async () => {
@@ -103,8 +138,19 @@ export default function DatingPage() {
     const res = await getDatingMatches(profile.uid);
     if (res.success && res.matches) {
       setMatches(res.matches);
+      if (res.matchDetails) setMatchDetails(res.matchDetails);
     }
     setMatchesLoading(false);
+  };
+
+  const handleReactivateMatch = async (matchId: string, partnerName: string) => {
+    const res = await reactivateExpiredMatch(matchId);
+    if (res.success) {
+      toast.success(`48-hour timer extended with ${partnerName}! Say hello now! ⚡`);
+      fetchMatches();
+    } else {
+      toast.error("Could not reactivate match.");
+    }
   };
 
   useEffect(() => {
@@ -120,16 +166,14 @@ export default function DatingPage() {
     setPremiumLockOpen(true);
   };
 
-  const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
-
   const handleAction = async (action: 'like' | 'pass', specificProspectId?: string) => {
     if (!profile?.uid || isProcessing) return;
     
-    // Check swipe limits (for discover swipe)
-    if (!specificProspectId && (profile.subscriptionTier === 'free' || !profile.subscriptionTier) && swipesToday >= 5) {
+    // Check Stardom XP tiered swipe limits
+    if (!specificProspectId && swipesToday >= dailySwipeLimit) {
       openLock(
         "Unlock Unlimited Dating Swipes",
-        "You've reached your daily free limit of 5 swipes. Upgrade to Premium for unlimited matches & swipes!"
+        `You've used all ${dailySwipeLimit} of your daily ${stardomProgress.currentTier.title} swipes! Upgrade to Pro/Elite or reach Influencer rank for unlimited daily swipes.`
       );
       return;
     }
@@ -172,6 +216,16 @@ export default function DatingPage() {
         if (res.isMatch) {
           // Add to matches in memory
           setMatches(prev => [currentProspect, ...prev.filter(m => m.uid !== currentProspect.uid)]);
+          setMatchDetails(prev => [
+            {
+              matchId: [profile.uid, currentProspect.uid].sort().join('_'),
+              partner: currentProspect,
+              createdAt: new Date(),
+              hasMessaged: false,
+              isExtended: false
+            },
+            ...prev.filter(m => m.partner.uid !== currentProspect.uid)
+          ]);
           setMatchModal(currentProspect);
           toast.success(`It's a Match with ${currentProspect.fullName}! 💖`, { icon: '🎉' });
         } else if (action === 'like') {
@@ -222,17 +276,34 @@ export default function DatingPage() {
             <Heart className="w-6 h-6 sm:w-7 sm:h-7 text-brand fill-brand" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Rhockstar Dating</h1>
               <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-brand/20 text-brand border border-brand/30 uppercase">
                 Verified
               </span>
+              {profile.datingIncognito && isPremium && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase flex items-center gap-1">
+                  <Shield className="w-3 h-3" /> Incognito Active
+                </span>
+              )}
             </div>
             <p className="text-xs sm:text-sm text-slate-400 font-medium">Connect authentically with verified professionals.</p>
           </div>
         </div>
         
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+        <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
+          {/* Stardom XP Swipe Allowance Indicator */}
+          <div
+            className="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 flex items-center gap-1.5 text-xs font-bold text-slate-200 shadow-sm"
+            title={`Stardom Rank: ${stardomProgress.currentTier.title}`}
+          >
+            <span>{stardomProgress.currentTier.badge}</span>
+            <span className="text-brand">{stardomProgress.currentTier.title}:</span>
+            <span>
+              {dailySwipeLimit === Infinity ? 'Unlimited Swipes' : `${Math.max(0, dailySwipeLimit - swipesToday)}/${dailySwipeLimit} Swipes Left`}
+            </span>
+          </div>
+
           {activeTab === 'discover' && (
             <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-white/10">
               <button 
@@ -713,83 +784,185 @@ export default function DatingPage() {
         </div>
       )}
 
-      {/* ================= TAB 3: MUTUAL MATCHES ================= */}
-      {activeTab === 'matches' && (
-        <div className="space-y-6">
-          <div className="p-5 rounded-3xl bg-slate-900/60 border border-white/10 shadow-xl flex items-center justify-between">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                <span>Mutual Matches</span>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand text-slate-950">
-                  {matches.length}
-                </span>
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                You both liked each other! Start a conversation and get to know each other.
-              </p>
-            </div>
-          </div>
+      {/* ================= TAB 3: MUTUAL MATCHES (WITH 48H COUNTDOWN & EXPIRED DRAWER) ================= */}
+      {activeTab === 'matches' && (() => {
+        const nowMs = Date.now();
+        const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
 
-          {matchesLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map(i => (
-                <Skeleton key={i} className="aspect-[4/5] rounded-3xl" />
-              ))}
+        // Enrich matches with countdown calculation
+        const enrichedMatches = matches.map(m => {
+          const detail = matchDetails.find(d => d.partner.uid === m.uid);
+          const rawStart = detail?.lastExtendedAt || detail?.createdAt;
+          const startMs = rawStart?.toDate ? rawStart.toDate().getTime() : rawStart ? new Date(rawStart).getTime() : nowMs;
+          const elapsedMs = Math.max(0, nowMs - startMs);
+          const remainingMs = Math.max(0, FORTY_EIGHT_HOURS_MS - elapsedMs);
+          const hoursLeft = Math.ceil(remainingMs / (60 * 60 * 1000));
+          const hasMessaged = Boolean(detail?.hasMessaged);
+          const isExpired = !hasMessaged && remainingMs === 0;
+
+          return {
+            match: m,
+            matchId: detail?.matchId || [profile.uid, m.uid].sort().join('_'),
+            hasMessaged,
+            hoursLeft,
+            isExpired,
+            isExtended: Boolean(detail?.isExtended)
+          };
+        });
+
+        const activeMatchesList = enrichedMatches.filter(item => !item.isExpired);
+        const expiredMatchesList = enrichedMatches.filter(item => item.isExpired);
+
+        return (
+          <div className="space-y-6">
+            <div className="p-5 rounded-3xl bg-slate-900/60 border border-white/10 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                  <span>Mutual Matches</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand text-slate-950">
+                    {activeMatchesList.length}
+                  </span>
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                  New matches have a 48-hour anti-ghosting timer—send a quick message to lock in your connection!
+                </p>
+              </div>
             </div>
-          ) : matches.length === 0 ? (
-            <EmptyState
-              icon={MessageCircleHeart}
-              title="No mutual matches yet"
-              description="Keep discovering profiles or check who is interested in you to create your first match!"
-            />
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5">
-              {matches.map((match) => (
-                <div 
-                  key={match.uid}
-                  className="neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden flex flex-col shadow-xl hover:border-brand/40 transition-all group"
-                >
-                  <div 
-                    onClick={() => { setInspectingProspect(match); setInspectingPhotoIndex(0); }}
-                    className="w-full aspect-[4/5] bg-slate-800 relative overflow-hidden cursor-pointer"
-                  >
-                    {match.datingPhotos && match.datingPhotos.length > 0 ? (
-                      <img 
-                        src={match.datingPhotos[0]} 
-                        alt={match.fullName} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                        <UserAvatar src={match.avatar} name={match.fullName} className="w-20 h-20 opacity-80" textClassName="text-3xl font-extrabold" />
+
+            {matchesLoading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(i => (
+                  <Skeleton key={i} className="aspect-[4/5] rounded-3xl" />
+                ))}
+              </div>
+            ) : activeMatchesList.length === 0 && expiredMatchesList.length === 0 ? (
+              <EmptyState
+                icon={MessageCircleHeart}
+                title="No mutual matches yet"
+                description="Keep discovering profiles or check who is interested in you to create your first match!"
+              />
+            ) : (
+              <>
+                {activeMatchesList.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-5">
+                    {activeMatchesList.map(({ match, hasMessaged, hoursLeft }) => (
+                      <div 
+                        key={match.uid}
+                        className="neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden flex flex-col shadow-xl hover:border-brand/40 transition-all group"
+                      >
+                        <div 
+                          onClick={() => { setInspectingProspect(match); setInspectingPhotoIndex(0); }}
+                          className="w-full aspect-[4/5] bg-slate-800 relative overflow-hidden cursor-pointer"
+                        >
+                          {match.datingPhotos && match.datingPhotos.length > 0 ? (
+                            <img 
+                              src={match.datingPhotos[0]} 
+                              alt={match.fullName} 
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                              <UserAvatar src={match.avatar} name={match.fullName} className="w-20 h-20 opacity-80" textClassName="text-3xl font-extrabold" />
+                            </div>
+                          )}
+                          
+                          {/* 48-Hour Countdown / Bonded Status Badge */}
+                          {hasMessaged ? (
+                            <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
+                              <CheckCircle2 className="w-3 h-3" /> Active Chat
+                            </div>
+                          ) : (
+                            <div className={`absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md ${
+                              hoursLeft > 24
+                                ? 'bg-brand text-slate-950'
+                                : hoursLeft > 12
+                                  ? 'bg-amber-500 text-slate-950'
+                                  : 'bg-rose-500 text-white animate-pulse'
+                            }`}>
+                              <Clock className="w-3 h-3" /> {hoursLeft}h left to say hi
+                            </div>
+                          )}
+
+                          <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent flex flex-col justify-end p-3.5">
+                            <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight truncate">{match.fullName}</h3>
+                            <p className="text-xs font-semibold text-brand truncate">@{match.username}</p>
+                          </div>
+                        </div>
+
+                        <div className="p-3 flex flex-col gap-2.5 bg-slate-900">
+                          <button 
+                            onClick={() => router.push(`/messages?user=${match.uid}`)}
+                            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-extrabold text-xs shadow-md shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            <span>Chat Now</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* EXPIRED MATCHES DRAWER (1-Click Reactivate) */}
+                {expiredMatchesList.length > 0 && (
+                  <div className="mt-8 rounded-3xl bg-slate-900/50 border border-white/10 overflow-hidden">
+                    <button
+                      onClick={() => setExpiredDrawerOpen(!expiredDrawerOpen)}
+                      className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-white/5 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                          <Clock className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                            <span>Expired Matches Drawer</span>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                              {expiredMatchesList.length}
+                            </span>
+                          </h3>
+                          <p className="text-xs text-slate-400">
+                            48 hours passed without a message. Reactivate once to reopen the conversation window!
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold text-brand">
+                        {expiredDrawerOpen ? 'Hide Drawer' : 'Open Drawer'}
+                      </span>
+                    </button>
+
+                    {expiredDrawerOpen && (
+                      <div className="p-4 sm:p-5 border-t border-white/10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {expiredMatchesList.map(({ match, matchId }) => (
+                          <div
+                            key={match.uid}
+                            className="p-3.5 rounded-2xl bg-slate-950/70 border border-white/10 flex items-center justify-between gap-3"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <UserAvatar src={match.avatar} name={match.fullName} className="w-12 h-12 rounded-xl shrink-0 opacity-75" />
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-white truncate">{match.fullName}</p>
+                                <p className="text-xs text-slate-400 truncate">@{match.username}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => handleReactivateMatch(matchId, match.fullName)}
+                              className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 shrink-0 transition-all shadow-md"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Reactivate</span>
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     )}
-                    
-                    <div className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full bg-brand text-slate-950 text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
-                      <Sparkles className="w-3 h-3" /> Matched
-                    </div>
-
-                    <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent flex flex-col justify-end p-3.5">
-                      <h3 className="text-base sm:text-lg font-extrabold text-white leading-tight truncate">{match.fullName}</h3>
-                      <p className="text-xs font-semibold text-brand truncate">@{match.username}</p>
-                    </div>
                   </div>
-
-                  <div className="p-3 flex flex-col gap-2.5 bg-slate-900">
-                    <button 
-                      onClick={() => router.push(`/messages?user=${match.uid}`)}
-                      className="w-full py-2.5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-extrabold text-xs shadow-md shadow-brand/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span>Chat Now</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                )}
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ================= DATING PROFILE DETAIL MODAL (Responsive Desktop & Mobile Inspector) ================= */}
       {inspectingProspect && (
@@ -967,6 +1140,26 @@ export default function DatingPage() {
                   )}
                 </div>
 
+                {/* Shared Community Circles ("Who's Connected") */}
+                {sharedCircles.length > 0 && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-brand/10 border border-emerald-500/30 space-y-2.5">
+                    <h4 className="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-4 h-4" />
+                      <span>⚡ {sharedCircles.length} Shared Community {sharedCircles.length === 1 ? 'Circle' : 'Circles'}</span>
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {sharedCircles.map(circle => (
+                        <span
+                          key={circle.id}
+                          className="px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-200 border border-emerald-500/30 text-xs font-bold"
+                        >
+                          {circle.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* About Me / Bio */}
                 {inspectingProspect.bio && (
                   <div className="space-y-2">
@@ -980,14 +1173,28 @@ export default function DatingPage() {
                   </div>
                 )}
 
-                {/* Voice Intro Note */}
-                {inspectingProspect.datingVoiceIntro && (
+                {/* "Vibe Check" 15s Audio Icebreaker */}
+                {(inspectingProspect.datingIcebreaker?.audioUrl || inspectingProspect.datingVoiceIntro) && (
                   <div className="p-4 sm:p-5 rounded-2xl bg-brand/10 border border-brand/20 space-y-2.5">
-                    <h4 className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-2">
-                      <Volume2 className="w-4 h-4" />
-                      <span>Voice Intro Note</span>
-                    </h4>
-                    <audio controls src={inspectingProspect.datingVoiceIntro} className="w-full h-10" />
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-xs font-black text-brand uppercase tracking-wider flex items-center gap-2">
+                        <Volume2 className="w-4 h-4" />
+                        <span>🎙️ Vibe Check Audio Icebreaker</span>
+                      </h4>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand/20 text-brand">
+                        Voice Note
+                      </span>
+                    </div>
+                    {inspectingProspect.datingIcebreaker?.prompt && (
+                      <p className="text-xs sm:text-sm font-bold text-white italic">
+                        &ldquo;{inspectingProspect.datingIcebreaker.prompt}&rdquo;
+                      </p>
+                    )}
+                    <audio
+                      controls
+                      src={inspectingProspect.datingIcebreaker?.audioUrl || inspectingProspect.datingVoiceIntro}
+                      className="w-full h-10"
+                    />
                   </div>
                 )}
 
