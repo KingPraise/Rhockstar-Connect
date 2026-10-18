@@ -12,7 +12,7 @@ import {
 import { 
   Heart, X, Sparkles, Loader2, MessageCircleHeart, Lock, Crown, 
   Settings, LayoutGrid, Layers, MapPin, MoreHorizontal, Flag, 
-  Volume2, ExternalLink, ChevronRight, User, MessageSquare, 
+  Volume2, ExternalLink, ChevronRight, ChevronLeft, User, MessageSquare, 
   Flame, CheckCircle2 
 } from "lucide-react";
 import { getOrCreateChat } from "@/lib/services/messages";
@@ -791,72 +791,114 @@ export default function DatingPage() {
         </div>
       )}
 
-      {/* ================= DATING PROFILE DETAIL MODAL (Tinder / Hinge Style Inspector) ================= */}
+      {/* ================= DATING PROFILE DETAIL MODAL (Responsive Desktop & Mobile Inspector) ================= */}
       {inspectingProspect && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] relative animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-lg md:max-w-4xl lg:max-w-5xl bg-slate-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[94vh] md:h-[88vh] max-h-[860px] relative animate-in zoom-in-95 duration-200">
             
-            {/* Modal Header Bar */}
-            <div className="flex items-center justify-between p-4 border-b border-white/5 bg-slate-900/90 sticky top-0 z-20">
-              <div className="flex items-center gap-2 min-w-0">
-                <h3 className="text-base font-bold text-white truncate">{inspectingProspect.fullName}</h3>
+            {/* Modal Top Header Bar */}
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-white/5 bg-slate-900/95 sticky top-0 z-20 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-white truncate">{inspectingProspect.fullName}</h3>
                 <VerifiedBadge tier={inspectingProspect.subscriptionTier} />
+                <span className="text-xs font-semibold text-brand hidden sm:inline">@{inspectingProspect.username}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Link
                   href={`/profile?uid=${inspectingProspect.uid}`}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors border border-white/5"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors border border-white/5"
                 >
                   <span>Social Profile</span>
                   <ExternalLink className="w-3.5 h-3.5 text-brand" />
                 </Link>
                 <button 
                   onClick={() => setInspectingProspect(null)} 
-                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                  className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Scrollable Profile Body */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
+            {/* Modal Body: Split 2-Column on Tablet/Desktop (md:grid-cols-12), Stacked on Mobile */}
+            <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-0">
               
-              {/* Photo Carousel */}
-              {inspectingProspect.datingPhotos && inspectingProspect.datingPhotos.length > 0 ? (
-                <div className="space-y-2">
-                  <div className="w-full aspect-[4/5] rounded-3xl overflow-hidden bg-slate-800 relative shadow-xl">
-                    <img 
-                      src={inspectingProspect.datingPhotos[inspectingPhotoIndex] || inspectingProspect.datingPhotos[0]} 
-                      alt={inspectingProspect.fullName}
-                      className="w-full h-full object-cover"
-                    />
-                    
-                    {/* Multi-photo indicator dots */}
-                    {inspectingProspect.datingPhotos.length > 1 && (
+              {/* Left Column: Photos & Quick Actions (md:col-span-5 lg:col-span-5) */}
+              <div className="md:col-span-5 lg:col-span-5 bg-slate-950/70 p-4 sm:p-5 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/5 overflow-y-auto no-scrollbar">
+                <div className="space-y-3">
+                  {/* Photo Viewer with Arrows */}
+                  <div className="relative w-full aspect-[4/5] sm:aspect-[3/4] md:aspect-[4/5] rounded-3xl overflow-hidden bg-slate-800 shadow-2xl group">
+                    {inspectingProspect.datingPhotos && inspectingProspect.datingPhotos.length > 0 ? (
+                      <img 
+                        src={inspectingProspect.datingPhotos[inspectingPhotoIndex] || inspectingProspect.datingPhotos[0]} 
+                        alt={inspectingProspect.fullName}
+                        className="w-full h-full object-cover transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
+                        <UserAvatar src={inspectingProspect.avatar} name={inspectingProspect.fullName} className="w-24 h-24" />
+                      </div>
+                    )}
+
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+
+                    {/* Multi-photo Story Indicators */}
+                    {inspectingProspect.datingPhotos && inspectingProspect.datingPhotos.length > 1 && (
                       <div className="absolute top-3 inset-x-0 flex justify-center gap-1.5 z-10 px-4">
                         {inspectingProspect.datingPhotos.map((_, idx) => (
                           <div 
                             key={idx}
                             onClick={() => setInspectingPhotoIndex(idx)}
                             className={`h-1.5 rounded-full flex-1 transition-all cursor-pointer ${
-                              inspectingPhotoIndex === idx ? 'bg-white shadow-md' : 'bg-white/40'
+                              inspectingPhotoIndex === idx ? 'bg-white shadow-md' : 'bg-white/40 hover:bg-white/70'
                             }`}
                           />
                         ))}
                       </div>
                     )}
+
+                    {/* Photo Navigation Arrows */}
+                    {inspectingProspect.datingPhotos && inspectingProspect.datingPhotos.length > 1 && (
+                      <>
+                        {inspectingPhotoIndex > 0 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setInspectingPhotoIndex(prev => Math.max(0, prev - 1)); }}
+                            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all backdrop-blur-sm border border-white/10 shadow-lg"
+                            aria-label="Previous photo"
+                          >
+                            <ChevronLeft className="w-5 h-5" />
+                          </button>
+                        )}
+                        {inspectingPhotoIndex < inspectingProspect.datingPhotos.length - 1 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setInspectingPhotoIndex(prev => Math.min(inspectingProspect.datingPhotos!.length - 1, prev + 1)); }}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 hover:bg-black/90 text-white flex items-center justify-center transition-all backdrop-blur-sm border border-white/10 shadow-lg"
+                            aria-label="Next photo"
+                          >
+                            <ChevronRight className="w-5 h-5" />
+                          </button>
+                        )}
+                      </>
+                    )}
+
+                    {/* Photo Index Counter Badge */}
+                    {inspectingProspect.datingPhotos && inspectingProspect.datingPhotos.length > 1 && (
+                      <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full text-[11px] font-bold bg-black/70 backdrop-blur text-white border border-white/10">
+                        {inspectingPhotoIndex + 1} / {inspectingProspect.datingPhotos.length}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Thumbnail Selector */}
-                  {inspectingProspect.datingPhotos.length > 1 && (
+                  {/* Thumbnail Row */}
+                  {inspectingProspect.datingPhotos && inspectingProspect.datingPhotos.length > 1 && (
                     <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
                       {inspectingProspect.datingPhotos.map((photoUrl, idx) => (
                         <div 
                           key={idx}
                           onClick={() => setInspectingPhotoIndex(idx)}
-                          className={`w-14 h-14 rounded-xl overflow-hidden shrink-0 border-2 cursor-pointer transition-all ${
-                            inspectingPhotoIndex === idx ? 'border-brand scale-105' : 'border-transparent opacity-60 hover:opacity-100'
+                          className={`w-14 h-14 rounded-2xl overflow-hidden shrink-0 border-2 cursor-pointer transition-all ${
+                            inspectingPhotoIndex === idx ? 'border-brand scale-105 shadow-md shadow-brand/20' : 'border-transparent opacity-60 hover:opacity-100'
                           }`}
                         >
                           <img src={photoUrl} alt="Thumbnail" className="w-full h-full object-cover" />
@@ -865,103 +907,142 @@ export default function DatingPage() {
                     </div>
                   )}
                 </div>
-              ) : null}
 
-              {/* Identity & Badges */}
-              <div className="p-4 rounded-2xl bg-slate-800/40 border border-white/5 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-2xl font-black text-white leading-tight">{inspectingProspect.fullName}</h2>
-                    <p className="text-sm font-semibold text-brand">@{inspectingProspect.username}</p>
-                  </div>
-                  {inspectingProspect.datingGoals && (
-                    <span className="px-3 py-1 rounded-full text-xs font-black bg-brand/20 text-brand border border-brand/30">
-                      🎯 {inspectingProspect.datingGoals}
-                    </span>
-                  )}
+                {/* Left Desktop Action Bar */}
+                <div className="hidden md:flex items-center gap-3 pt-4 border-t border-white/5">
+                  <button 
+                    onClick={() => handleAction('pass', inspectingProspect.uid)}
+                    disabled={isProcessing}
+                    className="flex-1 py-3 rounded-2xl bg-slate-800 hover:bg-rose-600/30 text-slate-300 hover:text-rose-300 font-extrabold text-xs transition-all flex items-center justify-center gap-2 border border-white/10"
+                  >
+                    <X className="w-4 h-4" />
+                    <span>Pass</span>
+                  </button>
+                  <button 
+                    onClick={() => handleAction('like', inspectingProspect.uid)}
+                    disabled={isProcessing}
+                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-brand to-brand-purple text-white font-extrabold text-xs shadow-lg shadow-brand/30 hover:opacity-95 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Heart className="w-4 h-4 fill-white" />
+                    <span>Like Profile</span>
+                  </button>
                 </div>
-                
-                {inspectingProspect.location && (
-                  <p className="text-xs text-slate-300 flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                    <span>
-                      {typeof inspectingProspect.location === 'object' 
-                        ? [inspectingProspect.location.city, inspectingProspect.location.country].filter(Boolean).join(", ") 
-                        : inspectingProspect.location}
-                    </span>
-                  </p>
-                )}
               </div>
 
-              {/* Bio */}
-              {inspectingProspect.bio && (
-                <div className="space-y-1.5">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">About Me</h4>
-                  <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap bg-slate-800/30 p-4 rounded-2xl border border-white/5">
-                    {inspectingProspect.bio}
-                  </p>
-                </div>
-              )}
-
-              {/* Voice Intro Note */}
-              {inspectingProspect.datingVoiceIntro && (
-                <div className="p-4 rounded-2xl bg-brand/10 border border-brand/20 space-y-2">
-                  <h4 className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-2">
-                    <Volume2 className="w-4 h-4" />
-                    <span>Voice Intro</span>
-                  </h4>
-                  <audio controls src={inspectingProspect.datingVoiceIntro} className="w-full h-9" />
-                </div>
-              )}
-
-              {/* Prompts & Answers (Hinge Style) */}
-              {inspectingProspect.datingPrompts && inspectingProspect.datingPrompts.length > 0 && (
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Conversation Starters</h4>
-                  {inspectingProspect.datingPrompts.map((p, idx) => (
-                    <div key={idx} className="p-4 rounded-2xl bg-gradient-to-br from-slate-800/60 to-slate-900 border border-white/10 space-y-1">
-                      <p className="text-xs font-bold text-brand">{p.prompt}</p>
-                      <p className="text-sm font-semibold text-white leading-relaxed">{p.answer}</p>
+              {/* Right Column: Profile Information Panel (md:col-span-7 lg:col-span-7) */}
+              <div className="md:col-span-7 lg:col-span-7 overflow-y-auto p-4 sm:p-6 md:p-8 space-y-5 custom-scrollbar bg-slate-900/40">
+                {/* Identity & Badges Card */}
+                <div className="p-5 rounded-3xl bg-slate-800/40 border border-white/5 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">{inspectingProspect.fullName}</h2>
+                        <VerifiedBadge tier={inspectingProspect.subscriptionTier} />
+                      </div>
+                      <p className="text-sm font-semibold text-brand">@{inspectingProspect.username}</p>
                     </div>
-                  ))}
-                </div>
-              )}
 
-              {/* Dating Interests Tags */}
-              {inspectingProspect.datingInterests && inspectingProspect.datingInterests.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Interests & Passions</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {inspectingProspect.datingInterests.map((interest, idx) => (
-                      <span key={idx} className="px-3 py-1 rounded-xl bg-slate-800 text-slate-200 text-xs font-medium border border-white/5">
-                        {interest}
+                    {inspectingProspect.datingGoals && (
+                      <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-brand/20 text-brand border border-brand/30 shrink-0 self-start">
+                        🎯 {inspectingProspect.datingGoals}
                       </span>
-                    ))}
+                    )}
                   </div>
-                </div>
-              )}
 
-              {/* Full Social Profile CTA */}
-              <div className="p-4 rounded-2xl bg-slate-800/50 border border-white/5 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-white">Want to see more?</p>
-                  <p className="text-[11px] text-slate-400">View education, career background, and recent posts.</p>
+                  {inspectingProspect.headline && (
+                    <p className="text-xs sm:text-sm font-semibold text-slate-200">
+                      {inspectingProspect.headline}
+                    </p>
+                  )}
+
+                  {inspectingProspect.location && (
+                    <p className="text-xs text-slate-300 flex items-center gap-1.5 pt-1">
+                      <MapPin className="w-4 h-4 text-brand shrink-0" />
+                      <span>
+                        {typeof inspectingProspect.location === 'object' 
+                          ? [inspectingProspect.location.city, inspectingProspect.location.state, inspectingProspect.location.country].filter(Boolean).join(", ") 
+                          : inspectingProspect.location}
+                      </span>
+                    </p>
+                  )}
                 </div>
-                <Link
-                  href={`/profile?uid=${inspectingProspect.uid}`}
-                  className="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition-colors shrink-0"
-                >
-                  View Profile & Posts
-                </Link>
+
+                {/* About Me / Bio */}
+                {inspectingProspect.bio && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-brand" />
+                      <span>About Me</span>
+                    </h4>
+                    <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap bg-slate-800/30 p-4 sm:p-5 rounded-2xl border border-white/5">
+                      {inspectingProspect.bio}
+                    </p>
+                  </div>
+                )}
+
+                {/* Voice Intro Note */}
+                {inspectingProspect.datingVoiceIntro && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-brand/10 border border-brand/20 space-y-2.5">
+                    <h4 className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-2">
+                      <Volume2 className="w-4 h-4" />
+                      <span>Voice Intro Note</span>
+                    </h4>
+                    <audio controls src={inspectingProspect.datingVoiceIntro} className="w-full h-10" />
+                  </div>
+                )}
+
+                {/* Conversation Starters / Prompts & Answers */}
+                {inspectingProspect.datingPrompts && inspectingProspect.datingPrompts.length > 0 && (
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Conversation Starters</h4>
+                    <div className="space-y-3">
+                      {inspectingProspect.datingPrompts.map((p, idx) => (
+                        <div key={idx} className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-800/70 to-slate-900 border border-white/10 space-y-1.5 shadow-sm">
+                          <p className="text-xs font-bold text-brand">{p.prompt}</p>
+                          <p className="text-sm sm:text-base font-semibold text-white leading-relaxed">{p.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Interests & Passions */}
+                {inspectingProspect.datingInterests && inspectingProspect.datingInterests.length > 0 && (
+                  <div className="space-y-2.5">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Interests & Passions</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {inspectingProspect.datingInterests.map((interest, idx) => (
+                        <span key={idx} className="px-3.5 py-1.5 rounded-xl bg-slate-800/90 text-slate-200 text-xs font-medium border border-white/5 hover:border-brand/40 transition-colors">
+                          {interest}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Full Social Profile CTA Banner */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-800/70 to-slate-900 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs sm:text-sm font-bold text-white">Want to know them better?</p>
+                    <p className="text-xs text-slate-400">View their career experience, education, portfolio, and published posts.</p>
+                  </div>
+                  <Link
+                    href={`/profile?uid=${inspectingProspect.uid}`}
+                    className="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs transition-colors shrink-0 flex items-center justify-center gap-1.5"
+                  >
+                    <span>View Full Profile</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
             </div>
 
-            {/* Modal Bottom Action Bar */}
-            <div className="p-4 bg-slate-950 border-t border-white/5 flex items-center justify-center gap-6 shrink-0">
+            {/* Mobile Bottom Action Bar (hidden on md/desktop) */}
+            <div className="md:hidden p-3.5 bg-slate-950 border-t border-white/5 flex items-center justify-center gap-4 shrink-0">
               <button 
                 onClick={() => handleAction('pass', inspectingProspect.uid)}
                 disabled={isProcessing}
-                className="flex-1 py-3 rounded-2xl bg-slate-850 hover:bg-rose-600 text-slate-300 hover:text-white font-extrabold text-xs transition-all flex items-center justify-center gap-2 border border-white/10"
+                className="flex-1 py-3 rounded-2xl bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white font-extrabold text-xs transition-all flex items-center justify-center gap-2 border border-white/10"
               >
                 <X className="w-4 h-4" />
                 <span>Pass</span>
