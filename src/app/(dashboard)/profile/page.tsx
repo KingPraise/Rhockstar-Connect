@@ -9,7 +9,7 @@ import {
   Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap, 
   UserPlus, Target, CheckCircle2, MessageSquare, User, MoreHorizontal, 
   FileText, Briefcase, MapPin, Calendar, ExternalLink, Sparkles, ChevronDown, 
-  ChevronUp, ShieldCheck 
+  ChevronUp, ShieldCheck, Volume2, Flame 
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getUserById, getUserByUsername, trackProfileView, listenToUserProfile } from "@/lib/services/users";
@@ -17,6 +17,7 @@ import { sendConnectionRequest } from "@/lib/services/connections";
 import { followUser, unfollowUser, listenToFollowState } from "@/lib/services/follows";
 import { calculateProfileProgress } from "@/lib/utils/profileProgress";
 import { subscribeToUserPosts, Post } from "@/lib/services/posts";
+import { recordDatingAction } from "@/lib/services/dating";
 import PostCard from "@/components/feed/PostCard";
 import PostComposer from "@/components/feed/PostComposer";
 import PostCardSkeleton from "@/components/feed/PostCardSkeleton";
@@ -36,6 +37,7 @@ export default function ProfilePage() {
   const searchParams = useSearchParams();
   const queryUser = searchParams.get("user") || searchParams.get("username");
   const queryUid = searchParams.get("uid");
+  const queryTab = searchParams.get("tab");
 
   const [targetUser, setTargetUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -48,9 +50,17 @@ export default function ProfilePage() {
   // Profile navigation & user posts
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'posts' | 'about' | 'experience' | 'skills' | 'portfolio'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'about' | 'experience' | 'skills' | 'portfolio' | 'dating'>(
+    queryTab === 'dating' ? 'dating' : 'posts'
+  );
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showIntroDetails, setShowIntroDetails] = useState(false);
+
+  useEffect(() => {
+    if (queryTab === 'dating') {
+      setActiveTab('dating');
+    }
+  }, [queryTab]);
 
   useEffect(() => {
     let unsubscribeUser: (() => void) | undefined;
@@ -317,6 +327,20 @@ export default function ProfilePage() {
             <Globe className="w-4 h-4" />
             <span>Links</span>
           </button>
+
+          {activeProfile?.datingActive && (
+            <button
+              onClick={() => setActiveTab('dating')}
+              className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all shrink-0 ${
+                activeTab === 'dating'
+                  ? 'bg-gradient-to-r from-brand to-brand-purple text-white shadow-lg shadow-brand/20'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Heart className="w-4 h-4 text-brand" />
+              <span>Dating</span>
+            </button>
+          )}
         </div>
 
         {/* 3-Dots / Show More Menu Dropdown */}
@@ -369,6 +393,15 @@ export default function ProfilePage() {
                 <Globe className="w-4 h-4 text-amber-400" />
                 <span>Portfolio & Links</span>
               </button>
+              {activeProfile?.datingActive && (
+                <button
+                  onClick={() => { setActiveTab('dating'); setShowMoreMenu(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:bg-white/10 text-left transition-colors"
+                >
+                  <Heart className="w-4 h-4 text-brand" />
+                  <span>Dating Profile</span>
+                </button>
+              )}
               {activeProfile?.resumeUrl && (
                 <a
                   href={activeProfile.resumeUrl}
@@ -886,6 +919,149 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex flex-col gap-6">
+            <StardomBadge xp={activeProfile?.stardomXP || 0} variant="full-card" />
+          </div>
+        </div>
+      )}
+
+      {/* TAB CONTENT: DATING PROFILE */}
+      {activeTab === 'dating' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+          <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
+            <div className="neo-card p-6 relative overflow-hidden group bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-6">
+              <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-brand to-brand-purple"></div>
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
+                    <Heart className="w-5 h-5 fill-brand/30" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-black text-white flex items-center gap-2">
+                      Dating Profile
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-brand/20 text-brand border border-brand/30">
+                        Active
+                      </span>
+                    </h2>
+                    <p className="text-xs text-slate-400">Relationship goals, voice note, prompts, and dating photos</p>
+                  </div>
+                </div>
+
+                {!isOwnProfile && loggedInProfile && (
+                  <button
+                    onClick={async () => {
+                      if (!activeProfile?.uid) return;
+                      const res = await recordDatingAction(loggedInProfile.uid, activeProfile.uid, 'like');
+                      if (res.success) {
+                        toast.success(res.isMatch ? "🎉 It's a Mutual Match!" : `Liked @${activeProfile.username || 'user'}!`);
+                      } else {
+                        toast.error(res.error || "Failed to send like");
+                      }
+                    }}
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-xs shadow-lg shadow-brand/25 hover:opacity-95 transition-opacity shrink-0"
+                  >
+                    <Heart className="w-4 h-4 fill-white" />
+                    <span>Send Dating Like</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Photos Gallery */}
+              {activeProfile?.datingPhotos && activeProfile.datingPhotos.length > 0 ? (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Dating Photos</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {activeProfile.datingPhotos.map((photoUrl: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="relative aspect-[3/4] rounded-2xl overflow-hidden bg-slate-800 border border-white/10 group shadow-md"
+                      >
+                        <img 
+                          src={photoUrl} 
+                          alt={`Dating photo ${idx + 1}`} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center rounded-2xl bg-slate-800/30 border border-white/5 text-slate-400 text-sm">
+                  No dating photos uploaded yet.
+                </div>
+              )}
+
+              {/* Dating Goals / Intent */}
+              {activeProfile?.datingGoals && (
+                <div className="p-4 rounded-2xl bg-brand/10 border border-brand/20 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-300">Relationship Intent</span>
+                  <span className="px-3 py-1 rounded-full text-xs font-black bg-brand/20 text-brand border border-brand/30">
+                    🎯 {activeProfile.datingGoals}
+                  </span>
+                </div>
+              )}
+
+              {/* Voice Intro Note */}
+              {activeProfile?.datingVoiceIntro && (
+                <div className="p-4 rounded-2xl bg-brand/10 border border-brand/20 space-y-2">
+                  <h4 className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-2">
+                    <Volume2 className="w-4 h-4" />
+                    <span>Voice Intro</span>
+                  </h4>
+                  <audio controls src={activeProfile.datingVoiceIntro} className="w-full h-9" />
+                </div>
+              )}
+
+              {/* Prompts & Answers */}
+              {activeProfile?.datingPrompts && activeProfile.datingPrompts.length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Conversation Starters</h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    {activeProfile.datingPrompts.map((p: any, idx: number) => (
+                      <div key={idx} className="p-4 rounded-2xl bg-gradient-to-br from-slate-800/60 to-slate-900 border border-white/10 space-y-1">
+                        <p className="text-xs font-bold text-brand">{p.prompt}</p>
+                        <p className="text-sm font-semibold text-white leading-relaxed">{p.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dating Interests Tags */}
+              {activeProfile?.datingInterests && activeProfile.datingInterests.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Interests & Passions</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {activeProfile.datingInterests.map((interest: string, idx: number) => (
+                      <span key={idx} className="px-3 py-1 rounded-xl bg-slate-800 text-slate-200 text-xs font-medium border border-white/5">
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div className="flex flex-col gap-6">
+            <div className="neo-card p-6 bg-gradient-to-br from-brand/10 to-brand-purple/10 border-brand/20 shadow-xl rounded-3xl space-y-4">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <Flame className="w-4 h-4 text-brand" />
+                Rhockstar Dating
+              </h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Connect with creatives, professionals, and like-minded individuals in a verified community.
+              </p>
+              <Link
+                href="/dating"
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-brand/20 hover:opacity-95 transition-opacity"
+              >
+                <span>Open Dating Hub</span>
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+
             <StardomBadge xp={activeProfile?.stardomXP || 0} variant="full-card" />
           </div>
         </div>
