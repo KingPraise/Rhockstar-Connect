@@ -63,11 +63,15 @@ export const getOrCreateChat = async (userId1: string, userId2: string) => {
     const q = query(chatsRef, where('participants', 'array-contains', userId1));
     const snapshot = await getDocs(q);
     
-    let existingChat = null;
+    let existingChat: any = null;
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
       if (data.participants && data.participants.includes(userId2)) {
-        existingChat = { id: docSnap.id, ...data };
+        if (!existingChat) {
+          existingChat = { id: docSnap.id, ...data };
+        } else if (data.lastMessage && !existingChat.lastMessage) {
+          existingChat = { id: docSnap.id, ...data };
+        }
       }
     });
 
@@ -315,16 +319,38 @@ export const subscribeToChats = (userId: string, callback: (chats: Chat[]) => vo
   );
   
   return onSnapshot(q, (snapshot) => {
-    const chats: Chat[] = [];
+    const rawChats: Chat[] = [];
     snapshot.forEach((doc) => {
-      chats.push({ id: doc.id, ...doc.data() } as Chat);
+      rawChats.push({ id: doc.id, ...doc.data() } as Chat);
     });
     
-    // Sort in memory to avoid requiring a Firestore composite index
+    // Sort descending by last message time first
+    rawChats.sort((a, b) => {
+      const timeA = (a.lastMessageTime as any)?.toMillis?.() || (a.lastMessageTime as any)?.seconds * 1000 || 0;
+      const timeB = (b.lastMessageTime as any)?.toMillis?.() || (b.lastMessageTime as any)?.seconds * 1000 || 0;
+      return timeB - timeA;
+    });
+
+    // Deduplicate chats per other participant to prevent duplicate threads
+    const chatMap = new Map<string, Chat>();
+    for (const chat of rawChats) {
+      const otherUserId = chat.participants.find(p => p !== userId) || chat.id;
+      if (!chatMap.has(otherUserId)) {
+        chatMap.set(otherUserId, chat);
+      } else {
+        const existing = chatMap.get(otherUserId)!;
+        // If the current one has a message and the existing one does not, use current
+        if (chat.lastMessage && !existing.lastMessage) {
+          chatMap.set(otherUserId, chat);
+        }
+      }
+    }
+
+    const chats = Array.from(chatMap.values());
+    // Re-sort after deduplication
     chats.sort((a, b) => {
-      // Handle Firebase Timestamps
-      const timeA = (a.lastMessageTime as any)?.toMillis?.() || 0;
-      const timeB = (b.lastMessageTime as any)?.toMillis?.() || 0;
+      const timeA = (a.lastMessageTime as any)?.toMillis?.() || (a.lastMessageTime as any)?.seconds * 1000 || 0;
+      const timeB = (b.lastMessageTime as any)?.toMillis?.() || (b.lastMessageTime as any)?.seconds * 1000 || 0;
       return timeB - timeA;
     });
 

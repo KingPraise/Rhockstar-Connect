@@ -64,6 +64,7 @@ export default function MessagesPage() {
 
   // DMs State
   const [chats, setChats] = useState<Chat[]>([]);
+  const [isChatsLoaded, setIsChatsLoaded] = useState(false);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -207,7 +208,7 @@ export default function MessagesPage() {
 
   // Handle URL target user param or chatId
   useEffect(() => {
-    if (!targetUserParam || !profile?.uid) return;
+    if (!targetUserParam || !profile?.uid || !isChatsLoaded) return;
     if (initiatedTargetParamRef.current === targetUserParam) return;
 
     const initiateChat = async () => {
@@ -226,6 +227,27 @@ export default function MessagesPage() {
         const userRes = await getUserByUsername(targetUserParam);
         if (userRes.success && userRes.user) {
           targetUid = userRes.user.uid;
+        } else {
+          // Check if targetUserParam was a legacy chat ID in Firestore whose partner is in chats
+          try {
+            const { getDoc, doc } = await import('firebase/firestore');
+            const legacyDoc = await getDoc(doc(db, 'chats', targetUserParam));
+            if (legacyDoc.exists()) {
+              const participants = legacyDoc.data()?.participants || [];
+              const partnerId = participants.find((p: string) => p !== profile.uid);
+              if (partnerId) {
+                const canonicalChat = chats.find(c => c.participants && c.participants.includes(partnerId));
+                if (canonicalChat) {
+                  initiatedTargetParamRef.current = targetUserParam;
+                  setActiveChat(canonicalChat);
+                  setMessagesMode('direct');
+                  return;
+                }
+              }
+            }
+          } catch {
+            // Ignore and proceed
+          }
         }
       }
 
@@ -251,13 +273,14 @@ export default function MessagesPage() {
     };
 
     initiateChat();
-  }, [targetUserParam, profile?.uid, chats, users]);
+  }, [targetUserParam, profile?.uid, isChatsLoaded, chats, users]);
 
   // Subscribe to DMs
   useEffect(() => {
     if (!profile?.uid) return;
     const unsubscribe = subscribeToChats(profile.uid, async (updatedChats) => {
       setChats(updatedChats);
+      setIsChatsLoaded(true);
       
       const missingUserIds = new Set<string>();
       updatedChats.forEach(chat => {
@@ -647,6 +670,12 @@ export default function MessagesPage() {
   const startNewChatWithUser = async (otherUserId: string) => {
     if (!profile?.uid) return;
     setShowNewChat(false);
+    const existing = chats.find(c => c.participants && c.participants.includes(otherUserId));
+    if (existing) {
+      setActiveChat(existing);
+      setMessagesMode('direct');
+      return;
+    }
     const res = await getOrCreateChat(profile.uid, otherUserId);
     if (res.success && res.chat) {
       setActiveChat(res.chat as Chat);
@@ -852,6 +881,7 @@ export default function MessagesPage() {
               </div>
             ) : (
               (() => {
+                const seenUserIds = new Set<string>();
                 const filteredChats = chats.filter(chat => {
                   if (!profile?.uid) return false;
                   const isDeleted = chat.deletedFor?.includes(profile.uid);
@@ -862,6 +892,11 @@ export default function MessagesPage() {
                   if (chatTab === 'archived' && !isArchived) return false;
 
                   const otherUserId = chat.participants.find(p => p !== profile.uid);
+                  if (otherUserId) {
+                    if (seenUserIds.has(otherUserId)) return false;
+                    seenUserIds.add(otherUserId);
+                  }
+
                   const otherUser = otherUserId ? users[otherUserId] : null;
                   if (!otherUser) return true;
 
