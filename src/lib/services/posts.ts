@@ -236,26 +236,57 @@ export const subscribeToFeed = (limitCount: number, callback: (posts: Post[]) =>
 
 // Subscribe to real-time posts authored by a specific user
 export const subscribeToUserPosts = (userId: string, callback: (posts: Post[]) => void) => {
-  const q = query(
-    collection(db, 'posts'), 
-    where('userId', '==', userId)
-  );
-  
-  return onSnapshot(q, (querySnapshot) => {
-    const posts: Post[] = [];
-    querySnapshot.forEach((doc) => {
-      posts.push({ id: doc.id, ...doc.data() } as Post);
+  let isDone = false;
+  try {
+    const q = query(
+      collection(db, 'posts'), 
+      where('userId', '==', userId)
+    );
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      isDone = true;
+      const posts: Post[] = [];
+      querySnapshot.forEach((doc) => {
+        posts.push({ id: doc.id, ...doc.data() } as Post);
+      });
+      // In-memory sort by createdAt descending to avoid composite index requirement
+      posts.sort((a, b) => {
+        const timeA = (a.createdAt as any)?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
+        const timeB = (b.createdAt as any)?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
+        return timeB - timeA;
+      });
+      callback(posts);
+    }, async (error) => {
+      console.warn("Realtime user posts subscription failed, attempting fallback query:", error);
+      if (!isDone) {
+        try {
+          const fallbackSnap = await getDocs(query(collection(db, 'posts'), limit(60)));
+          const userPosts: Post[] = [];
+          fallbackSnap.forEach(d => {
+            const data = d.data();
+            if (data.userId === userId) {
+              userPosts.push({ id: d.id, ...data } as Post);
+            }
+          });
+          userPosts.sort((a, b) => {
+            const timeA = (a.createdAt as any)?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
+            const timeB = (b.createdAt as any)?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
+            return timeB - timeA;
+          });
+          callback(userPosts);
+        } catch (e) {
+          console.error("Fallback getDocs also failed:", e);
+          callback([]);
+        }
+      }
     });
-    // In-memory sort by createdAt descending to avoid composite index requirement
-    posts.sort((a, b) => {
-      const timeA = (a.createdAt as any)?.toMillis?.() || (a.createdAt as any)?.seconds * 1000 || 0;
-      const timeB = (b.createdAt as any)?.toMillis?.() || (b.createdAt as any)?.seconds * 1000 || 0;
-      return timeB - timeA;
-    });
-    callback(posts);
-  }, (error) => {
-    console.error("Error subscribing to user posts:", error);
-  });
+
+    return unsubscribe;
+  } catch (err) {
+    console.error("Error creating user posts listener:", err);
+    callback([]);
+    return () => {};
+  }
 };
 
 // Fetch feed posts once

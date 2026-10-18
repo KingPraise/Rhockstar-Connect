@@ -132,7 +132,7 @@ export default function ProfilePage() {
     };
   }, [queryUser, queryUid, loggedInProfile]);
 
-  // Subscribe to user posts in real-time
+  // Subscribe to user posts in real-time with safety timeout
   useEffect(() => {
     const activeUid = targetUser?.uid || loggedInProfile?.uid;
     if (!activeUid) {
@@ -142,12 +142,28 @@ export default function ProfilePage() {
     }
 
     setPostsLoading(true);
+    let isMounted = true;
+
+    // Safety timeout: Never let user wait more than 3 seconds on skeleton
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) {
+        setPostsLoading(false);
+      }
+    }, 3000);
+
     const unsubscribe = subscribeToUserPosts(activeUid, (userPosts) => {
-      setPosts(userPosts);
-      setPostsLoading(false);
+      if (isMounted) {
+        clearTimeout(safetyTimer);
+        setPosts(userPosts);
+        setPostsLoading(false);
+      }
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
+      if (unsubscribe) unsubscribe();
+    };
   }, [targetUser?.uid, loggedInProfile?.uid]);
 
   const activeProfile = targetUser || loggedInProfile;
