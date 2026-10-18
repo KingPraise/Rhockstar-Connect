@@ -909,6 +909,87 @@ export default function ProfilePage() {
               </div>
               
               <div className="flex flex-col gap-3 z-10 relative">
+                {/* Social Profiles Grid */}
+                {activeProfile?.socialLinks && Object.values(activeProfile.socialLinks).some(Boolean) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
+                    {activeProfile.socialLinks.linkedin && (
+                      <a
+                        href={activeProfile.socialLinks.linkedin.startsWith('http') ? activeProfile.socialLinks.linkedin : `https://${activeProfile.socialLinks.linkedin}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3.5 rounded-xl bg-[#0A66C2]/10 border border-[#0A66C2]/25 hover:bg-[#0A66C2]/20 text-[#70b5f9] transition-all flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-7 h-7 rounded-lg bg-[#0A66C2] text-white flex items-center justify-center font-black text-sm">in</span>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-slate-400">LinkedIn</p>
+                            <p className="text-xs font-semibold truncate max-w-[170px] text-white">
+                              {activeProfile.socialLinks.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '@')}
+                            </p>
+                          </div>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                      </a>
+                    )}
+                    {activeProfile.socialLinks.twitter && (
+                      <a
+                        href={activeProfile.socialLinks.twitter.startsWith('http') ? activeProfile.socialLinks.twitter : `https://${activeProfile.socialLinks.twitter}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3.5 rounded-xl bg-slate-800/80 border border-white/10 hover:border-white/25 text-white transition-all flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-7 h-7 rounded-lg bg-black border border-white/20 text-white flex items-center justify-center font-black text-sm">𝕏</span>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-slate-400">Twitter / X</p>
+                            <p className="text-xs font-semibold truncate max-w-[170px] text-white">
+                              {activeProfile.socialLinks.twitter.replace(/^https?:\/\/(www\.)?(twitter|x)\.com\//, '@')}
+                            </p>
+                          </div>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                      </a>
+                    )}
+                    {activeProfile.socialLinks.github && (
+                      <a
+                        href={activeProfile.socialLinks.github.startsWith('http') ? activeProfile.socialLinks.github : `https://${activeProfile.socialLinks.github}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3.5 rounded-xl bg-slate-800/80 border border-white/10 hover:border-white/25 text-white transition-all flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-7 h-7 rounded-lg bg-slate-900 border border-white/20 text-white flex items-center justify-center font-mono font-bold text-xs">git</span>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-slate-400">GitHub</p>
+                            <p className="text-xs font-semibold truncate max-w-[170px] text-white">
+                              {activeProfile.socialLinks.github.replace(/^https?:\/\/(www\.)?github\.com\//, '@')}
+                            </p>
+                          </div>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                      </a>
+                    )}
+                    {activeProfile.socialLinks.instagram && (
+                      <a
+                        href={activeProfile.socialLinks.instagram.startsWith('http') ? activeProfile.socialLinks.instagram : `https://${activeProfile.socialLinks.instagram}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3.5 rounded-xl bg-pink-500/10 border border-pink-500/25 hover:bg-pink-500/20 text-pink-300 transition-all flex items-center justify-between group"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-7 h-7 rounded-lg bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center font-bold text-xs">📷</span>
+                          <div>
+                            <p className="text-[10px] font-bold uppercase text-slate-400">Instagram</p>
+                            <p className="text-xs font-semibold truncate max-w-[170px] text-white">
+                              {activeProfile.socialLinks.instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//, '@')}
+                            </p>
+                          </div>
+                        </div>
+                        <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+                      </a>
+                    )}
+                  </div>
+                )}
                 {activeProfile?.website && (
                   <div className="p-3.5 rounded-xl bg-slate-800/60 border border-white/5 flex items-center justify-between">
                     <div>

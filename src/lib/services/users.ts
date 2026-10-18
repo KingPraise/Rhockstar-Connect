@@ -25,6 +25,7 @@ export interface UserBasic {
   foundedYear?: string;
   website?: string;
   portfolio?: string[];
+  socialLinks?: Record<string, string>;
   datingActive?: boolean;
   datingInterests?: string[];
   datingGoals?: string;

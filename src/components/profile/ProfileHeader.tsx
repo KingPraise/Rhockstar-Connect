@@ -255,6 +255,56 @@ export default function ProfileHeader({
               <span>Joined {format(new Date(), "MMMM yyyy")}</span>
             </div>
           </div>
+
+          {/* Social Profiles Row */}
+          {profile.socialLinks && Object.values(profile.socialLinks).some(Boolean) && (
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              {profile.socialLinks.linkedin && (
+                <a
+                  href={profile.socialLinks.linkedin.startsWith('http') ? profile.socialLinks.linkedin : `https://${profile.socialLinks.linkedin}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#0A66C2]/15 text-[#70b5f9] border border-[#0A66C2]/30 hover:bg-[#0A66C2]/30 transition-all shadow-sm"
+                >
+                  <span className="font-black text-[13px]">in</span>
+                  <span>LinkedIn</span>
+                </a>
+              )}
+              {profile.socialLinks.twitter && (
+                <a
+                  href={profile.socialLinks.twitter.startsWith('http') ? profile.socialLinks.twitter : `https://${profile.socialLinks.twitter}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-slate-200 border border-white/15 hover:bg-white/20 transition-all shadow-sm"
+                >
+                  <span className="font-black text-[13px]">𝕏</span>
+                  <span>Twitter</span>
+                </a>
+              )}
+              {profile.socialLinks.github && (
+                <a
+                  href={profile.socialLinks.github.startsWith('http') ? profile.socialLinks.github : `https://${profile.socialLinks.github}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-200 border border-white/10 hover:border-white/25 transition-all shadow-sm"
+                >
+                  <span className="font-mono font-bold text-[13px]">{"{ }"}</span>
+                  <span>GitHub</span>
+                </a>
+              )}
+              {profile.socialLinks.instagram && (
+                <a
+                  href={profile.socialLinks.instagram.startsWith('http') ? profile.socialLinks.instagram : `https://${profile.socialLinks.instagram}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-pink-500/15 text-pink-300 border border-pink-500/30 hover:bg-pink-500/25 transition-all shadow-sm"
+                >
+                  <span className="font-bold text-[13px]">📷</span>
+                  <span>Instagram</span>
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
       

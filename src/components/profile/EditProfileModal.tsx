@@ -36,6 +36,22 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
     visibility: profile?.visibility || "public",
   });
 
+  const [socialLinks, setSocialLinks] = useState<{
+    linkedin: string;
+    twitter: string;
+    github: string;
+    instagram: string;
+  }>({
+    linkedin: profile?.socialLinks?.linkedin || "",
+    twitter: profile?.socialLinks?.twitter || "",
+    github: profile?.socialLinks?.github || "",
+    instagram: profile?.socialLinks?.instagram || "",
+  });
+
+  const handleSocialChange = (key: 'linkedin' | 'twitter' | 'github' | 'instagram', value: string) => {
+    setSocialLinks(prev => ({ ...prev, [key]: value }));
+  };
+
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(profile?.avatar || null);
 
@@ -181,6 +197,12 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
         education: formData.education,
         certifications: formData.certifications.split(",").map(s => s.trim()).filter(Boolean),
         portfolio: formData.portfolio.split(",").map(s => s.trim()).filter(Boolean),
+        socialLinks: {
+          ...(socialLinks.linkedin.trim() && { linkedin: socialLinks.linkedin.trim() }),
+          ...(socialLinks.twitter.trim() && { twitter: socialLinks.twitter.trim() }),
+          ...(socialLinks.github.trim() && { github: socialLinks.github.trim() }),
+          ...(socialLinks.instagram.trim() && { instagram: socialLinks.instagram.trim() }),
+        },
         visibility: formData.visibility,
         ...(avatarUrl && { avatar: avatarUrl }),
         ...(coverUrl && { coverImage: coverUrl }),
@@ -406,10 +428,22 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
               {/* Social Links Tab */}
               {activeTab === "social" && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                  {['LinkedIn', 'Twitter', 'GitHub', 'Instagram'].map(social => (
-                    <div key={social} className="flex flex-col gap-1">
-                      <label className="text-sm font-medium text-secondary ml-1">{social}</label>
-                      <input type="url" className="neo-input" placeholder={`https://${social.toLowerCase()}.com/...`} />
+                  {[
+                    { key: 'linkedin' as const, label: 'LinkedIn', placeholder: 'https://linkedin.com/in/...' },
+                    { key: 'twitter' as const, label: 'Twitter / X', placeholder: 'https://x.com/...' },
+                    { key: 'github' as const, label: 'GitHub', placeholder: 'https://github.com/...' },
+                    { key: 'instagram' as const, label: 'Instagram', placeholder: 'https://instagram.com/...' }
+                  ].map(({ key, label, placeholder }) => (
+                    <div key={key} className="flex flex-col gap-1.5">
+                      <label className="text-sm font-semibold text-secondary ml-1">{label}</label>
+                      <input
+                        type="url"
+                        name={key}
+                        value={socialLinks[key]}
+                        onChange={(e) => handleSocialChange(key, e.target.value)}
+                        className="neo-input focus:border-brand-purple transition-all"
+                        placeholder={placeholder}
+                      />
                     </div>
                   ))}
                 </div>
