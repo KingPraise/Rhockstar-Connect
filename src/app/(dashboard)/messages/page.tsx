@@ -826,26 +826,28 @@ export default function MessagesPage() {
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-white/5">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder={messagesMode === 'direct' ? "Search conversations..." : "Search communities e.g., Football..."}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand/50 transition-colors"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+        {messagesMode !== 'leaderboard' && (
+          <div className="p-4 border-b border-white/5">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder={messagesMode === 'direct' ? "Search conversations..." : "Search communities e.g., Football..."}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand/50 transition-colors"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* List Content Area */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -1228,6 +1230,60 @@ export default function MessagesPage() {
                 </button>
               </div>
             )
+          )}
+
+          {/* MODE 3: LEADERBOARD / RANKS (Mobile View) */}
+          {messagesMode === 'leaderboard' && (
+            <div className="md:hidden flex-1 flex flex-col p-2">
+              <LeaderboardView />
+            </div>
+          )}
+
+          {/* MODE 3: LEADERBOARD / RANKS (Desktop Sidebar Companion) */}
+          {messagesMode === 'leaderboard' && (
+            <div className="hidden md:flex flex-col p-4 space-y-4">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-purple-600/10 to-slate-900 border border-amber-500/20">
+                <div className="flex items-center gap-2 mb-2 text-amber-400 font-black text-sm">
+                  <Trophy className="w-4 h-4" />
+                  <span>Stardom Rankings</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed mb-3">
+                  Earn XP by chatting, staying active daily, and engaging with communities to climb the Platform Hall of Fame.
+                </p>
+                <div className="p-2.5 rounded-xl bg-slate-950/70 border border-white/5 space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Your XP:</span>
+                    <span className="text-amber-400 font-mono font-bold">{(profile.stardomXP || 0).toLocaleString()} XP</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Current Rank:</span>
+                    <span className="text-white font-bold">{profile.stardomRank || 'Explorer'}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Daily Streak:</span>
+                    <span className="text-orange-400 font-bold">{profile.streakCount || 0} Days 🔥</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950/50 border border-white/5 space-y-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">How to Earn XP</h4>
+                <div className="space-y-1.5 text-xs text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
+                    <span>Send a direct message (+5 XP)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                    <span>Message in public community (+8 XP)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                    <span>Keep daily streak active (Multiplier up to 2x)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -2216,9 +2272,9 @@ export default function MessagesPage() {
         </div>
       )}
 
-      {/* VIEW 3: LEADERBOARD MODE */}
+      {/* VIEW 3: LEADERBOARD MODE (Desktop View) */}
       {messagesMode === 'leaderboard' && (
-        <div className="flex-1 flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+        <div className="hidden md:flex flex-1 flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
           <LeaderboardView />
         </div>
       )}
