@@ -17,7 +17,7 @@ const inter = Inter({
 
 
 export const viewport: Viewport = {
-  themeColor: "#8b5cf6",
+  themeColor: "#000b29",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -33,8 +33,25 @@ export const metadata: Metadata = {
   keywords:
     "networking, jobs, career, dating, relationship, professionals, community",
 
+  manifest: "/manifest.json",
+
   icons: {
-    icon: "/icon.png",
+    icon: [
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
+
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Rhockstar Connect",
   },
 
   openGraph: {
@@ -70,6 +87,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Rhockstar Connect" />
+        <meta name="application-name" content="Rhockstar Connect" />
+        <meta name="theme-color" content="#000b29" />
+      </head>
       <body className="font-sans">
         <AuthProvider>
           <NextTopLoader />
