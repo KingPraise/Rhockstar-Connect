@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { uploadMediaToCloudinary } from './cloudinary';
 import { UserProfile } from '../../store/useAuthStore';
+import { sanitizeText } from '../sanitizer';
 
 export interface PollOption {
   id: string;
@@ -154,7 +155,7 @@ export const createPost = async (
         avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase(),
         ...(user.subscriptionTier && { subscriptionTier: user.subscriptionTier })
       },
-      content,
+      content: sanitizeText(content, 3000),
       ...(imageUrl && { imageUrl }),
       ...(videoUrl && { videoUrl }),
       ...(documentUrl && { documentUrl, documentName }),
@@ -418,7 +419,7 @@ export const addComment = async (postId: string, user: UserProfile, content: str
           avatar: user.avatar || user.fullName.substring(0, 2).toUpperCase(),
         ...(user.subscriptionTier && { subscriptionTier: user.subscriptionTier })
       },
-        content,
+        content: sanitizeText(content, 1000),
         createdAt: new Date().toISOString(),
         ...(replyToId && { replyToId })
       };

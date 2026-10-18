@@ -129,10 +129,6 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
       }
 
       const updateData: any = { lastLogin: serverTimestamp() };
-      if (emailToUse.toLowerCase() === "elijah@rhockstarconnect.com") {
-        updateData.role = "admin";
-      }
-
       await setDoc(doc(db, "users", userCredential.user.uid), updateData, { merge: true });
       await syncAuthStore(userCredential.user.uid, userCredential.user);
 

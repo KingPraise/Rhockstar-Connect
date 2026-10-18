@@ -23,6 +23,8 @@ export interface AdminUser {
   role?: 'admin' | 'user';
   subscriptionTier?: 'free' | 'pro' | 'elite';
   subscriptionStatus?: 'active' | 'inactive';
+  subscriptionSource?: 'paid' | 'giveaway' | 'referral' | 'admin_grant';
+  acquisitionType?: 'paid' | 'reward' | 'giveaway';
   premiumUntil?: string;
   isBanned?: boolean;
   isBoosted?: boolean;
@@ -122,6 +124,8 @@ export const grantUserSubscription = async (
       await updateDoc(userRef, {
         subscriptionTier: tier,
         subscriptionStatus: 'active',
+        subscriptionSource: 'giveaway',
+        acquisitionType: 'giveaway',
         premiumUntil: expiryDate.toISOString()
       });
     }

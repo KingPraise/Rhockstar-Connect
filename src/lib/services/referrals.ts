@@ -152,6 +152,9 @@ export const claimReferralReward = async (userId: string, tierId: string) => {
       baseDate.setDate(baseDate.getDate() + daysToAdd);
       
       updateData.subscriptionTier = 'pro';
+      updateData.subscriptionStatus = 'active';
+      updateData.subscriptionSource = 'referral';
+      updateData.acquisitionType = 'reward';
       updateData.premiumUntil = baseDate.toISOString();
     } else if (tier.rewardType === 'boost') {
       const daysToAdd = tier.rewardDays || 7;
@@ -170,6 +173,9 @@ export const claimReferralReward = async (userId: string, tierId: string) => {
       baseDate.setDate(baseDate.getDate() + daysToAdd);
 
       updateData.subscriptionTier = 'elite';
+      updateData.subscriptionStatus = 'active';
+      updateData.subscriptionSource = 'referral';
+      updateData.acquisitionType = 'reward';
       updateData.premiumUntil = baseDate.toISOString();
       updateData.isBoosted = true;
       updateData.badges = arrayUnion(tier.badgeName || 'Rhockstar Legend');

@@ -24,16 +24,20 @@ export default function AdminDashboardPage() {
   }, []);
 
   const totalUsers = users.length;
-  const proCount = users.filter(u => u.subscriptionTier === "pro").length;
-  const eliteCount = users.filter(u => u.subscriptionTier === "elite").length;
-  const paidUsers = proCount + eliteCount;
+  const isPaid = (u: AdminUser) => u.subscriptionSource === "paid" || u.acquisitionType === "paid";
+  
+  const paidSubscribers = users.filter(u => (u.subscriptionTier === "pro" || u.subscriptionTier === "elite") && u.subscriptionStatus === "active" && isPaid(u));
+  const giveawaySubscribers = users.filter(u => (u.subscriptionTier === "pro" || u.subscriptionTier === "elite") && u.subscriptionStatus === "active" && !isPaid(u));
+
+  const paidProCount = paidSubscribers.filter(u => u.subscriptionTier === "pro").length;
+  const paidEliteCount = paidSubscribers.filter(u => u.subscriptionTier === "elite").length;
+  const verifiedRevenue = (paidProCount * 3) + (paidEliteCount * 9);
   const pendingReports = reports.filter(r => r.status === "pending").length;
-  const estRevenue = (proCount * 9.99) + (eliteCount * 19.99);
 
   const stats = [
     { label: "Total Registered Users", value: totalUsers.toString(), change: "+Live", icon: Users, color: "text-rose-500" },
-    { label: "Active Subscriptions", value: paidUsers.toString(), change: `${proCount} Pro / ${eliteCount} Elite`, icon: Star, color: "text-brand-purple" },
-    { label: "Est. Monthly Revenue", value: `$${estRevenue.toFixed(2)}`, change: "+Live", icon: CreditCard, color: "text-emerald-500" },
+    { label: "Paid Subscribers", value: paidSubscribers.length.toString(), change: `${giveawaySubscribers.length} Free Gifts`, icon: Star, color: "text-brand-purple" },
+    { label: "Verified Revenue (Est.)", value: `$${verifiedRevenue.toFixed(2)}`, change: "+Verified", icon: CreditCard, color: "text-emerald-500" },
     { label: "Pending Reports", value: pendingReports.toString(), change: pendingReports > 0 ? "Action Req." : "Clear", icon: AlertTriangle, color: "text-amber-500" },
   ];
 

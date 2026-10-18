@@ -10,7 +10,9 @@ import {
   CheckCircle2, 
   Gift, 
   X,
-  CreditCard
+  CreditCard,
+  ShieldCheck,
+  Sparkles
 } from "lucide-react";
 import Image from "next/image";
 import { getAllUsersAdmin, grantUserSubscription, AdminUser } from "@/lib/services/admin";
@@ -18,7 +20,7 @@ import { getAllUsersAdmin, grantUserSubscription, AdminUser } from "@/lib/servic
 export default function AdminSubscriptionsPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterTier, setFilterTier] = useState<"all" | "pro" | "elite">("all");
+  const [filterTier, setFilterTier] = useState<"all" | "paid" | "giveaway" | "pro" | "elite">("all");
   const [grantModalUser, setGrantModalUser] = useState<AdminUser | null>(null);
   const [grantDays, setGrantDays] = useState(30);
   const [grantTier, setGrantTier] = useState<"pro" | "elite" | "free">("pro");
@@ -42,16 +44,38 @@ export default function AdminSubscriptionsPage() {
     setTimeout(() => setToastMsg(""), 3500);
   };
 
-  const proCount = users.filter(u => u.subscriptionTier === "pro" && u.subscriptionStatus === "active").length;
-  const eliteCount = users.filter(u => u.subscriptionTier === "elite" && u.subscriptionStatus === "active").length;
-  const totalPaid = proCount + eliteCount;
-  // Estimated revenue calculation ($2/mo Pro, $5/mo Elite)
-  const estRevenue = (proCount * 2) + (eliteCount * 5);
+  const isPaidUser = (u: AdminUser) => u.subscriptionSource === "paid" || u.acquisitionType === "paid";
+  const isGiveawayUser = (u: AdminUser) => 
+    u.subscriptionSource === "giveaway" || 
+    u.subscriptionSource === "referral" || 
+    u.subscriptionSource === "admin_grant" || 
+    u.acquisitionType === "reward" || 
+    u.acquisitionType === "giveaway";
 
-  const subscribers = users.filter(u => {
+  // All active subscribers
+  const activeSubscribers = users.filter(
+    u => (u.subscriptionTier === "pro" || u.subscriptionTier === "elite") && u.subscriptionStatus === "active"
+  );
+
+  // Breakdown between real paid vs promotional giveaways
+  const paidSubscribers = activeSubscribers.filter(isPaidUser);
+  const giveawaySubscribers = activeSubscribers.filter(u => !isPaidUser(u));
+
+  const proCount = activeSubscribers.filter(u => u.subscriptionTier === "pro").length;
+  const eliteCount = activeSubscribers.filter(u => u.subscriptionTier === "elite").length;
+
+  const paidProCount = paidSubscribers.filter(u => u.subscriptionTier === "pro").length;
+  const paidEliteCount = paidSubscribers.filter(u => u.subscriptionTier === "elite").length;
+
+  // Real verified revenue calculation ($3/mo Pro, $9/mo Elite) based strictly on PAID purchases
+  const verifiedRevenue = (paidProCount * 3) + (paidEliteCount * 9);
+
+  const filteredSubscribers = activeSubscribers.filter(u => {
+    if (filterTier === "paid") return isPaidUser(u);
+    if (filterTier === "giveaway") return !isPaidUser(u);
     if (filterTier === "pro") return u.subscriptionTier === "pro";
     if (filterTier === "elite") return u.subscriptionTier === "elite";
-    return u.subscriptionTier === "pro" || u.subscriptionTier === "elite";
+    return true;
   });
 
   const handleGrant = async (e: React.FormEvent) => {
@@ -59,7 +83,7 @@ export default function AdminSubscriptionsPage() {
     if (!grantModalUser) return;
     const res = await grantUserSubscription(grantModalUser.uid, grantTier, grantDays);
     if (res.success) {
-      showToast(`Updated subscription for ${grantModalUser.fullName}`);
+      showToast(`Updated subscription perk for ${grantModalUser.fullName}`);
       setGrantModalUser(null);
       loadData();
     }
@@ -74,8 +98,8 @@ export default function AdminSubscriptionsPage() {
             <Star className="w-6 h-6 fill-amber-400" />
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-white">Subscription Manager</h1>
-            <p className="text-sm text-slate-400">Track active subscribers, revenue metrics, and grant manual perks</p>
+            <h1 className="text-2xl font-extrabold text-white">Subscription & Revenue Manager</h1>
+            <p className="text-sm text-slate-400">Track verified paid revenue vs promotional rewards and giveaways</p>
           </div>
         </div>
       </div>
@@ -90,50 +114,69 @@ export default function AdminSubscriptionsPage() {
 
       {/* METRICS GRID */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-amber-500/20">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Revenue (Est.)</span>
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
+        {/* Real Paid Revenue */}
+        <div className="p-5 rounded-2xl bg-slate-900/60 border border-emerald-500/30 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-3 opacity-10">
+            <TrendingUp className="w-16 h-16 text-emerald-400" />
           </div>
-          <p className="text-3xl font-black text-white">${estRevenue.toFixed(2)}<span className="text-xs font-semibold text-slate-400">/mo</span></p>
+          <div className="flex items-center justify-between mb-3 relative z-10">
+            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" /> Verified Revenue
+            </span>
+          </div>
+          <p className="text-3xl font-black text-white relative z-10">
+            ${verifiedRevenue.toFixed(2)}
+            <span className="text-xs font-semibold text-slate-400">/mo</span>
+          </p>
+          <p className="text-[11px] text-slate-400 mt-1">Based on {paidSubscribers.length} paying subscribers</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-brand-purple/20">
+        {/* Real Paid Subscribers */}
+        <div className="p-5 rounded-2xl bg-slate-900/60 border border-brand-purple/30">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Paid Subscribers</span>
+            <span className="text-xs font-bold text-brand-purple uppercase tracking-wider">Paid Subscribers</span>
             <Users className="w-4 h-4 text-brand-purple" />
           </div>
-          <p className="text-3xl font-black text-white">{totalPaid}</p>
+          <p className="text-3xl font-black text-white">{paidSubscribers.length}</p>
+          <p className="text-[11px] text-slate-400 mt-1">Direct Flutterwave checkouts</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-blue-500/20">
+        {/* Giveaways & Promotional Rewards */}
+        <div className="p-5 rounded-2xl bg-slate-900/60 border border-purple-500/30">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pro Members</span>
-            <Star className="w-4 h-4 text-blue-400" />
+            <span className="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center gap-1">
+              <Gift className="w-3.5 h-3.5" /> Giveaways & Rewards
+            </span>
+            <Sparkles className="w-4 h-4 text-purple-400" />
           </div>
-          <p className="text-3xl font-black text-blue-400">{proCount}</p>
+          <p className="text-3xl font-black text-purple-300">{giveawaySubscribers.length}</p>
+          <p className="text-[11px] text-slate-400 mt-1">Referral perks & manual admin gifts</p>
         </div>
 
-        <div className="p-5 rounded-2xl bg-slate-900/60 border border-rose-500/20">
+        {/* Total Active Subscribers */}
+        <div className="p-5 rounded-2xl bg-slate-900/60 border border-amber-500/20">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Elite VIP Members</span>
-            <Crown className="w-4 h-4 text-rose-400" />
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Active Subscribers</span>
+            <Crown className="w-4 h-4 text-amber-400" />
           </div>
-          <p className="text-3xl font-black text-rose-400">{eliteCount}</p>
+          <p className="text-3xl font-black text-amber-400">{activeSubscribers.length}</p>
+          <p className="text-[11px] text-slate-400 mt-1">{proCount} Pro • {eliteCount} Elite</p>
         </div>
       </div>
 
-      {/* TIER FILTER TABS */}
-      <div className="flex items-center gap-2">
+      {/* FILTER TABS */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
         {[
-          { id: "all", label: "All Paid Subscribers" },
-          { id: "pro", label: "Pro ($9.99/mo)" },
-          { id: "elite", label: "Elite ($19.99/mo)" },
+          { id: "all", label: `All Active (${activeSubscribers.length})` },
+          { id: "paid", label: `💰 Verified Paid (${paidSubscribers.length})` },
+          { id: "giveaway", label: `🎁 Giveaways & Rewards (${giveawaySubscribers.length})` },
+          { id: "pro", label: `Pro Tier (${proCount})` },
+          { id: "elite", label: `Elite VIP (${eliteCount})` },
         ].map((t) => (
           <button
             key={t.id}
             onClick={() => setFilterTier(t.id as any)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
               filterTier === t.id
                 ? "bg-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/20"
                 : "bg-slate-900/80 text-slate-400 hover:text-white border border-white/5"
@@ -150,11 +193,11 @@ export default function AdminSubscriptionsPage() {
           <Loader2 className="w-8 h-8 animate-spin text-amber-400 mb-2" />
           <p className="text-sm text-slate-400">Loading subscription records...</p>
         </div>
-      ) : subscribers.length === 0 ? (
+      ) : filteredSubscribers.length === 0 ? (
         <div className="p-8 bg-slate-900/60 border border-white/5 rounded-2xl text-center">
           <CreditCard className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-white mb-1">No active subscribers in this view</h3>
-          <p className="text-sm text-slate-400">Use User Management to grant manual subscription perks.</p>
+          <h3 className="text-lg font-bold text-white mb-1">No subscribers in this category</h3>
+          <p className="text-sm text-slate-400">Try selecting a different filter above.</p>
         </div>
       ) : (
         <div className="bg-slate-900/60 border border-amber-500/10 rounded-2xl overflow-hidden shadow-xl">
@@ -164,63 +207,83 @@ export default function AdminSubscriptionsPage() {
                 <tr>
                   <th className="py-4 px-4">Subscriber</th>
                   <th className="py-4 px-4">Tier</th>
+                  <th className="py-4 px-4">Acquisition Type</th>
                   <th className="py-4 px-4">Status</th>
                   <th className="py-4 px-4">Expiry Date</th>
                   <th className="py-4 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {subscribers.map((sub) => (
-                  <tr key={sub.uid} className="hover:bg-amber-500/5 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-amber-500/20 relative border border-amber-500/30 flex-shrink-0">
-                          {sub.avatar ? (
-                            <Image src={sub.avatar} alt={sub.fullName} fill className="object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center font-bold text-amber-400 text-sm">
-                              {sub.fullName.charAt(0)}
-                            </div>
-                          )}
+                {filteredSubscribers.map((sub) => {
+                  const paid = isPaidUser(sub);
+                  return (
+                    <tr key={sub.uid} className="hover:bg-amber-500/5 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full overflow-hidden bg-amber-500/20 relative border border-amber-500/30 flex-shrink-0">
+                            {sub.avatar ? (
+                              <Image src={sub.avatar} alt={sub.fullName} fill className="object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center font-bold text-amber-400 text-sm">
+                                {sub.fullName.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-white">{sub.fullName}</p>
+                            <p className="text-xs text-slate-400">{sub.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-white">{sub.fullName}</p>
-                          <p className="text-xs text-slate-400">{sub.email}</p>
-                        </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="py-3.5 px-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-                        sub.subscriptionTier === "elite"
-                          ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                          : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                      }`}>
-                        {sub.subscriptionTier === "elite" ? <Crown className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />}
-                        {sub.subscriptionTier?.toUpperCase()}
-                      </span>
-                    </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+                          sub.subscriptionTier === "elite"
+                            ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                            : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                        }`}>
+                          {sub.subscriptionTier === "elite" ? <Crown className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />}
+                          {sub.subscriptionTier?.toUpperCase()}
+                        </span>
+                      </td>
 
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-400">
-                        Active
-                      </span>
-                    </td>
+                      <td className="py-3.5 px-4">
+                        {paid ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            💰 Paid Checkout
+                          </span>
+                        ) : sub.subscriptionSource === "referral" ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                            🤝 Referral Reward
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-500/10 text-purple-300 border border-purple-500/30">
+                            🎁 Promo Giveaway
+                          </span>
+                        )}
+                      </td>
 
-                    <td className="py-3.5 px-4 text-xs text-slate-400">
-                      {sub.premiumUntil ? new Date(sub.premiumUntil).toLocaleDateString() : "Lifetime"}
-                    </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-400">
+                          Active
+                        </span>
+                      </td>
 
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => setGrantModalUser(sub)}
-                        className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 text-xs font-bold hover:bg-amber-500/30 transition-colors"
-                      >
-                        Adjust Perks
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="py-3.5 px-4 text-xs text-slate-400">
+                        {sub.premiumUntil ? new Date(sub.premiumUntil).toLocaleDateString() : "Lifetime"}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => setGrantModalUser(sub)}
+                          className="px-3 py-1.5 rounded-xl bg-amber-500/20 text-amber-300 text-xs font-bold hover:bg-amber-500/30 transition-colors"
+                        >
+                          Adjust Perks
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

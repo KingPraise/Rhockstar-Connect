@@ -17,6 +17,7 @@ import {
 
 import { createNotification } from './notifications';
 import { getUserById } from './users';
+import { sanitizeText } from '../sanitizer';
 
 export interface Chat {
   id: string;
@@ -111,10 +112,11 @@ export const sendMessage = async (
     const messagesRef = collection(db, `chats/${chatId}/messages`);
     const chatRef = doc(db, 'chats', chatId);
 
+    const cleanText = sanitizeText(text, 2000);
     const messageData: any = {
       chatId,
       senderId,
-      text,
+      text: cleanText,
       type,
       status: 'delivered',
       createdAt: serverTimestamp()
@@ -140,7 +142,7 @@ export const sendMessage = async (
       const { increment, arrayRemove } = await import('firebase/firestore');
 
       await updateDoc(chatRef, {
-        lastMessage: text,
+        lastMessage: cleanText.slice(0, 100),
         lastMessageTime: serverTimestamp(),
         ...(recipientId ? { 
           [`unreadCount.${recipientId}`]: increment(1),
