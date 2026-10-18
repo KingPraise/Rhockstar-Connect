@@ -7,7 +7,7 @@ import { subscribeToFeed, getPostById, Post } from "@/lib/services/posts";
 import { useSearchParams } from "next/navigation";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { getJobs, JobListing } from "@/lib/services/jobs";
-import { sendConnectionRequest } from "@/lib/services/connections";
+import { sendConnectionRequest, getUserConnections } from "@/lib/services/connections";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Loader2, MessageSquarePlus, Search, Compass, Users, Briefcase, ChevronRight, UserPlus, Sparkles, Check } from "lucide-react";
 import PullToRefresh from "@/components/ui/PullToRefresh";
@@ -18,19 +18,6 @@ import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import toast from "react-hot-toast";
-
-const FALLBACK_SUGGESTED_PEOPLE: UserBasic[] = [
-  { uid: "vVGsCR7knwVrxIMYK8pmHDlVjho2", fullName: "Adewale Sunday", username: "fadasunday", avatar: "", headline: "Automobile Specialist", industry: "Automobiles", connections: 12, subscriptionTier: "pro" },
-  { uid: "yY1Jk5UWZhNHXXYOVlfe5gmqCUx1", fullName: "Chinedu Emmanuel", username: "brazil", avatar: "", headline: "Fullstack Developer", industry: "Technology", connections: 8 },
-  { uid: "DoLqoHeILXQygrgMJjQMOD6SWoo1", fullName: "Kemisola Adebayo", username: "wonuolami", avatar: "", headline: "Product Designer & UI Specialist", industry: "Tech & Career", connections: 15, subscriptionTier: "pro" },
-  { uid: "0sBerfsz51XTXjngFJio2RgnAmb2", fullName: "Rhockstar Nation", username: "rnation", avatar: "/icon.png", headline: "Media & Creator Community", industry: "General", connections: 45, subscriptionTier: "elite" },
-];
-
-const FALLBACK_FEATURED_JOBS: JobListing[] = [
-  { id: "GqRuqiXiK4L9yQaG9ofs", title: "Virtual Assistant", company: "Rhockstar Nation", location: "Lagos (Remote)", type: "Remote", salary: "₦50,000 / mo", postedAt: "Recently", logo: "/icon.png" },
-  { id: "I4lkQDqmIsof3KzZhlU6", title: "Full-Stack Engineer (Next.js)", company: "Techstars Africa", location: "Remote", type: "Contract", salary: "$2,000 - $4,000/mo", postedAt: "Recently", logo: "T" },
-  { id: "MDJ4NrfEukGyQ0L4HJr3", title: "Senior Product Designer", company: "Rhockstar Connect", location: "Lagos (Hybrid)", type: "Full-time", salary: "₦500k - ₦800k/mo", postedAt: "Recently", logo: "R" },
-];
 
 const COMMUNITY_CHIPS = [
   { name: "Football", category: "Sports", icon: "⚽", color: "from-green-600/20 to-emerald-600/20 border-green-500/30 text-green-300" },
@@ -52,9 +39,11 @@ export default function FeedPage() {
   const [hasMore, setHasMore] = useState(true);
   const { openSearch } = useSearchStore();
 
-  // Dynamic Real Time DB State with guaranteed fallbacks
-  const [suggestedPeople, setSuggestedPeople] = useState<UserBasic[]>(FALLBACK_SUGGESTED_PEOPLE);
-  const [featuredJobs, setFeaturedJobs] = useState<JobListing[]>(FALLBACK_FEATURED_JOBS);
+  // Dynamic Real Time DB State (strictly real database entries)
+  const [suggestedPeople, setSuggestedPeople] = useState<UserBasic[]>([]);
+  const [suggestedLoading, setSuggestedLoading] = useState(true);
+  const [featuredJobs, setFeaturedJobs] = useState<JobListing[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
   const [activeAds, setActiveAds] = useState<Advertisement[]>([]);
   const [connectingUserIds, setConnectingUserIds] = useState<Set<string>>(new Set());
   const [sentRequestIds, setSentRequestIds] = useState<Set<string>>(new Set());
@@ -128,34 +117,71 @@ export default function FeedPage() {
 
   // Fetch real database users & jobs from Firestore
   useEffect(() => {
+    let isCancelled = false;
+
     const fetchSidebarData = async () => {
-      // 1. Fetch Real Users from Firestore
+      // 1. Fetch Real Users from Firestore & filter out current user and existing connections
       try {
-        const userRes = await getAllUsers(false);
-        if (userRes.success && userRes.users && userRes.users.length > 0) {
-          const filtered = userRes.users
-            .filter(u => u.uid !== profile?.uid && u.fullName && u.fullName !== "Unknown User")
-            .slice(0, 5);
-          if (filtered.length > 0) {
+        setSuggestedLoading(true);
+        const [userRes, connRes] = await Promise.all([
+          getAllUsers(false),
+          profile?.uid ? getUserConnections(profile.uid) : Promise.resolve({ success: true, connections: [] })
+        ]);
+
+        if (!isCancelled) {
+          if (userRes.success && userRes.users && userRes.users.length > 0) {
+            const connectedUserIds = new Set<string>();
+            if (profile?.uid) {
+              connectedUserIds.add(profile.uid);
+            }
+            if (connRes.success && connRes.connections) {
+              connRes.connections.forEach((c: any) => {
+                if (c.status === 'accepted' || c.status === 'pending') {
+                  connectedUserIds.add(c.fromUserId === profile?.uid ? c.toUserId : c.fromUserId);
+                }
+              });
+            }
+
+            const filtered = userRes.users
+              .filter(u => !connectedUserIds.has(u.uid) && u.fullName && u.fullName !== "Unknown User")
+              .slice(0, 5);
+
             setSuggestedPeople(filtered);
+          } else {
+            setSuggestedPeople([]);
           }
         }
       } catch (err) {
         console.error("Failed to load suggested users:", err);
+        if (!isCancelled) setSuggestedPeople([]);
+      } finally {
+        if (!isCancelled) setSuggestedLoading(false);
       }
 
       // 2. Fetch Real Jobs from Firestore
       try {
+        setJobsLoading(true);
         const jobRes = await getJobs({ limitCount: 4 });
-        if (jobRes.success && jobRes.jobs && jobRes.jobs.length > 0) {
-          setFeaturedJobs(jobRes.jobs);
+        if (!isCancelled) {
+          if (jobRes.success && jobRes.jobs && jobRes.jobs.length > 0) {
+            setFeaturedJobs(jobRes.jobs);
+          } else {
+            setFeaturedJobs([]);
+          }
         }
       } catch (err) {
         console.error("Failed to load featured jobs:", err);
+        if (!isCancelled) setFeaturedJobs([]);
+      } finally {
+        if (!isCancelled) setJobsLoading(false);
       }
     };
 
     fetchSidebarData();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [profile?.uid]);
 
   // Handle real connection request to Firestore
@@ -238,8 +264,29 @@ export default function FeedPage() {
           </div>
         </div>
 
-        {/* Mobile / Tablet Horizontal Suggestions Widget (Real DB Users) */}
-        {suggestedPeople.length > 0 && (
+        {/* Mobile / Tablet Horizontal Suggestions Widget (Real DB Users Only) */}
+        {suggestedLoading ? (
+          <div className="block lg:hidden mb-4 space-y-3">
+            <div className="p-3 bg-slate-900/80 border border-white/5 rounded-2xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-purple-400" /> Suggested Connections
+                </span>
+              </div>
+              <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+                {[1, 2].map((i) => (
+                  <div key={i} className="p-2.5 bg-slate-800/40 border border-white/5 rounded-xl flex items-center gap-2 shrink-0 min-w-[210px] animate-pulse">
+                    <div className="w-8 h-8 rounded-full bg-slate-700 shrink-0" />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="h-3 bg-slate-700 rounded w-24" />
+                      <div className="h-2 bg-slate-700/60 rounded w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : suggestedPeople.length > 0 ? (
           <div className="block lg:hidden mb-4 space-y-3">
             <div className="p-3 bg-slate-900/80 border border-white/5 rounded-2xl space-y-2">
               <div className="flex items-center justify-between">
@@ -285,7 +332,7 @@ export default function FeedPage() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* 2-Column Responsive Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
@@ -359,7 +406,17 @@ export default function FeedPage() {
               </div>
 
               <div className="space-y-3">
-                {suggestedPeople.length > 0 ? (
+                {suggestedLoading ? (
+                  [1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-2.5 p-2 rounded-xl animate-pulse">
+                      <div className="w-8 h-8 rounded-full bg-slate-700 shrink-0" />
+                      <div className="min-w-0 flex-1 space-y-1.5">
+                        <div className="h-3 bg-slate-700 rounded w-28" />
+                        <div className="h-2 bg-slate-700/60 rounded w-16" />
+                      </div>
+                    </div>
+                  ))
+                ) : suggestedPeople.length > 0 ? (
                   suggestedPeople.map((user) => (
                     <div key={user.uid} className="flex items-center justify-between gap-2 p-2 rounded-xl hover:bg-slate-800/50 transition-colors">
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -417,7 +474,14 @@ export default function FeedPage() {
               </div>
 
               <div className="space-y-2.5">
-                {featuredJobs.length > 0 ? (
+                {jobsLoading ? (
+                  [1, 2].map((i) => (
+                    <div key={i} className="p-3 bg-slate-800/40 rounded-xl border border-white/5 space-y-2 animate-pulse">
+                      <div className="h-3 bg-slate-700 rounded w-32" />
+                      <div className="h-2 bg-slate-700/60 rounded w-20" />
+                    </div>
+                  ))
+                ) : featuredJobs.length > 0 ? (
                   featuredJobs.map((job) => (
                     <div key={job.id} className="p-3 bg-slate-800/40 rounded-xl border border-white/5 hover:border-emerald-500/30 transition-all space-y-1.5">
                       <div className="flex items-start justify-between gap-2">
