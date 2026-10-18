@@ -88,39 +88,31 @@ export default function ProfilePage() {
         setTargetUser(null);
       }
 
-      const activeUid = fetchedUser?.uid || loggedInProfile?.uid;
-      if (activeUid) {
-        // Listen to live user profile changes (for connections, followers, views)
-        unsubscribeUser = listenToUserProfile(activeUid, (updatedUser) => {
-            setTargetUser(updatedUser);
-            if (loggedInProfile && updatedUser.uid === loggedInProfile.uid) {
-              useAuthStore.getState().setProfile(updatedUser);
-            }
-          });
-      }
-
-      // If viewing another user's profile
-      if (fetchedUser && loggedInProfile && fetchedUser.uid !== loggedInProfile.uid) {
-        // 1. Track profile view
-        trackProfileView(fetchedUser.uid, loggedInProfile.uid);
-
-        // 2. Fetch connection status
-        const { getUserConnections } = await import("@/lib/services/connections");
-        const connRes = await getUserConnections(loggedInProfile.uid);
-        if (connRes.success && connRes.connections) {
-          const conn = connRes.connections.find((c: any) => 
-            (c.fromUserId === loggedInProfile.uid && c.toUserId === fetchedUser.uid) ||
-            (c.toUserId === loggedInProfile.uid && c.fromUserId === fetchedUser.uid)
-          );
-          if (conn) {
-            setConnectionStatus(conn.status);
-          }
-        }
-
-        // 3. Listen to follow state
-        unsubscribeFollow = listenToFollowState(loggedInProfile.uid, fetchedUser.uid, (following) => {
-          setIsFollowing(following);
+      // Only listen to target user document when viewing another person's profile
+      if (fetchedUser) {
+        unsubscribeUser = listenToUserProfile(fetchedUser.uid, (updatedUser) => {
+          setTargetUser(updatedUser);
         });
+
+        if (loggedInProfile && fetchedUser.uid !== loggedInProfile.uid) {
+          trackProfileView(fetchedUser.uid, loggedInProfile.uid);
+
+          const { getUserConnections } = await import("@/lib/services/connections");
+          const connRes = await getUserConnections(loggedInProfile.uid);
+          if (connRes.success && connRes.connections) {
+            const conn = connRes.connections.find((c: any) => 
+              (c.fromUserId === loggedInProfile.uid && c.toUserId === fetchedUser.uid) ||
+              (c.toUserId === loggedInProfile.uid && c.fromUserId === fetchedUser.uid)
+            );
+            if (conn) {
+              setConnectionStatus(conn.status);
+            }
+          }
+
+          unsubscribeFollow = listenToFollowState(loggedInProfile.uid, fetchedUser.uid, (following) => {
+            setIsFollowing(following);
+          });
+        }
       }
     };
 
@@ -130,26 +122,29 @@ export default function ProfilePage() {
       if (unsubscribeUser) unsubscribeUser();
       if (unsubscribeFollow) unsubscribeFollow();
     };
-  }, [queryUser, queryUid, loggedInProfile]);
+  }, [queryUser, queryUid, loggedInProfile?.uid]);
+
+  // Active UID for profile posts
+  const activeUid = targetUser?.uid || loggedInProfile?.uid;
 
   // Subscribe to user posts in real-time with safety timeout
   useEffect(() => {
-    const activeUid = targetUser?.uid || loggedInProfile?.uid;
     if (!activeUid) {
       setPosts([]);
       setPostsLoading(false);
       return;
     }
 
-    setPostsLoading(true);
+    // Only trigger skeleton if we have no posts yet
+    setPostsLoading(prev => posts.length === 0 ? true : prev);
     let isMounted = true;
 
-    // Safety timeout: Never let user wait more than 3 seconds on skeleton
+    // Safety timeout: Never let user wait more than 2.5 seconds on skeleton
     const safetyTimer = setTimeout(() => {
       if (isMounted) {
         setPostsLoading(false);
       }
-    }, 3000);
+    }, 2500);
 
     const unsubscribe = subscribeToUserPosts(activeUid, (userPosts) => {
       if (isMounted) {
@@ -164,7 +159,7 @@ export default function ProfilePage() {
       clearTimeout(safetyTimer);
       if (unsubscribe) unsubscribe();
     };
-  }, [targetUser?.uid, loggedInProfile?.uid]);
+  }, [activeUid]);
 
   const activeProfile = targetUser || loggedInProfile;
   const isOwnProfile = Boolean(!targetUser || (loggedInProfile && targetUser?.uid === loggedInProfile.uid));
@@ -442,7 +437,7 @@ export default function ProfilePage() {
           <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
             {isOwnProfile && <PostComposer />}
 
-            {postsLoading ? (
+            {postsLoading && posts.length === 0 ? (
               <div className="space-y-4">
                 <PostCardSkeleton />
                 <PostCardSkeleton />
