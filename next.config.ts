@@ -6,8 +6,29 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === "development",
   register: true,
   fallbacks: {
-    document: "/offline"
-  }
+    document: "/offline",
+  },
+
+  extendDefaultRuntimeCaching: true,
+
+  workboxOptions: {
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/res\.cloudinary\.com\/.*$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "rhockstar-cloudinary-images",
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+          expiration: {
+            maxEntries: 150,
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+          },
+        },
+      },
+    ],
+  },
 });
 
 const securityHeaders = [

@@ -54,6 +54,11 @@ export interface Post {
   comments?: Comment[];
 }
 
+export interface FeedSnapshotMeta {
+  fromCache: boolean;
+  hasPendingWrites: boolean;
+}
+
 const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.75): Promise<string> => {
   return new Promise((resolve) => {
     if (typeof window === 'undefined') {
@@ -252,20 +257,38 @@ export const updatePost = async (postId: string, newContent: string) => {
 };
 
 // Subscribe to real-time feed updates
-export const subscribeToFeed = (limitCount: number, callback: (posts: Post[]) => void) => {
+export const subscribeToFeed = (
+  limitCount: number,
+  callback: (posts: Post[], meta?: FeedSnapshotMeta) => void
+) => {
   const q = query(
-    collection(db, 'posts'), 
-    orderBy('createdAt', 'desc'),
+    collection(db, "posts"),
+    orderBy("createdAt", "desc"),
     limit(limitCount)
   );
-  
-  return onSnapshot(q, (querySnapshot) => {
-    const posts: Post[] = [];
-    querySnapshot.forEach((doc) => {
-      posts.push({ id: doc.id, ...doc.data() } as Post);
-    });
-    callback(posts);
-  });
+
+  return onSnapshot(
+    q,
+    { includeMetadataChanges: true },
+    (querySnapshot) => {
+      const posts: Post[] = [];
+
+      querySnapshot.forEach((document) => {
+        posts.push({
+          id: document.id,
+          ...document.data(),
+        } as Post);
+      });
+
+      callback(posts, {
+        fromCache: querySnapshot.metadata.fromCache,
+        hasPendingWrites: querySnapshot.metadata.hasPendingWrites,
+      });
+    },
+    (error) => {
+      console.error("Feed subscription error:", error);
+    }
+  );
 };
 
 // Subscribe to real-time posts authored by a specific user
