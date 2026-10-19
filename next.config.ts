@@ -3,48 +3,94 @@ import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
   dest: "public",
-  disable: process.env.NODE_ENV === "development",
+
+  disable:
+    process.env.NODE_ENV ===
+    "development",
+
   register: true,
+
   fallbacks: {
-    document: "/offline"
-  }
+    document: "/offline",
+  },
+
+  extendDefaultRuntimeCaching: true,
+
+  workboxOptions: {
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/res\.cloudinary\.com\/.*$/i,
+
+        handler: "CacheFirst",
+
+        options: {
+          cacheName:
+            "rhockstar-cloudinary-images",
+
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+
+          expiration: {
+            maxEntries: 150,
+            maxAgeSeconds:
+              30 * 24 * 60 * 60,
+          },
+        },
+      },
+    ],
+  },
 });
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
+
   reactCompiler: true,
-  allowedDevOrigins: ['rhockstar-dev-999.loca.lt', 'localhost:3000'],
+
+  allowedDevOrigins: [
+    "rhockstar-dev-999.loca.lt",
+    "localhost:3000",
+  ],
+
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
+        protocol: "https",
+        hostname:
+          "images.unsplash.com",
       },
       {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com',
+        protocol: "https",
+        hostname:
+          "firebasestorage.googleapis.com",
       },
       {
-        protocol: 'https',
-        hostname: 'lh3.googleusercontent.com',
+        protocol: "https",
+        hostname:
+          "lh3.googleusercontent.com",
       },
       {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
-      }
+        protocol: "https",
+        hostname:
+          "res.cloudinary.com",
+      },
     ],
   },
+
   async headers() {
     return [
       {
-        source: '/:all*(svg|jpg|png|webp|ico|woff2)',
+        source:
+          "/:all*(svg|jpg|png|webp|ico|woff2)",
+
         headers: [
           {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
+            key: "Cache-Control",
+
+            value:
+              "public, max-age=31536000, immutable",
           },
         ],
       },
@@ -52,4 +98,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA(nextConfig);
+export default withPWA(
+  nextConfig
+);
