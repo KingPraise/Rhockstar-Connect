@@ -2,35 +2,52 @@
 
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { useAuthStore, UserProfile } from '@/store/useAuthStore';
 
-import SplashScreen from '@/components/layout/SplashScreen';
-
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setProfile, setLoading, isLoading } = useAuthStore();
+  const { setUser, setProfile, setLoading } = useAuthStore();
+
+  // 1. Immediately restore cached profile from localStorage on client mount (0ms instant display)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const cached = localStorage.getItem('rhockstar_cached_profile');
+      if (cached) {
+        setProfile(JSON.parse(cached));
+      }
+    } catch {}
+  }, [setProfile]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       
       if (firebaseUser) {
-        // Fetch user profile from Firestore
+        // Fetch user profile from Firestore with metadata changes so cached doc emits instantly
         const docRef = doc(db, 'users', firebaseUser.uid);
-        const unsubscribeProfile = onSnapshot(docRef, (docSnap) => {
-          if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
-          } else {
-            console.warn("User profile document not found!");
-            setProfile(null);
+        const unsubscribeProfile = onSnapshot(
+          docRef, 
+          { includeMetadataChanges: true },
+          (docSnap) => {
+            if (docSnap.exists()) {
+              const data = docSnap.data() as UserProfile;
+              setProfile(data);
+              try {
+                localStorage.setItem('rhockstar_cached_profile', JSON.stringify(data));
+              } catch {}
+            } else {
+              console.warn("User profile document not found!");
+              setProfile(null);
+            }
+            setLoading(false);
+          }, 
+          (error) => {
+            console.error("Error listening to user profile:", error);
+            setLoading(false);
           }
-          // Hold the splash screen until we actually have the profile data!
-          setLoading(false);
-        }, (error) => {
-          console.error("Error listening to user profile:", error);
-          setLoading(false);
-        });
+        );
         
         // Clean up profile listener when auth state changes
         if ((window as any)._profileUnsub) {
@@ -39,7 +56,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         (window as any)._profileUnsub = unsubscribeProfile;
       } else {
         setProfile(null);
-        // Only dismiss loading immediately if there is absolutely no logged-in user
+        try {
+          localStorage.removeItem('rhockstar_cached_profile');
+        } catch {}
         setLoading(false);
       }
     });
@@ -52,11 +71,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     };
   }, [setUser, setProfile, setLoading]);
 
-  // Fallback: forcefully drop splash screen after 10 seconds to prevent indefinite hanging on very slow networks
+  // Fallback: forcefully drop loading state after 1.5 seconds so users never freeze on slow/spotty network
   useEffect(() => {
     const safetyTimer = setTimeout(() => {
       setLoading(false);
-    }, 10000);
+    }, 1500);
 
     return () => clearTimeout(safetyTimer);
   }, [setLoading]);

@@ -83,7 +83,13 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     }
   }, [user, isLoading, router, pathname, isPublicRoute]);
 
-  if (!mounted || isLoading) {
+  if (!mounted) {
+    return null;
+  }
+
+  // Only block rendering with a full-page spinner if the route is strictly private
+  // Public routes (like /feed, /jobs, /profile) render immediately with their own cached data or skeletons
+  if (!isPublicRoute && isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh] w-full">
         <Loader2 className="w-8 h-8 animate-spin text-brand" />

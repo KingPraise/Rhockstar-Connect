@@ -34,8 +34,35 @@ import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanne
 
 export default function FeedPage() {
   const { profile } = useAuthStore();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Instant 0ms hydration from local device storage for offline and fast render
+  const [posts, setPosts] = useState<Post[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("rhockstar_cached_feed_posts");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      } catch {}
+    }
+    return [];
+  });
+
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("rhockstar_cached_feed_posts");
+        if (cached && JSON.parse(cached).length > 0) {
+          return false;
+        }
+      } catch {}
+    }
+    return true;
+  });
+
   const [limitCount, setLimitCount] = useState(10);
   const [hasMore, setHasMore] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
@@ -137,6 +164,15 @@ export default function FeedPage() {
 
         setPosts(newPosts);
         setLoading(false);
+
+        if (newPosts && newPosts.length > 0) {
+          try {
+            localStorage.setItem(
+              "rhockstar_cached_feed_posts",
+              JSON.stringify(newPosts.slice(0, 25))
+            );
+          } catch {}
+        }
 
         if (!meta?.fromCache) {
           setHasMore(newPosts.length >= limitCount);
