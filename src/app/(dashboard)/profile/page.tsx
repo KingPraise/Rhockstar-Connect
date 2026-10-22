@@ -38,6 +38,7 @@ export default function ProfilePage() {
   const queryUser = searchParams.get("user") || searchParams.get("username");
   const queryUid = searchParams.get("uid");
   const queryTab = searchParams.get("tab");
+  const queryEdit = searchParams.get("edit");
 
   const [targetUser, setTargetUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -61,6 +62,12 @@ export default function ProfilePage() {
       setActiveTab('dating');
     }
   }, [queryTab]);
+
+  useEffect(() => {
+    if (queryEdit === 'true') {
+      setIsEditModalOpen(true);
+    }
+  }, [queryEdit]);
 
   useEffect(() => {
     let unsubscribeUser: (() => void) | undefined;

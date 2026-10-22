@@ -140,7 +140,7 @@ function RegisterForm() {
         account_type: accountType,
       });
 
-      router.push("/feed");
+      router.push("/feed?welcome=true");
     }
   };
 

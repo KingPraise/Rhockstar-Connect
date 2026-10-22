@@ -30,6 +30,7 @@ const COMMUNITY_CHIPS = [
 
 import { subscribeToActiveAds, Advertisement } from "@/lib/services/ads";
 import SponsoredAdCard from "@/components/feed/SponsoredAdCard";
+import ProfileCompletionBanner from "@/components/profile/ProfileCompletionBanner";
 
 export default function FeedPage() {
   const { profile } = useAuthStore();
@@ -449,6 +450,9 @@ export default function FeedPage() {
 
           {/* Main Feed Column */}
           <div className="lg:col-span-8 space-y-3.5">
+
+            {/* Profile Completion Onboarding & Reminder Banner */}
+            <ProfileCompletionBanner />
 
             {/* Post Composer */}
             <PostComposer />

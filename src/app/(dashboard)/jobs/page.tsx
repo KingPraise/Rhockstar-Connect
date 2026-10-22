@@ -11,6 +11,9 @@ import ApplicationTracker from "@/components/jobs/ApplicationTracker";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { checkJobApplicationReadiness, MissingFieldDetail } from "@/lib/utils/profileProgress";
+import CompleteProfileToApplyModal from "@/components/jobs/CompleteProfileToApplyModal";
+import EditProfileModal from "@/components/profile/EditProfileModal";
 import toast from "react-hot-toast";
 
 export default function JobsPage() {
@@ -28,6 +31,18 @@ export default function JobsPage() {
   const [premiumLockOpen, setPremiumLockOpen] = useState(false);
   const [applyModalJob, setApplyModalJob] = useState<JobListing | null>(null);
   const [coverLetter, setCoverLetter] = useState("");
+
+  const [profileReadinessModal, setProfileReadinessModal] = useState<{
+    isOpen: boolean;
+    job?: JobListing;
+    percentage: number;
+    missingFields: MissingFieldDetail[];
+  }>({
+    isOpen: false,
+    percentage: 0,
+    missingFields: []
+  });
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const [limitCount, setLimitCount] = useState(10);
   const [hasMore, setHasMore] = useState(true);
@@ -102,6 +117,19 @@ export default function JobsPage() {
   };
 
   const handleApply = async (job: JobListing, isFeatured?: boolean) => {
+    // 1. Enforce Profile Completeness Rule: "Please update your profiles before applying for our jobs"
+    const readiness = checkJobApplicationReadiness(profile);
+    if (!readiness.canApply) {
+      setProfileReadinessModal({
+        isOpen: true,
+        job,
+        percentage: readiness.percentage,
+        missingFields: readiness.missingFields,
+      });
+      return;
+    }
+
+    // 2. Subscription limit check
     const isFree = !profile?.subscriptionTier || profile.subscriptionTier === 'free';
     
     if (isFree && (appliedJobIds.size >= 2 || isFeatured)) {
@@ -127,8 +155,18 @@ export default function JobsPage() {
       });
       setApplyModalJob(null);
       setCoverLetter("");
+      toast.success("Application submitted successfully! 🚀");
     } else {
-      // Could show error toast here
+      toast.error(res.error || "Failed to submit application");
+      if ((res as any).missingFields) {
+        setApplyModalJob(null);
+        setProfileReadinessModal({
+          isOpen: true,
+          job: applyModalJob,
+          percentage: (res as any).percentage || 40,
+          missingFields: (res as any).missingFields,
+        });
+      }
     }
     setIsApplying(null);
   };
@@ -445,6 +483,25 @@ export default function JobsPage() {
               </div></form>
             </div>
           </div>
+        )}
+
+        {/* Complete Profile Gate Modal */}
+        <CompleteProfileToApplyModal
+          isOpen={profileReadinessModal.isOpen}
+          onClose={() => setProfileReadinessModal(prev => ({ ...prev, isOpen: false }))}
+          jobTitle={profileReadinessModal.job?.title}
+          companyName={profileReadinessModal.job?.company}
+          percentage={profileReadinessModal.percentage}
+          missingFields={profileReadinessModal.missingFields}
+          onOpenEditProfile={() => {
+            setProfileReadinessModal(prev => ({ ...prev, isOpen: false }));
+            setIsEditProfileOpen(true);
+          }}
+        />
+
+        {/* In-page Profile Editor */}
+        {isEditProfileOpen && (
+          <EditProfileModal onClose={() => setIsEditProfileOpen(false)} />
         )}
       </div>
     </PullToRefresh>

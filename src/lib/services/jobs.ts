@@ -204,6 +204,21 @@ export const applyForJob = async (job: JobListing, applicantId: string, applicat
     const applicantDoc = await getDoc(doc(db, "users", applicantId));
     const applicantUser = applicantDoc.data();
     
+    if (!applicantUser) {
+      return { success: false, error: "Applicant profile could not be found." };
+    }
+
+    const { checkJobApplicationReadiness } = await import("@/lib/utils/profileProgress");
+    const readiness = checkJobApplicationReadiness(applicantUser);
+    if (!readiness.canApply) {
+      const missingList = readiness.missingFields.map((f: any) => f.label).join(", ");
+      return {
+        success: false,
+        error: `Please update your profile before applying. Missing: ${missingList}.`,
+        missingFields: readiness.missingFields
+      };
+    }
+
     const app: JobApplication = {
       id: newAppRef.id,
       jobId: job.id,
@@ -214,7 +229,7 @@ export const applyForJob = async (job: JobListing, applicantId: string, applicat
       applicantId,
       applicantName: applicantUser?.fullName || 'Unknown',
       applicantAvatar: applicantUser?.avatar || '',
-      applicantTitle: applicantUser?.jobTitle || '',
+      applicantTitle: applicantUser?.headline || applicantUser?.jobTitle || '',
       resumeUrl: applicantUser?.resumeUrl || applicationData.resumeUrl || '',
       coverLetter: applicationData.coverLetter || '',
       status: 'pending',

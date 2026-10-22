@@ -27,6 +27,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import QuickCreateModal from "@/components/layout/QuickCreateModal";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { calculateProfileProgress } from "@/lib/utils/profileProgress";
 
 export default function Sidebar() {
   const { profile, logout, unreadNotifications, unreadMessages } = useAuthStore();
@@ -37,6 +38,7 @@ export default function Sidebar() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite';
   const isEmployer = (profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer') && (profile?.subscriptionTier === 'elite' || profile?.role === 'admin');
+  const profileProgress = calculateProfileProgress(profile);
 
 
   const primaryNavItems = [
@@ -121,6 +123,40 @@ export default function Sidebar() {
             </div>
           )}
         </Link>
+
+        {/* Profile Completion Indicator if < 85% */}
+        {profile && profileProgress.percentage < 85 && (
+          <Link
+            href="/profile?edit=true"
+            className={`block mt-2 p-2.5 rounded-xl bg-purple-950/40 border border-purple-500/20 hover:border-purple-500/40 transition-all group ${
+              isMinimized ? "text-center px-1" : ""
+            }`}
+            title="Complete your profile to unlock job applications and more connections"
+          >
+            <div className="flex items-center justify-between text-[11px] mb-1.5">
+              {!isMinimized && (
+                <span className="font-bold text-purple-300 group-hover:text-white transition-colors flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-purple-400" />
+                  Profile Strength
+                </span>
+              )}
+              <span className={`font-extrabold text-purple-400 ${isMinimized ? "w-full text-center" : ""}`}>
+                {profileProgress.percentage}%
+              </span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-purple-500 to-emerald-400"
+                style={{ width: `${Math.max(profileProgress.percentage, 8)}%` }}
+              />
+            </div>
+            {!isMinimized && (
+              <p className="text-[10px] text-slate-400 group-hover:text-purple-200 transition-colors mt-1.5 truncate">
+                + {profileProgress.missingItems[0] || "Update profile"}
+              </p>
+            )}
+          </Link>
+        )}
 
         {/* Quick Create Action Button */}
         <button
