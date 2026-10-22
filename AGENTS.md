@@ -34,3 +34,26 @@ When the user reports an issue or bug experienced by a user on Rhockstar Connect
      - UI state or race conditions (e.g., unhandled loading/error states, empty states masquerading as bugs).
    - Clarify the root cause and provide actionable guidance or defensive safeguards.
 <!-- END:bug-triage-rules -->
+
+<!-- BEGIN:collaborator-update-rules -->
+# Collaborator (Eniola) Update Protocol
+
+Whenever Eniola (or any collaborator) pushes an update or a branch is ready for review:
+
+1. **Fetch & Inspect**:
+   - Run `git fetch --all --prune` to detect all remote branch updates.
+   - Check out the branch locally and inspect commit logs and file diffs (`git log main..HEAD`, `git diff main..HEAD`).
+   - Audit all code modifications for breaking changes, missing dependencies, external assets, or type/lint regressions.
+
+2. **Verify Assets & Dependencies**:
+   - Check that any referenced local static files (images, configs, scripts) exist in the repository.
+   - Verify that any newly introduced libraries or configurations are compatible with the existing architecture.
+
+3. **Build & Local Test Verification**:
+   - Always run a clean local production build (`npm run build`) and confirm exit code 0.
+   - Test modified routes and key user journeys locally (e.g. running smoke tests against a local instance) to verify runtime rendering and HTTP status codes before proceeding.
+
+4. **Review & Gate Before Merge**:
+   - Present a clear, structured summary of changes and test findings to the user.
+   - Do NOT merge into `main` or push to production until local review, build validation, and smoke tests are confirmed.
+<!-- END:collaborator-update-rules -->
