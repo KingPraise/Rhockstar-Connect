@@ -34,7 +34,7 @@ import LevelUpModal from "@/components/gamification/LevelUpModal";
 import LeaderboardView from "@/components/gamification/LeaderboardView";
 import { awardUserXP, checkDailyStreak, StardomRank } from "@/lib/services/gamification";
 
-import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, ChevronLeft, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, Globe, Users, Compass, Plus, Lock, Shield, Sparkles, ShieldCheck, UserX, Crown, MessageSquare, Trophy, Flame, Paperclip } from "lucide-react";
+import { Send, Search, Loader2, MessageSquarePlus, Check, CheckCheck, Image as ImageIcon, Mic, Square, FileText, X, Edit2, Reply, ChevronLeft, Trash2, MoreHorizontal, Archive, Inbox, MoreVertical, Mail, ArchiveRestore, User, Globe, Users, Compass, Plus, Lock, Shield, Sparkles, ShieldCheck, UserX, Crown, MessageSquare, Trophy, Flame, Paperclip, CheckCircle2 } from "lucide-react";
 import { uploadMediaToCloudinary } from "@/lib/services/cloudinary";
 import toast from "react-hot-toast";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -83,6 +83,7 @@ export default function MessagesPage() {
   const [activeCommunity, setActiveCommunity] = useState<Community | null>(null);
   const [communityMessages, setCommunityMessages] = useState<CommunityMessage[]>([]);
   const [communityCategory, setCommunityCategory] = useState<string>('All');
+  const [communityViewTab, setCommunityViewTab] = useState<'all' | 'joined' | 'discover'>('all');
   const [newCommunityMessageText, setNewCommunityMessageText] = useState("");
   const [isCreateCommunityOpen, setIsCreateCommunityOpen] = useState(false);
   const [isCommunityInfoOpen, setIsCommunityInfoOpen] = useState(false);
@@ -706,6 +707,15 @@ export default function MessagesPage() {
     return matchesCategory && matchesSearch;
   });
 
+  // Split filtered communities into "Joined" (My Communities) and "Discover" (Unjoined)
+  const joinedCommunities = filteredCommunities.filter((c) =>
+    (c.members || []).includes(profile?.uid || "")
+  );
+
+  const discoverCommunities = filteredCommunities.filter(
+    (c) => !(c.members || []).includes(profile?.uid || "")
+  );
+
   return (
     <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100dvh-10rem)] md:h-[calc(100vh-4rem)] max-h-[920px] gap-2 md:gap-4 p-2 md:p-3 lg:p-4 lg:gap-5 overflow-hidden">
       
@@ -827,7 +837,7 @@ export default function MessagesPage() {
 
         {/* Search */}
         {messagesMode !== 'leaderboard' && (
-          <div className="p-4 border-b border-white/5">
+          <div className="p-4 border-b border-white/5 space-y-2.5">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -846,6 +856,46 @@ export default function MessagesPage() {
                 </button>
               )}
             </div>
+
+            {/* Community View Filter Tabs: All, Joined, Discover */}
+            {messagesMode === 'communities' && (
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <button
+                  onClick={() => setCommunityViewTab('all')}
+                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all text-center ${
+                    communityViewTab === 'all'
+                      ? 'bg-slate-700 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  All ({filteredCommunities.length})
+                </button>
+
+                <button
+                  onClick={() => setCommunityViewTab('joined')}
+                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
+                    communityViewTab === 'joined'
+                      ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  Joined ({joinedCommunities.length})
+                </button>
+
+                <button
+                  onClick={() => setCommunityViewTab('discover')}
+                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
+                    communityViewTab === 'discover'
+                      ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-purple-300 hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Compass className="w-3 h-3 shrink-0" />
+                  Discover ({discoverCommunities.length})
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -1094,143 +1144,202 @@ export default function MessagesPage() {
           )}
 
           {/* MODE 2: PUBLIC COMMUNITIES DIRECTORY */}
-          {messagesMode === 'communities' && (
-            filteredCommunities.length > 0 ? (
-              <div className="p-2 space-y-2">
-                {filteredCommunities.map((comm) => {
-                  const isJoined = (comm.members || []).includes(profile.uid);
-                  const isActive = activeCommunity?.id === comm.id;
+          {messagesMode === 'communities' && (() => {
+            const renderCommunityCard = (comm: Community, isJoined: boolean) => {
+              const isActive = activeCommunity?.id === comm.id;
+              const hasRequested = comm.pendingRequests?.includes(profile.uid);
+              const isLocked = comm.accessType === 'locked';
+              const isPrivate = comm.accessType === 'private';
 
-                  return (
-                    <div
-                      key={comm.id}
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setActiveCommunity(comm);
-                        }
-                      }}
-                      onClick={() => setActiveCommunity(comm)}
-                      className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                        isActive 
-                          ? 'bg-slate-800 border-brand/50 shadow-lg' 
-                          : 'bg-slate-900/80 hover:bg-slate-800/60 border-white/5'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className="w-12 h-12 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
-                          {comm.icon || "💬"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <h3 className="font-bold text-white text-sm truncate">{comm.name}</h3>
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-slate-400 border border-white/5">
-                              {comm.category}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-400 truncate mb-1">{comm.description}</p>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                            <Users className="w-3 h-3 text-brand" />
-                            <span>{comm.memberCount} members</span>
-                            {comm.creatorId === profile.uid && (
-                              <span className="text-amber-400 font-bold flex items-center gap-0.5">
-                                • Creator
-                              </span>
-                            )}
-                          </div>
-                        </div>
+              return (
+                <div
+                  key={comm.id}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setActiveCommunity(comm);
+                    }
+                  }}
+                  onClick={() => setActiveCommunity(comm)}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                    isActive 
+                      ? 'bg-slate-800 border-brand/50 shadow-lg' 
+                      : 'bg-slate-900/80 hover:bg-slate-800/60 border-white/5'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-11 h-11 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
+                      {comm.icon || "💬"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="font-bold text-white text-sm truncate">{comm.name}</h3>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-slate-400 border border-white/5">
+                          {comm.category}
+                        </span>
                       </div>
+                      <p className="text-xs text-slate-400 truncate mb-1">{comm.description}</p>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                        <Users className="w-3 h-3 text-brand" />
+                        <span>{comm.memberCount} members</span>
+                        {comm.creatorId === profile.uid && (
+                          <span className="text-amber-400 font-bold flex items-center gap-0.5">
+                            • Creator
+                          </span>
+                        )}
+                        {isJoined && (
+                          <span className="text-emerald-400 font-bold flex items-center gap-0.5">
+                            • Member
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                      {/* Join / Status Button */}
-                      {(() => {
-                        const hasRequested = comm.pendingRequests?.includes(profile.uid);
-                        const isLocked = comm.accessType === 'locked';
-                        const isPrivate = comm.accessType === 'private';
+                  {/* Join / Status Button */}
+                  {(() => {
+                    if (isJoined) {
+                      return (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveCommunity(comm);
+                          }}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-white/10 transition-all shrink-0"
+                        >
+                          Open
+                        </button>
+                      );
+                    }
 
-                        if (isJoined) {
-                          return (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveCommunity(comm);
-                              }}
-                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 border border-white/10 transition-all shrink-0"
-                            >
-                              Open
-                            </button>
-                          );
-                        }
+                    if (isLocked) {
+                      return (
+                        <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-rose-950/60 text-rose-400 border border-rose-500/20 shrink-0 flex items-center gap-1">
+                          <Lock className="w-3 h-3" /> Locked
+                        </span>
+                      );
+                    }
 
-                        if (isLocked) {
-                          return (
-                            <span className="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-rose-950/60 text-rose-400 border border-rose-500/20 shrink-0 flex items-center gap-1">
-                              <Lock className="w-3 h-3" /> Locked
-                            </span>
-                          );
-                        }
-
-                        if (isPrivate) {
-                          if (hasRequested) {
-                            return (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCancelJoinRequest(comm);
-                                }}
-                                className="px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/30 transition-all shrink-0"
-                                title="Click to cancel request"
-                              >
-                                ? Pending
-                              </button>
-                            );
-                          }
-                          return (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleJoinCommunity(comm);
-                              }}
-                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition-all shrink-0 flex items-center gap-1"
-                            >
-                              <Lock className="w-3 h-3" /> Request
-                            </button>
-                          );
-                        }
-
+                    if (isPrivate) {
+                      if (hasRequested) {
                         return (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleJoinCommunity(comm);
+                              handleCancelJoinRequest(comm);
                             }}
-                            className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-brand to-brand-purple text-slate-950 hover:opacity-90 shadow-md transition-all shrink-0"
+                            className="px-2.5 py-1.5 rounded-xl text-[10px] font-bold bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 border border-amber-500/30 transition-all shrink-0"
+                            title="Click to cancel request"
                           >
-                            Join
+                            ⏳ Pending
                           </button>
                         );
-                      })()}
+                      }
+                      return (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleJoinCommunity(comm);
+                          }}
+                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white shadow-md transition-all shrink-0 flex items-center gap-1"
+                        >
+                          <Lock className="w-3 h-3" /> Request
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleJoinCommunity(comm);
+                        }}
+                        className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-md transition-all shrink-0"
+                      >
+                        Join
+                      </button>
+                    );
+                  })()}
+                </div>
+              );
+            };
+
+            if (filteredCommunities.length === 0) {
+              return (
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                  <EmptyState
+                    icon={Globe}
+                    title="No communities found"
+                    description="Be the first to create a community for this topic!"
+                  />
+                  <button
+                    onClick={() => setIsCreateCommunityOpen(true)}
+                    className="mt-4 px-4 py-2 bg-brand text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create Community
+                  </button>
+                </div>
+              );
+            }
+
+            return (
+              <div className="p-2 space-y-4">
+                {/* 1. MY COMMUNITIES (JOINED) - ALWAYS ON TOP */}
+                {(communityViewTab === 'all' || communityViewTab === 'joined') && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        My Communities
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        {joinedCommunities.length} Joined
+                      </span>
                     </div>
-                  );
-                })}
+
+                    {joinedCommunities.length > 0 ? (
+                      <div className="space-y-2">
+                        {joinedCommunities.map((comm) => renderCommunityCard(comm, true))}
+                      </div>
+                    ) : (
+                      <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-dashed border-white/10 text-center">
+                        <p className="text-xs font-semibold text-slate-300">You haven't joined any communities in this category</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Explore the communities below and join conversations!</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 2. DISCOVER NEW COMMUNITIES - IN SEPARATE PLACE BELOW */}
+                {(communityViewTab === 'all' || communityViewTab === 'discover') && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between px-2 pt-2 pb-0.5 border-t border-white/5">
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <Compass className="w-3.5 h-3.5 text-purple-400" />
+                        Discover Communities
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        {discoverCommunities.length} New
+                      </span>
+                    </div>
+
+                    {discoverCommunities.length > 0 ? (
+                      <div className="space-y-2">
+                        {discoverCommunities.map((comm) => renderCommunityCard(comm, false))}
+                      </div>
+                    ) : (
+                      <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-dashed border-white/10 text-center">
+                        <p className="text-xs font-semibold text-slate-300">No new communities to join in this category</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">You're already part of all available communities here!</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                <EmptyState
-                  icon={Globe}
-                  title="No communities found"
-                  description="Be the first to create a community for this topic!"
-                />
-                <button
-                  onClick={() => setIsCreateCommunityOpen(true)}
-                  className="mt-4 px-4 py-2 bg-brand text-slate-950 font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Community
-                </button>
-              </div>
-            )
-          )}
+            );
+          })()}
 
           {/* MODE 3: LEADERBOARD / RANKS (Mobile View) */}
           {messagesMode === 'leaderboard' && (
