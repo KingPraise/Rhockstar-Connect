@@ -65,6 +65,7 @@ export default function ProtectedRoute({
 }, [user, mounted]);
 
   const isPublicRoute =
+    pathname === "/feed" ||
     pathname.startsWith("/profile") ||
     pathname.startsWith("/company") ||
     pathname === "/jobs" ||
