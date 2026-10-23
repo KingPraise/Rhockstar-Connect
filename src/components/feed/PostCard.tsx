@@ -406,6 +406,7 @@ export default function PostCard({ post }: PostCardProps) {
             alt="Post attachment" 
             className="max-w-full max-h-72 sm:max-h-80 object-cover cursor-pointer hover:opacity-95 transition-opacity w-full"
             loading="lazy"
+              decoding="async"
             onClick={() => openLightbox([post.imageUrl!])}
           />
         </div>

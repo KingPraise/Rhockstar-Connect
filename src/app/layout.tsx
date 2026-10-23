@@ -7,7 +7,7 @@ import NextTopLoader from "nextjs-toploader";
 import ToastProvider from "@/components/ui/ToastProvider";
 import AIAssistantWidget from "@/components/ai/AIAssistantWidget";
 import AnalyticsProvider from "@/components/AnalyticsProvider";
-import OfflineBanner from "@/components/ui/OfflineBanner";
+
 
 const inter = Inter({
   subsets: ["latin"],
@@ -106,7 +106,7 @@ export default function RootLayout({
           {children}
 
           <ToastProvider />
-          <OfflineBanner />
+
 
           <AIAssistantWidget />
         </AuthProvider>

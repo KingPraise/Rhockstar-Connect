@@ -1,88 +1,228 @@
 "use client";
 
-import { useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import { useAuthStore, UserProfile } from '@/store/useAuthStore';
+import { useEffect } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  doc,
+  onSnapshot,
+} from "firebase/firestore";
+import {
+  auth,
+  db,
+} from "@/lib/firebase";
+import {
+  useAuthStore,
+  UserProfile,
+} from "@/store/useAuthStore";
 
-export default function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setProfile, setLoading } = useAuthStore();
+const CACHED_PROFILE_KEY =
+  "rhockstar_cached_profile";
 
-  // 1. Immediately restore cached profile from localStorage on client mount (0ms instant display)
+export default function AuthProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const {
+    setUser,
+    setProfile,
+    setLoading,
+  } = useAuthStore();
+
+  /*
+   * Restore the most recently known profile immediately.
+   *
+   * This prevents the UI from unnecessarily blocking while
+   * Firebase Auth / Firestore reconnect in the background.
+   */
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return;
+    }
+
     try {
-      const cached = localStorage.getItem('rhockstar_cached_profile');
-      if (cached) {
-        setProfile(JSON.parse(cached));
+      const cachedProfile =
+        localStorage.getItem(
+          CACHED_PROFILE_KEY
+        );
+
+      if (cachedProfile) {
+        setProfile(
+          JSON.parse(
+            cachedProfile
+          ) as UserProfile
+        );
       }
-    } catch {}
+    } catch {
+      // Ignore malformed/unavailable local storage.
+    }
   }, [setProfile]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      
-      if (firebaseUser) {
-        // Fetch user profile from Firestore with metadata changes so cached doc emits instantly
-        const docRef = doc(db, 'users', firebaseUser.uid);
-        const unsubscribeProfile = onSnapshot(
-          docRef, 
-          { includeMetadataChanges: true },
-          (docSnap) => {
-            if (docSnap.exists()) {
-              const data = docSnap.data() as UserProfile;
-              setProfile(data);
-              try {
-                localStorage.setItem('rhockstar_cached_profile', JSON.stringify(data));
-              } catch {}
-            } else {
-              console.warn("User profile document not found!");
-              setProfile(null);
-            }
-            setLoading(false);
-          }, 
-          (error) => {
-            console.error("Error listening to user profile:", error);
-            setLoading(false);
+    let unsubscribeProfile:
+      | (() => void)
+      | null = null;
+
+    const unsubscribeAuth =
+      onAuthStateChanged(
+        auth,
+        (firebaseUser) => {
+          /*
+           * Always stop the previous profile listener
+           * before reacting to another auth-state change.
+           *
+           * This prevents permission errors during logout
+           * and prevents multiple profile listeners from
+           * surviving at once.
+           */
+          if (
+            unsubscribeProfile
+          ) {
+            unsubscribeProfile();
+
+            unsubscribeProfile =
+              null;
           }
-        );
-        
-        // Clean up profile listener when auth state changes
-        if ((window as any)._profileUnsub) {
-          (window as any)._profileUnsub();
+
+          setUser(
+            firebaseUser
+          );
+
+          if (!firebaseUser) {
+            setProfile(null);
+
+            try {
+              localStorage.removeItem(
+                CACHED_PROFILE_KEY
+              );
+            } catch {
+              // Ignore storage errors.
+            }
+
+            setLoading(false);
+
+            return;
+          }
+
+          const docRef = doc(
+            db,
+            "users",
+            firebaseUser.uid
+          );
+
+          unsubscribeProfile =
+            onSnapshot(
+              docRef,
+              {
+                includeMetadataChanges:
+                  true,
+              },
+              (docSnap) => {
+                if (
+                  docSnap.exists()
+                ) {
+                  const data =
+                    docSnap.data() as UserProfile;
+
+                  setProfile(data);
+
+                  /*
+                   * Store the latest profile locally so the
+                   * next application start can hydrate instantly.
+                   */
+                  try {
+                    localStorage.setItem(
+                      CACHED_PROFILE_KEY,
+                      JSON.stringify(
+                        data
+                      )
+                    );
+                  } catch {
+                    // Ignore storage quota/privacy errors.
+                  }
+                } else {
+                  console.warn(
+                    "User profile document not found!"
+                  );
+
+                  setProfile(
+                    null
+                  );
+                }
+
+                setLoading(
+                  false
+                );
+              },
+              (error) => {
+                /*
+                 * Firestore may briefly report permission-denied
+                 * while a listener is shutting down after logout.
+                 * That is expected and should not become a visible
+                 * application error.
+                 */
+                if (
+                  error.code ===
+                    "permission-denied" &&
+                  !auth.currentUser
+                ) {
+                  return;
+                }
+
+                console.error(
+                  "Error listening to user profile:",
+                  error
+                );
+
+                setLoading(
+                  false
+                );
+              }
+            );
         }
-        (window as any)._profileUnsub = unsubscribeProfile;
-      } else {
-        setProfile(null);
-        try {
-          localStorage.removeItem('rhockstar_cached_profile');
-        } catch {}
-        setLoading(false);
-      }
-    });
+      );
 
     return () => {
-      unsubscribe();
-      if ((window as any)._profileUnsub) {
-        (window as any)._profileUnsub();
+      unsubscribeAuth();
+
+      if (
+        unsubscribeProfile
+      ) {
+        unsubscribeProfile();
+
+        unsubscribeProfile =
+          null;
       }
     };
-  }, [setUser, setProfile, setLoading]);
+  }, [
+    setUser,
+    setProfile,
+    setLoading,
+  ]);
 
-  // Fallback: forcefully drop loading state after 1.5 seconds so users never freeze on slow/spotty network
+  /*
+   * Safety fallback.
+   *
+   * Authentication should normally resolve much sooner,
+   * but this prevents the application from being trapped
+   * indefinitely behind an auth loading state.
+   *
+   * Keep upstream's shorter timeout.
+   */
   useEffect(() => {
-    const safetyTimer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
+    const safetyTimer =
+      setTimeout(() => {
+        setLoading(false);
+      }, 1500);
 
-    return () => clearTimeout(safetyTimer);
+    return () =>
+      clearTimeout(
+        safetyTimer
+      );
   }, [setLoading]);
 
-  return (
-    <>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }
