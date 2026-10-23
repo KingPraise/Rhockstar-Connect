@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   useEffect,
@@ -46,6 +46,7 @@ import {
   UserPlus,
   Check,
   WifiOff,
+  ArrowUp,
 } from "lucide-react";
 
 import PullToRefresh from "@/components/ui/PullToRefresh";
@@ -328,6 +329,49 @@ export default function FeedPage() {
 
   const hasServerSnapshotRef =
     useRef(false);
+  const [pendingNewPosts, setPendingNewPosts] = useState<Post[]>([]);
+  const postsRef = useRef(posts);
+  postsRef.current = posts;
+  const isScrolledDownRef = useRef(false);
+
+  useEffect(() => {
+    const container =
+      document.getElementById("main-scroll-container") || window;
+    const handleScroll = () => {
+      const scrollTop =
+        container instanceof HTMLElement
+          ? container.scrollTop
+          : window.scrollY;
+      isScrolledDownRef.current = scrollTop > 100;
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleShowNewPosts = () => {
+    if (pendingNewPosts.length === 0) return;
+    setPosts((prev) => {
+      const existingIds = new Set(prev.map((p) => p.id));
+      const toAdd = pendingNewPosts.filter((p) => !existingIds.has(p.id));
+      const combined = [...toAdd, ...prev];
+      try {
+        localStorage.setItem(
+          "rhockstar_cached_feed_posts",
+          JSON.stringify(combined.slice(0, 25))
+        );
+      } catch {}
+      return combined;
+    });
+    setPendingNewPosts([]);
+
+    const container = document.getElementById("main-scroll-container");
+    if (container) {
+      container.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   // Hydrate cached sidebar immediately
   useEffect(() => {
@@ -508,34 +552,20 @@ export default function FeedPage() {
       ]
     );
 
-  const handleRefresh =
-    async () => {
-      if (
-        typeof navigator !==
-          "undefined" &&
-        !navigator.onLine
-      ) {
-        await new Promise(
-          (resolve) =>
-            setTimeout(
-              resolve,
-              300
-            )
-        );
+  const handleRefresh = async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      toast("You're offline. Browsing saved posts.", { icon: "📡" });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return;
+    }
 
-        return;
-      }
+    if (pendingNewPosts.length > 0) {
+      handleShowNewPosts();
+    }
 
-      setLimitCount(10);
-
-      await new Promise(
-        (resolve) =>
-          setTimeout(
-            resolve,
-            500
-          )
-      );
-    };
+    setLimitCount(10);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  };
 
   const searchParams =
     useSearchParams();
@@ -643,10 +673,31 @@ export default function FeedPage() {
             }
           }
 
-          setPosts(
-            newPosts
-          );
+          if (!fromCache && postsRef.current.length > 0 && isScrolledDownRef.current) {
+            const currentIds = new Set(postsRef.current.map((p) => p.id));
+            const incomingBrandNew = newPosts.filter((p) => !currentIds.has(p.id));
 
+            if (incomingBrandNew.length > 0) {
+              const serverMap = new Map(newPosts.map((p) => [p.id, p]));
+              const updatedCurrent = postsRef.current.map(
+                (p) => serverMap.get(p.id) || p
+              );
+
+              setPosts(updatedCurrent);
+              setPendingNewPosts((prev) => {
+                const prevIds = new Set(prev.map((p) => p.id));
+                const combined = [
+                  ...incomingBrandNew.filter((p) => !prevIds.has(p.id)),
+                  ...prev,
+                ];
+                return combined;
+              });
+              setLoading(false);
+              return;
+            }
+          }
+
+          setPosts(newPosts);
           setLoading(false);
 
           if (
@@ -1206,6 +1257,36 @@ export default function FeedPage() {
                   </span>
                 </div>
               )}
+
+            {/* Floating "New Posts" Pill */}
+            {pendingNewPosts.length > 0 && (
+              <div className="sticky top-20 md:top-6 z-40 flex justify-center -mb-8 pointer-events-none">
+                <button
+                  onClick={handleShowNewPosts}
+                  className="pointer-events-auto px-4 py-2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-xs shadow-2xl flex items-center gap-2 hover:scale-105 active:scale-95 transition-all duration-200 border border-white/20 animate-in slide-in-from-top-3 fade-in cursor-pointer"
+                >
+                  <ArrowUp className="w-3.5 h-3.5" />
+                  <span>
+                    {pendingNewPosts.length} new {pendingNewPosts.length === 1 ? 'post' : 'posts'}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* Offline Cache Indicator */}
+            {!isOnline && posts.length > 0 && (
+              <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-900/95 border border-amber-500/30 text-amber-200 text-xs shadow-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                  <span className="font-bold text-white">Offline Mode</span>
+                  <span className="text-slate-400 truncate">� Browsing saved posts</span>
+                </div>
+                <span className="text-[10px] text-amber-400/80 shrink-0 font-medium">Auto-syncs online</span>
+              </div>
+            )}
 
             {/* Profile Completion Onboarding & Reminder Banner */}
             <ProfileCompletionBanner />

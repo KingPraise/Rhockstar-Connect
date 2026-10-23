@@ -23,7 +23,49 @@ const withPWA = withPWAInit({
             statuses: [0, 200],
           },
           expiration: {
-            maxEntries: 150,
+            maxEntries: 200,
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/(lh3|[a-z0-9-]+)\.googleusercontent\.com\/.*$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "rhockstar-google-avatars",
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+          expiration: {
+            maxEntries: 200,
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "rhockstar-firebase-storage-images",
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+          expiration: {
+            maxEntries: 100,
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/images\.unsplash\.com\/.*$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "rhockstar-unsplash-images",
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+          expiration: {
+            maxEntries: 100,
             maxAgeSeconds: 30 * 24 * 60 * 60,
           },
         },
