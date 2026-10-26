@@ -6,15 +6,19 @@ import { getJobs, JobListing, createJob } from "@/lib/services/jobs";
 import { Plus, Briefcase, Users, Activity, Eye, Trash2, Loader2, Crown, Sparkles, Building2, X, MapPin, DollarSign, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { toast } from "react-hot-toast";
+import JobImportModal from "@/components/jobs/JobImportModal";
+import { ParsedJobData } from "@/lib/utils/jobParser";
 
 export default function EmployerDashboardPage() {
   const { profile } = useAuthStore();
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPostModal, setShowPostModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // New Job Form State
   const [title, setTitle] = useState("");
+  const [company, setCompany] = useState("");
   const [location, setLocation] = useState("");
   const [type, setType] = useState<'Full-time' | 'Part-time' | 'Contract' | 'Remote' | 'Internship'>("Full-time");
   const [salary, setSalary] = useState("");
@@ -37,14 +41,25 @@ export default function EmployerDashboardPage() {
     setLoading(false);
   };
 
+  const handleImportJob = (parsed: ParsedJobData) => {
+    if (parsed.title) setTitle(parsed.title);
+    if (parsed.company) setCompany(parsed.company);
+    if (parsed.location) setLocation(parsed.location);
+    if (parsed.type) setType(parsed.type);
+    if (parsed.salary) setSalary(parsed.salary);
+    if (parsed.description) setDescription(parsed.description);
+  };
+
   const handlePostJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
     setSubmitting(true);
     
+    const companyName = company.trim() || profile.fullName || "Company";
     const res = await createJob({
       title,
-      company: profile.fullName || "Company",
+      company: companyName,
+      customCompany: company.trim() || undefined,
       location,
       type,
       salary,
@@ -55,6 +70,7 @@ export default function EmployerDashboardPage() {
       toast.success("Job posted successfully!");
       setShowPostModal(false);
       setTitle("");
+      setCompany("");
       setLocation("");
       setSalary("");
       setDescription("");
@@ -239,27 +255,76 @@ export default function EmployerDashboardPage() {
                   <p className="text-xs text-slate-400">Reach thousands of top talent across the network</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setShowPostModal(false)}
-                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(true)}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-brand/20 to-purple-500/20 hover:from-brand/30 hover:to-purple-500/30 text-brand border border-brand/40 rounded-xl font-extrabold text-xs transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-brand animate-pulse" />
+                  AI Auto-Fill
+                </button>
+                <button 
+                  onClick={() => setShowPostModal(false)}
+                  className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             
             <form onSubmit={handlePostJob} className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
               
+              {/* Quick AI auto-fill banner */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-brand/10 via-purple-500/10 to-transparent border border-brand/25 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-brand/20 text-brand flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-brand" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                      Fast Auto-Fill with AI
+                      <span className="text-[9px] bg-brand text-slate-950 font-black px-1.5 py-0.2 rounded-full">New</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">Paste text or upload a spec to prefill this form in seconds</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowImportModal(true)}
+                  className="px-3 py-1.5 bg-brand text-slate-950 font-extrabold text-xs rounded-xl hover:bg-brand-hover transition-all shrink-0 shadow-sm"
+                >
+                  Paste Listing
+                </button>
+              </div>
+
               <div className="space-y-4">
-                <div className="space-y-2 text-left">
-                  <label className="text-sm font-extrabold text-slate-200">Job Title <span className="text-rose-500">*</span></label>
-                  <input 
-                    type="text" 
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Senior Full-Stack Engineer"
-                    className="neo-input text-sm"
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 text-left">
+                    <label className="text-sm font-extrabold text-slate-200">Job Title <span className="text-rose-500">*</span></label>
+                    <input 
+                      type="text" 
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Senior Full-Stack Engineer"
+                      className="neo-input text-sm"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2 text-left">
+                    <label className="text-sm font-extrabold text-slate-200">Company / Brand Name</label>
+                    <div className="relative">
+                      <Building2 className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="text" 
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        placeholder={profile?.fullName || "e.g. Rainha Hair"}
+                        className="neo-input pl-12 text-sm"
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -275,8 +340,8 @@ export default function EmployerDashboardPage() {
                         <option value="Full-time" className="bg-slate-900 text-white">Full-time</option>
                         <option value="Part-time" className="bg-slate-900 text-white">Part-time</option>
                         <option value="Contract" className="bg-slate-900 text-white">Contract</option>
-                        <option value="Freelance" className="bg-slate-900 text-white">Freelance</option>
                         <option value="Remote" className="bg-slate-900 text-white">Remote</option>
+                        <option value="Internship" className="bg-slate-900 text-white">Internship</option>
                       </select>
                       <ChevronDown className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                     </div>
@@ -299,14 +364,14 @@ export default function EmployerDashboardPage() {
                 </div>
                 
                 <div className="space-y-2 text-left">
-                  <label className="text-sm font-extrabold text-slate-200">Salary Range <span className="text-rose-500">*</span></label>
+                  <label className="text-sm font-extrabold text-slate-200">Salary / Compensation <span className="text-rose-500">*</span></label>
                   <div className="relative">
                     <DollarSign className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                     <input 
                       type="text" 
                       value={salary}
                       onChange={(e) => setSalary(e.target.value)}
-                      placeholder="e.g. ?600k - ?1.2M / mo"
+                      placeholder="e.g. ₦150,000–₦200,000 per month"
                       className="neo-input pl-12 text-sm"
                       required
                     />
@@ -319,33 +384,50 @@ export default function EmployerDashboardPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Detail key responsibilities, qualifications, stack, and application guidelines..." 
-                    rows={6}
-                    className="neo-input text-sm resize-y"
+                    rows={8}
+                    className="neo-input text-sm resize-y leading-relaxed font-mono"
                     required
                   ></textarea>
                 </div>
               </div>
               
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-white/5">
-                <button 
+              <div className="pt-4 flex items-center justify-between gap-3 border-t border-white/5">
+                <button
                   type="button"
-                  onClick={() => setShowPostModal(false)}
-                  className="px-5 py-2.5 text-slate-400 font-bold hover:bg-slate-800 rounded-xl transition-colors text-sm"
+                  onClick={() => setShowImportModal(true)}
+                  className="text-xs text-brand hover:underline font-bold flex items-center gap-1"
                 >
-                  Cancel
+                  <Sparkles className="w-3.5 h-3.5" /> Import text again
                 </button>
-                <button 
-                  type="submit"
-                  disabled={submitting}
-                  className="px-6 py-2.5 bg-brand text-white font-bold rounded-xl hover:scale-105 transition-transform disabled:opacity-70 text-sm flex items-center gap-2 shadow-[0_0_15px_rgba(56,189,248,0.4)]"
-                >
-                  {submitting ? "Posting..." : "Post Job"}
-                </button>
+
+                <div className="flex items-center gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setShowPostModal(false)}
+                    className="px-5 py-2.5 text-slate-400 font-bold hover:bg-slate-800 rounded-xl transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={submitting}
+                    className="px-6 py-2.5 bg-brand text-white font-bold rounded-xl hover:scale-105 transition-transform disabled:opacity-70 text-sm flex items-center gap-2 shadow-[0_0_15px_rgba(56,189,248,0.4)]"
+                  >
+                    {submitting ? "Posting..." : "Post Job"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* AI Smart Import Modal */}
+      <JobImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportJob}
+      />
     </div>
   );
 }
