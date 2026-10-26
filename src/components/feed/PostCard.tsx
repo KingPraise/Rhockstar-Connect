@@ -279,7 +279,7 @@ export default function PostCard({ post }: PostCardProps) {
   }, [post.id, searchParams]);
 
   return (
-    <div id={`post-${post.id}`} className="neo-card p-4 sm:p-4 mb-2 sm:mb-3.5 border-y sm:border border-white/5 bg-slate-900/60 rounded-none sm:rounded-2xl hover:border-white/10 transition-all duration-300">
+    <div id={`post-${post.id}`} className="neo-card p-4 sm:p-4 mb-2 sm:mb-3.5 border-y sm:border border-white/5 bg-slate-900/60 rounded-none sm:rounded-2xl hover:border-white/10 transition-colors duration-150">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <Link href={`/profile?uid=${post.userId}`} className="flex items-center gap-3 group min-w-0">
@@ -579,7 +579,7 @@ export default function PostCard({ post }: PostCardProps) {
                 const replies = post.comments?.filter(c => c.replyToId === comment.id) || [];
                 
                 return (
-                  <div key={comment.id} id={`comment-${comment.id}`} className="flex flex-col gap-3 transition-all duration-300">
+                  <div key={comment.id} id={`comment-${comment.id}`} className="flex flex-col gap-3 transition-colors duration-150">
                     <div className="flex gap-3">
                       <Link href={`/profile?uid=${comment.userId}`}>
                         <UserAvatar src={comment.userId === profile?.uid ? profile?.avatar : comment.user.avatar} name={comment.userId === profile?.uid ? profile?.fullName : comment.user.name} className="w-10 h-10 shadow-inner" textClassName="text-xs font-bold" />
@@ -679,7 +679,7 @@ export default function PostCard({ post }: PostCardProps) {
                             rTimeAgo = formatDistanceToNow(rCreatedAt, { addSuffix: true });
                           }
                           return (
-                            <div key={reply.id} id={`comment-${reply.id}`} className="flex gap-3 relative before:absolute before:left-[-22px] before:top-4 before:w-4 before:h-px before:bg-white/10 transition-all duration-300">
+                            <div key={reply.id} id={`comment-${reply.id}`} className="flex gap-3 relative before:absolute before:left-[-22px] before:top-4 before:w-4 before:h-px before:bg-white/10 transition-colors duration-150">
                               <Link href={`/profile?uid=${reply.userId}`}>
                                 <UserAvatar src={reply.userId === profile?.uid ? profile?.avatar : reply.user.avatar} name={reply.userId === profile?.uid ? profile?.fullName : reply.user.name} className="w-8 h-8 shrink-0 shadow-inner" textClassName="text-[10px] font-bold" />
                               </Link>

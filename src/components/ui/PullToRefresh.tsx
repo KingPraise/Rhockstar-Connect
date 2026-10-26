@@ -9,49 +9,53 @@ interface PullToRefreshProps {
 }
 
 export default function PullToRefresh({ onRefresh, children }: PullToRefreshProps) {
-  const [startY, setStartY] = useState(0);
   const [currentY, setCurrentY] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const containerRef = useRef<HTMLDivElement>(null);
+  const startYRef = useRef(0);
+  const isRefreshingRef = useRef(false);
+  isRefreshingRef.current = isRefreshing;
   
-  const MAX_PULL = 100; // pixels
-  const THRESHOLD = 70;
+  const MAX_PULL = 90;
+  const THRESHOLD = 65;
   
   useEffect(() => {
+    const scrollParent = document.getElementById('main-scroll-container');
+    if (!scrollParent) return;
+
     const handleTouchStart = (e: TouchEvent) => {
-      const scrollParent = document.getElementById('main-scroll-container');
-      // Only pull if we're at the top of the container
-      if (scrollParent && scrollParent.scrollTop <= 0) {
-        setStartY(e.touches[0].clientY);
+      if (scrollParent.scrollTop <= 0) {
+        startYRef.current = e.touches[0].clientY;
       } else {
-        setStartY(0);
+        startYRef.current = 0;
       }
     };
     
     const handleTouchMove = (e: TouchEvent) => {
-      if (startY === 0 || isRefreshing) return;
+      if (startYRef.current === 0 || isRefreshingRef.current) return;
       
       const y = e.touches[0].clientY;
-      const diff = y - startY;
+      const diff = y - startYRef.current;
       
-      const scrollParent = document.getElementById('main-scroll-container');
-      // Only care about pulling down
-      if (diff > 0 && scrollParent && scrollParent.scrollTop <= 0) {
+      if (diff > 0 && scrollParent.scrollTop <= 0) {
         setIsPulling(true);
-        setCurrentY(Math.min(diff, MAX_PULL));
-        // Prevent default scrolling when pulling to refresh
-        if (e.cancelable) e.preventDefault();
+        setCurrentY(Math.min(diff * 0.45, MAX_PULL));
+      } else {
+        if (isPulling) {
+          setIsPulling(false);
+          setCurrentY(0);
+        }
       }
     };
     
     const handleTouchEnd = async () => {
-      if (!isPulling || isRefreshing) return;
+      startYRef.current = 0;
+      if (!isPulling || isRefreshingRef.current) return;
       
-      if (currentY >= THRESHOLD) {
+      if (currentY >= THRESHOLD * 0.45) {
         setIsRefreshing(true);
-        setCurrentY(50); // Hold at a certain distance while refreshing
+        setCurrentY(40);
         
         try {
           await onRefresh();
@@ -64,53 +68,46 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
       
       setIsPulling(false);
       setCurrentY(0);
-      setStartY(0);
     };
     
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('touchstart', handleTouchStart, { passive: true });
-      container.addEventListener('touchmove', handleTouchMove, { passive: false });
-      container.addEventListener('touchend', handleTouchEnd);
-      
-      return () => {
-        container.removeEventListener('touchstart', handleTouchStart);
-        container.removeEventListener('touchmove', handleTouchMove);
-        container.removeEventListener('touchend', handleTouchEnd);
-      };
-    }
-  }, [startY, currentY, isPulling, isRefreshing, onRefresh]);
+    scrollParent.addEventListener('touchstart', handleTouchStart, { passive: true });
+    scrollParent.addEventListener('touchmove', handleTouchMove, { passive: true });
+    scrollParent.addEventListener('touchend', handleTouchEnd, { passive: true });
+    
+    return () => {
+      scrollParent.removeEventListener('touchstart', handleTouchStart);
+      scrollParent.removeEventListener('touchmove', handleTouchMove);
+      scrollParent.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [onRefresh, isPulling, currentY]);
+
+  const showIndicator = isPulling || isRefreshing;
 
   return (
-    <div className="relative w-full h-full">
-      {/* Refresh Indicator */}
-      <div 
-        className="absolute top-0 left-0 right-0 flex justify-center items-center z-50 pointer-events-none transition-transform duration-200"
-        style={{ 
-          transform: `translateY(${isRefreshing ? 20 : (isPulling ? currentY - 40 : -50)}px)`,
-          opacity: (isPulling || isRefreshing) ? 1 : 0
-        }}
-      >
-        <div className="bg-slate-800 border border-white/10 rounded-full p-2 shadow-lg">
-          <RefreshCw 
-            className={`w-6 h-6 text-brand-purple ${isRefreshing ? 'animate-spin' : ''}`}
-            style={{ 
-              transform: !isRefreshing ? `rotate(${currentY * 3}deg)` : 'none'
-            }}
-          />
+    <div className="relative w-full">
+      {/* Floating Refresh Indicator Pill */}
+      {showIndicator && (
+        <div 
+          className="fixed top-16 left-0 right-0 flex justify-center items-center z-50 pointer-events-none transition-transform duration-150"
+          style={{ 
+            transform: `translateY(${isRefreshing ? 16 : Math.max(0, currentY - 20)}px)`,
+            opacity: showIndicator ? 1 : 0
+          }}
+        >
+          <div className="bg-slate-900/95 border border-purple-500/30 rounded-full px-3.5 py-1.5 shadow-2xl backdrop-blur-md flex items-center gap-2 text-xs font-bold text-purple-300">
+            <RefreshCw 
+              className={`w-3.5 h-3.5 text-purple-400 ${isRefreshing ? 'animate-spin' : ''}`}
+              style={{ 
+                transform: !isRefreshing ? `rotate(${currentY * 4}deg)` : 'none'
+              }}
+            />
+            <span>{isRefreshing ? 'Refreshing...' : 'Pull to refresh'}</span>
+          </div>
         </div>
-      </div>
+      )}
       
-      {/* Content Container */}
-      <div 
-        ref={containerRef}
-        className="w-full h-full transition-transform duration-200"
-        style={{
-          transform: `translateY(${isRefreshing ? 50 : (isPulling ? currentY * 0.5 : 0)}px)`
-        }}
-      >
-        {children}
-      </div>
+      {/* Feed Children render directly with zero layout interference */}
+      {children}
     </div>
   );
 }

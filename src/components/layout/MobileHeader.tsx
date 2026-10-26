@@ -53,25 +53,33 @@ export default function MobileHeader() {
   };
 
   useEffect(() => {
+    let ticking = false;
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLElement;
       const currentScrollY = target.scrollTop;
-      const delta = currentScrollY - lastScrollY.current;
-      
-      if (currentScrollY < 50) {
-        setIsVisible(true);
-      } else if (delta > 15) {
-        setIsVisible(false); // scrolling down
-      } else if (delta < -15) {
-        setIsVisible(true); // scrolling up
+
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const delta = currentScrollY - lastScrollY.current;
+
+          if (currentScrollY < 60) {
+            setIsVisible(true);
+          } else if (delta > 25) {
+            setIsVisible(false); // scrolling down
+          } else if (delta < -20) {
+            setIsVisible(true); // scrolling up
+          }
+
+          lastScrollY.current = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
       }
-      
-      lastScrollY.current = currentScrollY;
     };
 
     const mainContainer = document.getElementById("main-scroll-container");
     if (mainContainer) {
-      mainContainer.addEventListener("scroll", handleScroll);
+      mainContainer.addEventListener("scroll", handleScroll, { passive: true });
       return () => mainContainer.removeEventListener("scroll", handleScroll);
     }
   }, []);
