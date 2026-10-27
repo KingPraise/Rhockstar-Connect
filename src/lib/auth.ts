@@ -31,6 +31,8 @@ export const registerUser = async (
   accountType: 'standard' | 'employer' = 'standard'
 ) => {
   let createdAuthUser: any = null;
+  let isOrphanHeal = false;
+
   try {
     const cleanUsername = username.toLowerCase().replace('@', '').trim();
     if (RESERVED_USERNAMES.includes(cleanUsername)) {
@@ -44,9 +46,42 @@ export const registerUser = async (
       return { user: null, error: "This username is already taken. Please choose another." };
     }
 
-    // 1. Create user in Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    createdAuthUser = userCredential.user;
+    // 1. Create user in Firebase Auth or self-heal orphaned Auth user
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      createdAuthUser = userCredential.user;
+    } catch (authErr: any) {
+      const msg = authErr?.message || "";
+      const isEmailInUse = authErr?.code === 'auth/email-already-in-use' || msg.includes('email-already-in-use');
+
+      if (isEmailInUse) {
+        // Self-Healing Mechanism: Check if this email exists in Auth as an orphaned record
+        try {
+          const signInAttempt = await signInWithEmailAndPassword(auth, email, password);
+          const existingDoc = await getDoc(doc(db, "users", signInAttempt.user.uid));
+          if (!existingDoc.exists()) {
+            // Found orphaned auth record! Reconnect and complete registration seamlessly!
+            createdAuthUser = signInAttempt.user;
+            isOrphanHeal = true;
+          } else {
+            // Genuine existing user with a database profile
+            await signOut(auth);
+            return {
+              user: null,
+              error: "This email address is already registered. If this is your account, please log in or reset your password."
+            };
+          }
+        } catch {
+          // Wrong password or cannot sign in
+          return {
+            user: null,
+            error: "This email address is already in use. If you already have an account, please log in or reset your password."
+          };
+        }
+      } else {
+        throw authErr;
+      }
+    }
 
     // 2. Update Auth profile
     await updateProfile(createdAuthUser, {
@@ -79,8 +114,8 @@ export const registerUser = async (
 
     return { user: createdAuthUser, error: null };
   } catch (error: any) {
-    // If Auth user was created but subsequent operations failed, rollback Auth user to prevent orphaned state
-    if (createdAuthUser) {
+    // If brand new Auth user was created but subsequent operations failed, rollback Auth user to prevent orphaned state
+    if (createdAuthUser && !isOrphanHeal) {
       try {
         await createdAuthUser.delete();
       } catch (delErr) {
@@ -144,7 +179,7 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
     try {
       const userCredential = await signInWithEmailAndPassword(auth, emailToUse, password);
       
-      // Check if banned
+      // Check if banned & auto-heal missing profile document
       const userDocRef = doc(db, "users", userCredential.user.uid);
       const userDocSnap = await getDoc(userDocRef);
       if (userDocSnap.exists() && userDocSnap.data().isBanned) {
@@ -152,8 +187,38 @@ export const loginUser = async (emailOrUsername: string, password: string, remem
         return { user: null, error: "Your account has been banned due to policy violations." };
       }
 
-      const updateData: any = { lastLogin: serverTimestamp() };
-      await setDoc(doc(db, "users", userCredential.user.uid), updateData, { merge: true });
+      if (!userDocSnap.exists()) {
+        // Auto-heal missing profile document so user is never broken or invisible
+        const rawEmailName = (userCredential.user.email?.split('@')[0] || "user")
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, '')
+          .slice(0, 15);
+        const generatedUsername = `${rawEmailName}${Math.floor(100 + Math.random() * 900)}`;
+
+        const fallbackProfile = {
+          uid: userCredential.user.uid,
+          fullName: userCredential.user.displayName || userCredential.user.email?.split('@')[0] || "Rhockstar Member",
+          username: generatedUsername,
+          email: userCredential.user.email || emailToUse,
+          accountType: "standard",
+          bio: "",
+          headline: "",
+          location: { city: "", state: "", country: "" },
+          stats: { posts: 0, followers: 0, following: 0, connections: 0 },
+          referralCode: generatedUsername,
+          referralCount: 0,
+          referredFriends: [],
+          claimedRewards: [],
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp(),
+        };
+
+        await setDoc(userDocRef, fallbackProfile);
+      } else {
+        const updateData: any = { lastLogin: serverTimestamp() };
+        await setDoc(userDocRef, updateData, { merge: true });
+      }
+
       await syncAuthStore(userCredential.user.uid, userCredential.user);
 
       return { user: userCredential.user, error: null };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -24,6 +24,7 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { profile } = useAuthStore();
+  const isSubmittingRef = useRef(false);
 
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
@@ -75,72 +76,85 @@ function RegisterForm() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isFormValid || loading) return;
+    // Prevent simultaneous double-taps or duplicate submissions synchronously
+    if (!isFormValid || loading || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     setError("");
     setLoading(true);
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
-      setLoading(false);
-      return;
-    }
+    try {
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters long");
+        setLoading(false);
+        isSubmittingRef.current = false;
+        return;
+      }
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        setLoading(false);
+        isSubmittingRef.current = false;
+        return;
+      }
 
-    if (!dobYear || !dobMonth || !dobDay) {
-      setError("Please complete your date of birth");
-      setLoading(false);
-      return;
-    }
+      if (!dobYear || !dobMonth || !dobDay) {
+        setError("Please complete your date of birth");
+        setLoading(false);
+        isSubmittingRef.current = false;
+        return;
+      }
 
-    const dateOfBirth = `${dobYear}-${dobMonth}-${dobDay}`;
+      const dateOfBirth = `${dobYear}-${dobMonth}-${dobDay}`;
 
-    // Check age >= 18
-    const dob = new Date(dateOfBirth);
-    const today = new Date();
+      // Check age >= 18
+      const dob = new Date(dateOfBirth);
+      const today = new Date();
 
-    let age = today.getFullYear() - dob.getFullYear();
-    const m = today.getMonth() - dob.getMonth();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
 
-    if (
-      m < 0 ||
-      (m === 0 && today.getDate() < dob.getDate())
-    ) {
-      age--;
-    }
+      if (
+        m < 0 ||
+        (m === 0 && today.getDate() < dob.getDate())
+      ) {
+        age--;
+      }
 
-    if (age < 18) {
-      setError(
-        "You must be at least 18 years old to join Rhockstar Connect, as per our Terms of Service."
+      if (age < 18) {
+        setError(
+          "You must be at least 18 years old to join Rhockstar Connect, as per our Terms of Service."
+        );
+        setLoading(false);
+        isSubmittingRef.current = false;
+        return;
+      }
+
+      const { user, error } = await registerUser(
+        email,
+        password,
+        fullName,
+        username,
+        referralCode,
+        accountType
       );
+
+      if (error) {
+        setError(error);
+        setLoading(false);
+        isSubmittingRef.current = false;
+      } else if (user) {
+        trackEvent("sign_up", {
+          method: "email",
+          account_type: accountType,
+        });
+
+        router.push("/feed?welcome=true");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Registration failed. Please try again.");
       setLoading(false);
-      return;
-    }
-
-    const { user, error } = await registerUser(
-      email,
-      password,
-      fullName,
-      username,
-      referralCode,
-      accountType
-    );
-
-    if (error) {
-      setError(error);
-      setLoading(false);
-    } else if (user) {
-      trackEvent("sign_up", {
-        method: "email",
-        account_type: accountType,
-      });
-
-      router.push("/feed?welcome=true");
+      isSubmittingRef.current = false;
     }
   };
 

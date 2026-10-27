@@ -37,6 +37,71 @@ export default function AdminUsersPage() {
   const [grantModalUser, setGrantModalUser] = useState<AdminUser | null>(null);
   const [grantDays, setGrantDays] = useState(30);
   const [grantTier, setGrantTier] = useState<"pro" | "elite" | "free">("pro");
+  const [orphanModalOpen, setOrphanModalOpen] = useState(false);
+  const [orphansList, setOrphansList] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const scanOrphanedUsers = async () => {
+    try {
+      setAuditLoading(true);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        showToast("Session expired. Please log in again.");
+        setAuditLoading(false);
+        return;
+      }
+      const res = await fetch("/api/admin/users/orphans", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setAuditLoading(false);
+      if (data.success) {
+        if (data.orphans.length === 0) {
+          showToast("✅ Auth Database Sync Healthy! No orphaned accounts found.");
+        } else {
+          setOrphansList(data.orphans);
+          setOrphanModalOpen(true);
+        }
+      } else {
+        showToast(`Audit failed: ${data.error || "Unknown error"}`);
+      }
+    } catch (err: any) {
+      setAuditLoading(false);
+      showToast(`Audit error: ${err.message}`);
+    }
+  };
+
+  const handleOrphanAction = async (action: 'purge' | 'heal') => {
+    if (orphansList.length === 0) return;
+    try {
+      setAuditLoading(true);
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/admin/users/orphans", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action,
+          uids: orphansList.map((o) => o.uid)
+        })
+      });
+      const data = await res.json();
+      setAuditLoading(false);
+      if (data.success) {
+        showToast(data.message);
+        setOrphanModalOpen(false);
+        setOrphansList([]);
+        loadUsers();
+      } else {
+        showToast(`Failed: ${data.error}`);
+      }
+    } catch (err: any) {
+      setAuditLoading(false);
+      showToast(`Action failed: ${err.message}`);
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -131,8 +196,22 @@ export default function AdminUsersPage() {
             <p className="text-sm text-slate-400">Search, manage roles, grant perks, and enforce moderation</p>
           </div>
         </div>
-        <div className="text-xs font-bold text-slate-400 bg-slate-900/80 px-4 py-2 rounded-xl border border-rose-500/10 self-start sm:self-auto">
-          Total Registered: <span className="text-rose-500 font-black text-sm">{users.length}</span>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={scanOrphanedUsers}
+            disabled={auditLoading}
+            className="text-xs font-bold text-slate-300 hover:text-white bg-slate-900/90 hover:bg-slate-800 px-3.5 py-2 rounded-xl border border-rose-500/20 flex items-center gap-2 transition-all shadow-sm"
+          >
+            {auditLoading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-500" />
+            ) : (
+              <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+            )}
+            <span>Audit Auth Sync</span>
+          </button>
+          <div className="text-xs font-bold text-slate-400 bg-slate-900/80 px-4 py-2 rounded-xl border border-rose-500/10">
+            Total Registered: <span className="text-rose-500 font-black text-sm">{users.length}</span>
+          </div>
         </div>
       </div>
 
@@ -524,6 +603,59 @@ export default function AdminUsersPage() {
                 Apply Perks Now
               </button>
             </form>
+          </div>
+        </div>
+      )}
+      {/* ORPHANED ACCOUNTS AUDIT MODAL */}
+      {orphanModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+              <div className="flex items-center gap-2 text-amber-400 font-bold">
+                <AlertTriangle className="w-5 h-5" />
+                <h3 className="text-lg text-white">Auth Sync Audit ({orphansList.length})</h3>
+              </div>
+              <button onClick={() => setOrphanModalOpen(false)} className="p-1 rounded-lg text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 mb-4 leading-relaxed">
+              Found <strong className="text-amber-400">{orphansList.length}</strong> account(s) present in Firebase Authentication that are missing their database profile documents in Firestore:
+            </p>
+
+            <div className="max-h-52 overflow-y-auto space-y-2 mb-6 pr-1">
+              {orphansList.map((orphan) => (
+                <div key={orphan.uid} className="p-2.5 rounded-xl bg-slate-950 border border-white/5 flex items-center justify-between text-xs">
+                  <div>
+                    <div className="font-semibold text-white">{orphan.email || "No email"}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">UID: {orphan.uid}</div>
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    {orphan.creationTime ? new Date(orphan.creationTime).toLocaleDateString() : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-white/10">
+              <button
+                onClick={() => handleOrphanAction("heal")}
+                disabled={auditLoading}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+              >
+                {auditLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+                Heal & Create Profiles
+              </button>
+              <button
+                onClick={() => handleOrphanAction("purge")}
+                disabled={auditLoading}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5"
+              >
+                {auditLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                Purge Orphans from Auth
+              </button>
+            </div>
           </div>
         </div>
       )}
