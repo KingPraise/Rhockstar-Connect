@@ -1,4 +1,4 @@
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { 
   collection, 
   getDocs, 
@@ -93,6 +93,23 @@ export const toggleUserBan = async (userId: string, isBanned: boolean) => {
 
 export const deleteUserAdmin = async (userId: string) => {
   try {
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      const token = await currentUser.getIdToken();
+      const res = await fetch('/api/admin/users/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ targetUid: userId })
+      });
+      if (res.ok) {
+        return { success: true };
+      }
+    }
+
+    // Direct Firestore fallback
     const userRef = doc(db, 'users', userId);
     await deleteDoc(userRef);
     return { success: true };

@@ -30,33 +30,41 @@ export const registerUser = async (
   referralCode?: string,
   accountType: 'standard' | 'employer' = 'standard'
 ) => {
+  let createdAuthUser: any = null;
   try {
-    const cleanUsername = username.toLowerCase().replace('@', '');
+    const cleanUsername = username.toLowerCase().replace('@', '').trim();
     if (RESERVED_USERNAMES.includes(cleanUsername)) {
       return { user: null, error: "This username is reserved and cannot be used." };
     }
 
+    // Pre-check if username is already taken BEFORE creating Auth record
+    const usernameQuery = query(collection(db, "users"), where("username", "==", cleanUsername));
+    const usernameSnap = await getDocs(usernameQuery);
+    if (!usernameSnap.empty) {
+      return { user: null, error: "This username is already taken. Please choose another." };
+    }
+
     // 1. Create user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    createdAuthUser = userCredential.user;
 
     // 2. Update Auth profile
-    await updateProfile(user, {
+    await updateProfile(createdAuthUser, {
       displayName: fullName,
     });
 
     // 3. Create Firestore user document
-    await setDoc(doc(db, "users", user.uid), {
-      uid: user.uid,
+    await setDoc(doc(db, "users", createdAuthUser.uid), {
+      uid: createdAuthUser.uid,
       fullName,
-      username: username.toLowerCase().replace('@', ''),
+      username: cleanUsername,
       email,
       accountType,
       bio: "",
       headline: "",
       location: { city: "", state: "", country: "" },
       stats: { posts: 0, followers: 0, following: 0, connections: 0 },
-      referralCode: username.toLowerCase().replace('@', ''),
+      referralCode: cleanUsername,
       referralCount: 0,
       referredFriends: [],
       claimedRewards: [],
@@ -66,12 +74,28 @@ export const registerUser = async (
 
     // 4. Record referral if referral code was provided
     if (referralCode && referralCode.trim()) {
-      await recordReferral(referralCode, user.uid, fullName);
+      await recordReferral(referralCode, createdAuthUser.uid, fullName);
     }
 
-    return { user, error: null };
-  } catch (error: unknown) {
-    return { user: null, error: (error as Error).message };
+    return { user: createdAuthUser, error: null };
+  } catch (error: any) {
+    // If Auth user was created but subsequent operations failed, rollback Auth user to prevent orphaned state
+    if (createdAuthUser) {
+      try {
+        await createdAuthUser.delete();
+      } catch (delErr) {
+        console.warn("Could not delete orphaned auth user on registration rollback:", delErr);
+      }
+    }
+
+    const rawMsg = error?.message || "An unexpected error occurred during registration.";
+    if (rawMsg.includes("auth/email-already-in-use")) {
+      return { 
+        user: null, 
+        error: "This email address is already registered. If you already have an account, please log in or reset your password." 
+      };
+    }
+    return { user: null, error: rawMsg };
   }
 };
 

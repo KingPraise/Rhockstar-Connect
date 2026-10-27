@@ -189,8 +189,20 @@ function RegisterForm() {
 
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-3 backdrop-blur-md">
-              <span className="mt-0.5">⚠️</span>
-              <p>{error}</p>
+              <span className="mt-0.5 text-base">⚠️</span>
+              <div className="flex-1">
+                <p className="font-medium">{error}</p>
+                {(error.toLowerCase().includes("already registered") || error.toLowerCase().includes("already in use") || error.toLowerCase().includes("email-already-in-use")) && (
+                  <div className="mt-3 flex items-center gap-3 pt-2 border-t border-red-500/20">
+                    <Link
+                      href="/login"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-purple text-white text-xs font-bold hover:bg-brand-purple/80 transition-colors shadow-sm"
+                    >
+                      Log In to your Account &rarr;
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
