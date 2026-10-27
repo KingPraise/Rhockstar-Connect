@@ -82,6 +82,17 @@ const DANGEROUS_PATTERNS = [
 ];
 
 export async function middleware(request: NextRequest) {
+  // 1. Canonical Domain Redirection: Automatically redirect any *.netlify.app traffic to rhockstarconnect.com
+  const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host || '';
+  if (host.includes('.netlify.app')) {
+    const url = request.nextUrl.clone();
+    url.protocol = 'https:';
+    url.host = 'rhockstarconnect.com';
+    url.port = '';
+    const status = (request.method === 'GET' || request.method === 'HEAD') ? 301 : 308;
+    return NextResponse.redirect(url, { status });
+  }
+
   const { pathname, search } = request.nextUrl;
 
   // 1. URL Path Traversal & Injection Check
