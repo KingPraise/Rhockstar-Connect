@@ -8,11 +8,22 @@ import Image from "next/image";
 import { useAuthStore } from "@/store/useAuthStore";
 import { logoutUser } from "@/lib/auth";
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+  mobileOpen?: boolean;
+  setMobileOpen?: (open: boolean) => void;
+}
+
+export default function AdminSidebar({
+  mobileOpen: controlledMobileOpen,
+  setMobileOpen: setControlledMobileOpen,
+}: AdminSidebarProps = {}) {
   const pathname = usePathname();
   const { profile, logout } = useAuthStore();
   const router = useRouter();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [internalMobileOpen, setInternalMobileOpen] = useState(false);
+
+  const mobileOpen = controlledMobileOpen !== undefined ? controlledMobileOpen : internalMobileOpen;
+  const setMobileOpen = setControlledMobileOpen !== undefined ? setControlledMobileOpen : setInternalMobileOpen;
 
   const handleLogout = async () => {
     await logoutUser();
@@ -44,12 +55,21 @@ export default function AdminSidebar() {
           <span className="font-extrabold text-white text-base">Super<span className="text-rose-500">Admin</span></span>
         </Link>
 
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2 text-slate-300 hover:text-white rounded-xl bg-slate-800/80 border border-white/10"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/feed"
+            className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs font-bold border border-white/10"
+          >
+            User Feed
+          </Link>
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="p-2 text-slate-300 hover:text-white rounded-xl bg-slate-800/80 border border-white/10"
+            aria-label="Toggle Navigation Menu"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* MOBILE DRAWER OVERLAY */}
