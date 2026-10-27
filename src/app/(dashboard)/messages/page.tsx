@@ -115,51 +115,90 @@ export default function MessagesPage() {
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
   const touchStartXRef = useRef<number>(0);
   const touchStartYRef = useRef<number>(0);
-  const isHorizontalSwipeRef = useRef<boolean | null>(null);
+  const touchStartTimeRef = useRef<number>(0);
+  const hasMovedRef = useRef<boolean>(false);
+  const isHorizontalSwipeRef = useRef<boolean>(false);
+  const lastTapTimeRef = useRef<number>(0);
+  const activeChatRef = useRef<Chat | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const communityMessagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Touch handlers for chat card swipe left
+  // Touch handlers for chat card swipe left & instant tap response
   const handleTouchStart = (chatId: string, e: React.TouchEvent) => {
     touchStartXRef.current = e.touches[0].clientX;
     touchStartYRef.current = e.touches[0].clientY;
-    isHorizontalSwipeRef.current = null;
-    setSwipingChatId(chatId);
+    touchStartTimeRef.current = Date.now();
+    hasMovedRef.current = false;
+    isHorizontalSwipeRef.current = false;
+    // CRITICAL: Do NOT call setSwipingChatId here!
+    // Triggering a state change and re-render on touch-down interrupts mobile Safari's tap recognition,
+    // causing the synthetic click to be dropped and requiring the user to tap multiple times.
   };
 
   const handleTouchMove = (chatId: string, e: React.TouchEvent) => {
     const diffX = e.touches[0].clientX - touchStartXRef.current;
     const diffY = e.touches[0].clientY - touchStartYRef.current;
 
-    if (isHorizontalSwipeRef.current === null) {
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 8) {
+    if (Math.abs(diffX) > 8 || Math.abs(diffY) > 8) {
+      hasMovedRef.current = true;
+    }
+
+    // Only initiate horizontal swipe if movement is predominantly horizontal and passes threshold
+    if (!isHorizontalSwipeRef.current) {
+      if (Math.abs(diffX) > Math.abs(diffY) * 1.4 && Math.abs(diffX) > 14) {
         isHorizontalSwipeRef.current = true;
-      } else if (Math.abs(diffY) > 8) {
-        isHorizontalSwipeRef.current = false;
+        setSwipingChatId(chatId);
       }
     }
 
     if (isHorizontalSwipeRef.current) {
       if (diffX < 0) {
         setSwipeOffset(Math.max(diffX, -160));
+      } else if (swipedChatId === chatId) {
+        // Swiping right to close a previously swiped item
+        setSwipeOffset(Math.min(0, -140 + diffX));
       } else {
         setSwipeOffset(0);
       }
     }
   };
 
-  const handleTouchEnd = (chatId: string) => {
+  const handleTouchEnd = (chat: Chat, e: React.TouchEvent) => {
+    const duration = Date.now() - touchStartTimeRef.current;
+    const endX = e.changedTouches?.[0]?.clientX ?? touchStartXRef.current;
+    const endY = e.changedTouches?.[0]?.clientY ?? touchStartYRef.current;
+    const totalDiffX = Math.abs(endX - touchStartXRef.current);
+    const totalDiffY = Math.abs(endY - touchStartYRef.current);
+
+    // Direct Tap Detection:
+    // If there was no horizontal swipe and minimal movement within 500ms, it was a clean tap!
+    if (!isHorizontalSwipeRef.current && totalDiffX < 12 && totalDiffY < 12 && duration < 500) {
+      lastTapTimeRef.current = Date.now();
+      if (swipedChatId === chat.id) {
+        setSwipedChatId(null);
+      } else {
+        // Instant 0ms response on mobile tap:
+        setActiveChat(chat);
+      }
+      setSwipingChatId(null);
+      setSwipeOffset(0);
+      isHorizontalSwipeRef.current = false;
+      return;
+    }
+
+    // Horizontal Swipe Detection:
     if (isHorizontalSwipeRef.current) {
       if (swipeOffset < -60) {
-        setSwipedChatId(chatId);
+        setSwipedChatId(chat.id);
       } else {
         setSwipedChatId(null);
       }
     }
     setSwipingChatId(null);
     setSwipeOffset(0);
+    isHorizontalSwipeRef.current = false;
   };
 
   // Helper for last seen status — strictly checks timestamp to prevent "stuck online" bugs
@@ -276,6 +315,11 @@ export default function MessagesPage() {
     initiateChat();
   }, [targetUserParam, profile?.uid, isChatsLoaded, chats, users]);
 
+  // Keep activeChatRef synced
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+
   // Subscribe to DMs
   useEffect(() => {
     if (!profile?.uid) return;
@@ -306,13 +350,13 @@ export default function MessagesPage() {
         }
       }
 
-      if (activeChat) {
-        const current = updatedChats.find(c => c.id === activeChat.id);
+      if (activeChatRef.current) {
+        const current = updatedChats.find(c => c.id === activeChatRef.current?.id);
         if (current) setActiveChat(current);
       }
     });
     return () => unsubscribe();
-  }, [profile?.uid, activeChat?.id]);
+  }, [profile?.uid]);
 
   // Subscribe to DM Messages & Real-time Presence
   useEffect(() => {
@@ -1018,8 +1062,11 @@ export default function MessagesPage() {
                         }}
                         onTouchStart={(e) => handleTouchStart(chat.id, e)}
                         onTouchMove={(e) => handleTouchMove(chat.id, e)}
-                        onTouchEnd={() => handleTouchEnd(chat.id)}
+                        onTouchEnd={(e) => handleTouchEnd(chat, e)}
                         onClick={() => {
+                          if (Date.now() - lastTapTimeRef.current < 500) {
+                            return;
+                          }
                           if (swipedChatId === chat.id) {
                             setSwipedChatId(null);
                           } else {
@@ -1033,7 +1080,9 @@ export default function MessagesPage() {
                               : (swipedChatId === chat.id ? '-140px' : '0px')
                           })`
                         }}
-                        className={`w-full p-4 flex items-center justify-between gap-3 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${
+                        className={`w-full p-4 flex items-center justify-between gap-3 text-left relative z-10 cursor-pointer ${
+                          swipingChatId === chat.id ? '' : 'transition-transform duration-200 ease-out'
+                        } ${
                           isActive 
                             ? 'bg-slate-800 text-white shadow-md border-l-4 border-brand' 
                             : isUnread 
