@@ -10,6 +10,7 @@ import {
 import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
+import { useAuthStore, UserProfile } from "@/store/useAuthStore";
 import { recordReferral } from "./services/referrals";
 
 const RESERVED_USERNAMES = [
@@ -30,70 +31,70 @@ export const registerUser = async (
   referralCode?: string,
   accountType: 'standard' | 'employer' = 'standard'
 ) => {
-  let createdAuthUser: any = null;
-  let isOrphanHeal = false;
+  const cleanUsername = username.toLowerCase().replace('@', '').replace(/[^a-z0-9_]/g, '').trim();
+  if (RESERVED_USERNAMES.includes(cleanUsername)) {
+    return { user: null, error: "This username is reserved and cannot be used." };
+  }
 
+  // Primary Path: Server-side API registration with full Firebase Admin SDK
+  // This executes with server-level privileges, completely eliminating client Firestore rule / permission errors.
   try {
-    const cleanUsername = username.toLowerCase().replace('@', '').trim();
-    if (RESERVED_USERNAMES.includes(cleanUsername)) {
-      return { user: null, error: "This username is reserved and cannot be used." };
-    }
-
-    // Pre-check if username is already taken BEFORE creating Auth record
-    const usernameQuery = query(collection(db, "users"), where("username", "==", cleanUsername));
-    const usernameSnap = await getDocs(usernameQuery);
-    if (!usernameSnap.empty) {
-      return { user: null, error: "This username is already taken. Please choose another." };
-    }
-
-    // 1. Create user in Firebase Auth or self-heal orphaned Auth user
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      createdAuthUser = userCredential.user;
-    } catch (authErr: any) {
-      const msg = authErr?.message || "";
-      const isEmailInUse = authErr?.code === 'auth/email-already-in-use' || msg.includes('email-already-in-use');
-
-      if (isEmailInUse) {
-        // Self-Healing Mechanism: Check if this email exists in Auth as an orphaned record
-        try {
-          const signInAttempt = await signInWithEmailAndPassword(auth, email, password);
-          const existingDoc = await getDoc(doc(db, "users", signInAttempt.user.uid));
-          if (!existingDoc.exists()) {
-            // Found orphaned auth record! Reconnect and complete registration seamlessly!
-            createdAuthUser = signInAttempt.user;
-            isOrphanHeal = true;
-          } else {
-            // Genuine existing user with a database profile
-            await signOut(auth);
-            return {
-              user: null,
-              error: "This email address is already registered. If this is your account, please log in or reset your password."
-            };
-          }
-        } catch {
-          // Wrong password or cannot sign in
-          return {
-            user: null,
-            error: "This email address is already in use. If you already have an account, please log in or reset your password."
-          };
-        }
-      } else {
-        throw authErr;
-      }
-    }
-
-    // 2. Update Auth profile
-    await updateProfile(createdAuthUser, {
-      displayName: fullName,
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: email.trim(),
+        password,
+        fullName: fullName.trim(),
+        username: cleanUsername,
+        referralCode: referralCode?.trim(),
+        accountType,
+      })
     });
 
-    // 3. Create Firestore user document
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok || !data.success) {
+      return { user: null, error: data.error || "Registration failed. Please check your details." };
+    }
+
+    // Server-side registration completed cleanly! Now sign in client-side to establish browser session
+    const signInResult = await signInWithEmailAndPassword(auth, email.trim(), password);
+
+    // Sync auth store immediately
+    try {
+      const userDocRef = doc(db, "users", signInResult.user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        useAuthStore.getState().setProfile(userDocSnap.data() as UserProfile);
+      }
+      useAuthStore.getState().setUser(signInResult.user);
+      useAuthStore.getState().setLoading(false);
+    } catch (syncErr) {
+      console.warn("Profile sync warning after registration:", syncErr);
+    }
+
+    return { user: signInResult.user, error: null };
+  } catch (apiErr: any) {
+    console.warn("API registration unreachable, attempting direct client fallback:", apiErr);
+  }
+
+  // Fallback Path: Direct client SDK registration
+  let createdAuthUser: any = null;
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    createdAuthUser = userCredential.user;
+
+    await updateProfile(createdAuthUser, {
+      displayName: fullName.trim(),
+    });
+
+    // Create user document in Firestore without protected keys
     await setDoc(doc(db, "users", createdAuthUser.uid), {
       uid: createdAuthUser.uid,
-      fullName,
+      fullName: fullName.trim(),
       username: cleanUsername,
-      email,
+      email: email.trim(),
       accountType,
       bio: "",
       headline: "",
@@ -102,28 +103,29 @@ export const registerUser = async (
       referralCode: cleanUsername,
       referralCount: 0,
       referredFriends: [],
-      claimedRewards: [],
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
     });
 
-    // 4. Record referral if referral code was provided
     if (referralCode && referralCode.trim()) {
-      await recordReferral(referralCode, createdAuthUser.uid, fullName);
-    }
-
-    return { user: createdAuthUser, error: null };
-  } catch (error: any) {
-    // If brand new Auth user was created but subsequent operations failed, rollback Auth user to prevent orphaned state
-    if (createdAuthUser && !isOrphanHeal) {
       try {
-        await createdAuthUser.delete();
-      } catch (delErr) {
-        console.warn("Could not delete orphaned auth user on registration rollback:", delErr);
+        await recordReferral(referralCode, createdAuthUser.uid, fullName);
+      } catch (refErr) {
+        console.warn("Referral recording fallback warning:", refErr);
       }
     }
 
-    const rawMsg = error?.message || "An unexpected error occurred during registration.";
+    return { user: createdAuthUser, error: null };
+  } catch (clientErr: any) {
+    if (createdAuthUser) {
+      try {
+        await createdAuthUser.delete();
+      } catch (delErr) {
+        console.warn("Client rollback delete warning:", delErr);
+      }
+    }
+
+    const rawMsg = clientErr?.message || "An unexpected error occurred during registration.";
     if (rawMsg.includes("auth/email-already-in-use")) {
       return { 
         user: null, 
@@ -133,8 +135,6 @@ export const registerUser = async (
     return { user: null, error: rawMsg };
   }
 };
-
-import { useAuthStore, UserProfile } from "@/store/useAuthStore";
 
 export const loginUser = async (emailOrUsername: string, password: string, rememberMe: boolean = true) => {
   try {

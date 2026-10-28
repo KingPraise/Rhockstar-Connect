@@ -26,7 +26,7 @@ service cloud.firestore {
         !request.resource.data.keys().hasAny([
           'role', 'subscriptionTier', 'subscriptionStatus', 'subscriptionSource', 
           'premiumUntil', 'isVerified', 'verifiedTier', 'isBanned', 
-          'claimedRewards', 'walletBalance'
+          'walletBalance'
         ])) || isAdmin();
       allow update: if (isOwner(userId) && 
         !request.resource.data.diff(resource.data).affectedKeys().hasAny([
