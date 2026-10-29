@@ -79,8 +79,10 @@ export const registerUser = async (
       return { user: null, error: data.error };
     }
 
-    // If server returned 500, 503, or failed to process, seamlessly fall through to client registration!
-    console.warn("Server API returned non-400 status, falling back to direct client registration:", res.status, data);
+    // If server returned fallback or non-400 status, seamlessly fall through to client registration
+    if (!data.fallback) {
+      console.warn("Server API returned non-400 status, falling back to direct client registration:", res.status, data);
+    }
   } catch (apiErr: any) {
     console.warn("API registration unreachable, attempting direct client fallback:", apiErr);
   }

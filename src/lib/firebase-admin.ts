@@ -22,33 +22,27 @@ let adminAuth: Auth | null = null;
 let adminDb: Firestore | null = null;
 let adminMessaging: Messaging | null = null;
 
+const projectId =
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+  process.env.FIREBASE_PROJECT_ID;
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = cleanPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
+
+const isAdminConfigured = Boolean(projectId && clientEmail && privateKey);
+
 try {
   if (!getApps().length) {
-    const projectId =
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
-      process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = cleanPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
-
-    if (projectId && clientEmail && privateKey) {
+    if (isAdminConfigured) {
       try {
         adminApp = initializeApp({
           credential: cert({
-            projectId,
-            clientEmail,
-            privateKey,
+            projectId: projectId!,
+            clientEmail: clientEmail!,
+            privateKey: privateKey!,
           }),
         });
       } catch (certErr) {
         console.error('Firebase Admin cert initialization error:', certErr);
-      }
-    }
-
-    if (!adminApp && !getApps().length) {
-      try {
-        adminApp = initializeApp();
-      } catch (defaultErr) {
-        console.warn('Firebase Admin default app fallback could not initialize:', defaultErr);
       }
     }
   } else {
@@ -57,7 +51,7 @@ try {
 
   const activeApp = adminApp || (getApps().length > 0 ? getApp() : null);
 
-  if (activeApp) {
+  if (activeApp && isAdminConfigured) {
     try { adminAuth = getAuth(activeApp); } catch (e) { console.warn('adminAuth init warning:', e); }
     try { adminDb = getFirestore(activeApp); } catch (e) { console.warn('adminDb init warning:', e); }
     try { adminMessaging = getMessaging(activeApp); } catch (e) { console.warn('adminMessaging init warning:', e); }
@@ -67,4 +61,4 @@ try {
 }
 
 // Proxies or direct exports so existing callers expecting non-null get meaningful errors on invocation rather than crash on import
-export { adminApp, adminAuth, adminDb, adminMessaging };
+export { adminApp, adminAuth, adminDb, adminMessaging, isAdminConfigured };

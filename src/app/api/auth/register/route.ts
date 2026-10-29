@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { adminDb, adminAuth, isAdminConfigured } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const RESERVED_USERNAMES = [
@@ -14,9 +14,9 @@ const RESERVED_USERNAMES = [
 
 export async function POST(req: Request) {
   try {
-    if (!adminAuth || !adminDb) {
-      console.warn('Firebase Admin not initialized on server, requesting client fallback');
-      return NextResponse.json({ error: 'Server initialization error', fallback: true }, { status: 503 });
+    if (!isAdminConfigured || !adminAuth || !adminDb) {
+      console.warn('Firebase Admin not configured on server, activating seamless client fallback');
+      return NextResponse.json({ success: false, fallback: true, message: 'Server fallback active' }, { status: 200 });
     }
 
     const body = await req.json().catch(() => ({}));
@@ -186,6 +186,6 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     console.error('Unhandled registration error:', err);
-    return NextResponse.json({ error: err.message || 'Registration failed' }, { status: 500 });
+    return NextResponse.json({ success: false, fallback: true, error: err.message || 'Registration failed' }, { status: 200 });
   }
 }
