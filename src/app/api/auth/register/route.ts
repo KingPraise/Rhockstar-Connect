@@ -15,7 +15,8 @@ const RESERVED_USERNAMES = [
 export async function POST(req: Request) {
   try {
     if (!adminAuth || !adminDb) {
-      return NextResponse.json({ error: 'Server initialization error. Please try again shortly.' }, { status: 500 });
+      console.warn('Firebase Admin not initialized on server, requesting client fallback');
+      return NextResponse.json({ error: 'Server initialization error', fallback: true }, { status: 503 });
     }
 
     const body = await req.json().catch(() => ({}));

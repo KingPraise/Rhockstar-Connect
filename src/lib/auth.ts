@@ -54,27 +54,33 @@ export const registerUser = async (
 
     const data = await res.json().catch(() => ({}));
 
-    if (!res.ok || !data.success) {
-      return { user: null, error: data.error || "Registration failed. Please check your details." };
-    }
+    if (res.ok && data.success) {
+      // Server-side registration completed cleanly! Now sign in client-side to establish browser session
+      const signInResult = await signInWithEmailAndPassword(auth, email.trim(), password);
 
-    // Server-side registration completed cleanly! Now sign in client-side to establish browser session
-    const signInResult = await signInWithEmailAndPassword(auth, email.trim(), password);
-
-    // Sync auth store immediately
-    try {
-      const userDocRef = doc(db, "users", signInResult.user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists()) {
-        useAuthStore.getState().setProfile(userDocSnap.data() as UserProfile);
+      // Sync auth store immediately
+      try {
+        const userDocRef = doc(db, "users", signInResult.user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          useAuthStore.getState().setProfile(userDocSnap.data() as UserProfile);
+        }
+        useAuthStore.getState().setUser(signInResult.user);
+        useAuthStore.getState().setLoading(false);
+      } catch (syncErr) {
+        console.warn("Profile sync warning after registration:", syncErr);
       }
-      useAuthStore.getState().setUser(signInResult.user);
-      useAuthStore.getState().setLoading(false);
-    } catch (syncErr) {
-      console.warn("Profile sync warning after registration:", syncErr);
+
+      return { user: signInResult.user, error: null };
     }
 
-    return { user: signInResult.user, error: null };
+    // Real validation error (e.g. username taken, email registered, password invalid)
+    if (res.status === 400 && data.error) {
+      return { user: null, error: data.error };
+    }
+
+    // If server returned 500, 503, or failed to process, seamlessly fall through to client registration!
+    console.warn("Server API returned non-400 status, falling back to direct client registration:", res.status, data);
   } catch (apiErr: any) {
     console.warn("API registration unreachable, attempting direct client fallback:", apiErr);
   }
@@ -113,6 +119,18 @@ export const registerUser = async (
       } catch (refErr) {
         console.warn("Referral recording fallback warning:", refErr);
       }
+    }
+
+    try {
+      const userDocRef = doc(db, "users", createdAuthUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists()) {
+        useAuthStore.getState().setProfile(userDocSnap.data() as UserProfile);
+      }
+      useAuthStore.getState().setUser(createdAuthUser);
+      useAuthStore.getState().setLoading(false);
+    } catch (syncErr) {
+      console.warn("Profile sync warning after registration:", syncErr);
     }
 
     return { user: createdAuthUser, error: null };
