@@ -57,3 +57,23 @@ Whenever Eniola (or any collaborator) pushes an update or a branch is ready for 
    - Present a clear, structured summary of changes and test findings to the user.
    - Do NOT merge into `main` or push to production until local review, build validation, and smoke tests are confirmed.
 <!-- END:collaborator-update-rules -->
+
+<!-- BEGIN:auth-onboarding-rules -->
+# Core Authentication & Onboarding Architecture Standards
+
+To guarantee that registration and onboarding remain 100% stable at scale (thousands of users) and never suffer from permission regressions:
+
+1. **Server-Side Exclusivity for Guest Onboarding**:
+   - Public visitor onboarding (account provisioning, username availability verification, initial profile document generation, and referral attribution) MUST NEVER rely on client-side direct Firestore reads or writes.
+   - All onboarding operations MUST be conducted through server-side API endpoints (such as `/api/auth/register`) powered by the Firebase Admin SDK.
+   - The Firebase Admin SDK operates with server-level privileges, ensuring that client-side Firestore security rules (`firestore.rules`) can never block or break new user sign-ups.
+
+2. **Defense-in-Depth for Security Rules**:
+   - Client Firestore security rules exist to protect authenticated user data from unauthorized tampering and scraping.
+   - Never write code that assumes unauthenticated guests can query or write to protected collections like `/users`.
+
+3. **Mandatory Auth Health Verification**:
+   - Whenever authentication, onboarding, security rules, or user models are modified, always execute the automated auth health suite:
+     `npm run test:auth`
+   - Confirm all 5 probes pass before proceeding with local build validation (`npm run build`) and deployment.
+<!-- END:auth-onboarding-rules -->
