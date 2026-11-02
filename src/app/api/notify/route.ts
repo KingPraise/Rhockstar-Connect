@@ -24,6 +24,10 @@ function checkRateLimit(senderUid: string): boolean {
 
 export async function POST(req: Request) {
   try {
+    if (!adminAuth || !adminDb || !adminMessaging) {
+      return NextResponse.json({ error: 'Server initialization error: Push notifications unavailable.' }, { status: 503 });
+    }
+
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized: Missing or malformed token' }, { status: 401 });

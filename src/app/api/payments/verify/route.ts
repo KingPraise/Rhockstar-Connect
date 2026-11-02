@@ -31,6 +31,10 @@ const MIN_PRICING: Record<string, Record<string, number>> = {
 
 export async function POST(req: Request) {
   try {
+    if (!adminAuth || !adminDb) {
+      return NextResponse.json({ error: 'Server initialization error: Firebase Admin SDK uninitialized.' }, { status: 503 });
+    }
+
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized: Missing or invalid token format' }, { status: 401 });

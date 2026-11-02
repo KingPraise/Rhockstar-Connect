@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { adminAuth } from '@/lib/firebase-admin';
 
 const ALLOWED_FOLDERS = new Set([
   'avatars',
@@ -21,11 +22,17 @@ function isFolderAllowed(folder: string): boolean {
   return false;
 }
 
-function verifyFirebaseToken(
+async function verifyFirebaseToken(
   token: string,
   expectedProjectId?: string
-): { valid: boolean; uid?: string; error?: string } {
+): Promise<{ valid: boolean; uid?: string; error?: string }> {
   try {
+    if (adminAuth) {
+      const decoded = await adminAuth.verifyIdToken(token);
+      return { valid: true, uid: decoded.uid };
+    }
+
+    // Fallback if Admin SDK is uninitialized in hosting environment
     const parts = token.split('.');
     if (parts.length !== 3) {
       return { valid: false, error: 'Invalid token structure' };
@@ -56,7 +63,7 @@ function verifyFirebaseToken(
 
     return { valid: true, uid };
   } catch (err: any) {
-    return { valid: false, error: err?.message || 'Malformed token' };
+    return { valid: false, error: err?.message || 'Token verification failed' };
   }
 }
 
@@ -81,7 +88,7 @@ export async function POST(req: Request) {
     const projectId =
       process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
       process.env.FIREBASE_PROJECT_ID;
-    const tokenCheck = verifyFirebaseToken(token, projectId);
+    const tokenCheck = await verifyFirebaseToken(token, projectId);
     if (!tokenCheck.valid) {
       return NextResponse.json(
         { error: `Unauthorized: ${tokenCheck.error}` },

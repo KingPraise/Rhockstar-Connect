@@ -68,11 +68,13 @@ export const createAdvertisement = async (adData: {
   ctaText: string;
   targetUrl: string;
   durationDays?: number;
+  price?: number;
 }) => {
   try {
     const adsRef = collection(db, 'advertisements');
     const newDoc = await addDoc(adsRef, {
       ...adData,
+      price: adData.price || 15000,
       durationDays: adData.durationDays || 7,
       status: 'pending',
       viewsCount: 0,

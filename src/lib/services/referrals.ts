@@ -120,70 +120,27 @@ export const recordReferral = async (referralCode: string, newUserId: string, ne
 
 export const claimReferralReward = async (userId: string, tierId: string) => {
   try {
-    const tier = REFERRAL_TIERS.find(t => t.id === tierId);
-    if (!tier) return { success: false, error: 'Invalid reward tier' };
+    const { auth } = await import('@/lib/firebase');
+    const token = await auth.currentUser?.getIdToken();
 
-    const userRef = doc(db, 'users', userId);
-    const userSnap = await getDoc(userRef);
-
-    if (!userSnap.exists()) return { success: false, error: 'User not found' };
-    const userData = userSnap.data();
-
-    const referralCount = userData.referralCount || 0;
-    const claimedRewards: string[] = userData.claimedRewards || [];
-
-    if (referralCount < tier.requiredInvites) {
-      return { success: false, error: `You need ${tier.requiredInvites} referrals to claim this reward.` };
+    if (!token) {
+      return { success: false, error: 'Session expired. Please log in again.' };
     }
 
-    if (claimedRewards.includes(tierId)) {
-      return { success: false, error: 'Reward already claimed.' };
+    const res = await fetch('/api/referrals/claim', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ tierId })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      return { success: true, message: data.message };
     }
-
-    const now = new Date();
-    const updateData: any = {
-      claimedRewards: arrayUnion(tierId)
-    };
-
-    if (tier.rewardType === 'premium') {
-      const daysToAdd = tier.rewardDays || 7;
-      const currentExpiry = userData.premiumUntil ? new Date(userData.premiumUntil) : now;
-      const baseDate = currentExpiry > now ? currentExpiry : now;
-      baseDate.setDate(baseDate.getDate() + daysToAdd);
-      
-      updateData.subscriptionTier = 'pro';
-      updateData.subscriptionStatus = 'active';
-      updateData.subscriptionSource = 'referral';
-      updateData.acquisitionType = 'reward';
-      updateData.premiumUntil = baseDate.toISOString();
-    } else if (tier.rewardType === 'boost') {
-      const daysToAdd = tier.rewardDays || 7;
-      const baseDate = new Date();
-      baseDate.setDate(baseDate.getDate() + daysToAdd);
-
-      updateData.isBoosted = true;
-      updateData.boostedUntil = baseDate.toISOString();
-    } else if (tier.rewardType === 'badge_and_jobs') {
-      updateData.badges = arrayUnion(tier.badgeName || 'Featured Professional');
-      updateData.extraJobApps = increment(tier.extraJobs || 20);
-    } else if (tier.rewardType === 'vip') {
-      const daysToAdd = tier.rewardDays || 30;
-      const currentExpiry = userData.premiumUntil ? new Date(userData.premiumUntil) : now;
-      const baseDate = currentExpiry > now ? currentExpiry : now;
-      baseDate.setDate(baseDate.getDate() + daysToAdd);
-
-      updateData.subscriptionTier = 'elite';
-      updateData.subscriptionStatus = 'active';
-      updateData.subscriptionSource = 'referral';
-      updateData.acquisitionType = 'reward';
-      updateData.premiumUntil = baseDate.toISOString();
-      updateData.isBoosted = true;
-      updateData.badges = arrayUnion(tier.badgeName || 'Rhockstar Legend');
-    }
-
-    await updateDoc(userRef, updateData);
-
-    return { success: true };
+    return { success: false, error: data.error || 'Failed to claim reward' };
   } catch (error: unknown) {
     console.error('Error claiming reward:', error);
     return { success: false, error: (error as Error).message };

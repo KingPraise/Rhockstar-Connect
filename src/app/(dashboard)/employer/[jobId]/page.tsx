@@ -22,7 +22,7 @@ const KANBAN_COLUMNS: { id: ColumnStatus; label: string; color: string }[] = [
 ];
 
 export default function EmployerJobApplicantsPage() {
-  const { profile } = useAuthStore();
+  const { profile, isLoading: authLoading } = useAuthStore();
   const params = useParams();
   const jobId = params?.jobId as string;
   
@@ -31,16 +31,25 @@ export default function EmployerJobApplicantsPage() {
   const [draggedAppId, setDraggedAppId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (jobId) {
+    if (authLoading) return;
+    if (jobId && profile?.uid) {
       loadApplications();
+    } else if (!authLoading && !profile) {
+      setLoading(false);
     }
-  }, [jobId]);
+  }, [jobId, profile?.uid, authLoading]);
 
   const loadApplications = async () => {
+    if (!profile?.uid) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const res = await getApplicationsForJob(jobId, profile?.role === 'admin' ? undefined : profile?.uid);
     if (res.success && res.applications) {
       setApplications(res.applications);
+    } else if (res.error) {
+      toast.error(res.error);
     }
     setLoading(false);
   };
@@ -118,6 +127,15 @@ export default function EmployerJobApplicantsPage() {
 
   const isEmployer = profile?.accountType === 'employer' || profile?.role === 'admin' || (profile as any)?.role === 'employer';
   const isElite = profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
+
+  if (authLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-3 min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-brand" />
+        <p>Loading candidate pipeline...</p>
+      </div>
+    );
+  }
 
   if (!profile || !isEmployer || !isElite) {
     return (

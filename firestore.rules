@@ -33,7 +33,9 @@ service cloud.firestore {
           'role', 'subscriptionTier', 'subscriptionStatus', 'subscriptionSource', 
           'premiumUntil', 'isVerified', 'verifiedTier', 'isBanned', 
           'claimedRewards', 'walletBalance'
-        ])) || isAdmin();
+        ])) || 
+        (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['connectionsCount', 'connections'])) ||
+        isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -46,7 +48,10 @@ service cloud.firestore {
       allow update: if isAdmin() || (
         isAuthenticated() && 
         resource.data.companyId == request.auth.uid &&
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status', 'paidAt'])
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['paidAt', 'price', 'approvedAt'])
+      ) || (
+        isAuthenticated() && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewsCount', 'clicksCount', 'views', 'clicks', 'impressions'])
       );
       allow delete: if isAdmin() || (isAuthenticated() && resource.data.companyId == request.auth.uid);
     }
@@ -63,16 +68,34 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
 
-    // Communities Collection - Protect community moderation
+    // Communities Collection - Protect community moderation & subcollection messages
     match /communities/{communityId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.createdBy == request.auth.uid;
+      allow create: if isAuthenticated() && (
+        request.resource.data.createdBy == request.auth.uid || 
+        request.resource.data.creatorId == request.auth.uid
+      );
       allow update: if isAuthenticated() && (
         resource.data.createdBy == request.auth.uid || 
+        resource.data.creatorId == request.auth.uid || 
         isAdmin() ||
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['membersCount', 'members'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'membersCount', 'memberCount', 'members', 'admins', 'lastMessage', 'lastMessageTime'
+        ])
       );
-      allow delete: if isAdmin() || (isAuthenticated() && resource.data.createdBy == request.auth.uid);
+      allow delete: if isAdmin() || (
+        isAuthenticated() && (
+          resource.data.createdBy == request.auth.uid || 
+          resource.data.creatorId == request.auth.uid
+        )
+      );
+
+      // Subcollection for community messages
+      match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if isAuthenticated() && (resource.data.senderId == request.auth.uid || isAdmin());
+      }
     }
 
     // Direct Messages - Impersonation protection
@@ -122,8 +145,22 @@ service cloud.firestore {
     // Jobs Collection
     match /jobs/{jobId} {
       allow read: if true;
-      allow create: if isAuthenticated() && request.resource.data.employerId == request.auth.uid;
-      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.employerId == request.auth.uid);
+      allow create: if isAuthenticated() && (
+        request.resource.data.employerId == request.auth.uid || 
+        request.resource.data.companyId == request.auth.uid
+      );
+      allow update: if isAdmin() || 
+        (isAuthenticated() && (
+          resource.data.employerId == request.auth.uid || 
+          resource.data.companyId == request.auth.uid
+        )) ||
+        (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['applicantsCount']));
+      allow delete: if isAdmin() || (
+        isAuthenticated() && (
+          resource.data.employerId == request.auth.uid || 
+          resource.data.companyId == request.auth.uid
+        )
+      );
     }
     
     // Job Applications Collection
@@ -144,8 +181,17 @@ service cloud.firestore {
     // Connections Collection
     match /connections/{connId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.targetId == request.auth.uid);
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid || 
+        request.resource.data.fromUserId == request.auth.uid
+      );
+      allow update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid || 
+        resource.data.targetId == request.auth.uid ||
+        resource.data.fromUserId == request.auth.uid || 
+        resource.data.toUserId == request.auth.uid ||
+        isAdmin()
+      );
     }
     
     // Follows Collection
@@ -199,6 +245,15 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read, update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated();
+    }
+
+    // Referrals Collection - Admin analytics & user self-read
+    match /referrals/{refId} {
+      allow read, write: if isAdmin();
+      allow read: if isAuthenticated() && (
+        resource.data.referrerId == request.auth.uid || 
+        resource.data.referredUserId == request.auth.uid
+      );
     }
 
     // Processed Transactions - Server/Admin SDK only
