@@ -112,7 +112,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://images.unsplash.com https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://res.cloudinary.com https://*.googleusercontent.com https://*.gstatic.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "media-src 'self' blob: data: https://res.cloudinary.com https://firebasestorage.googleapis.com",
-      "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.flutterwave.com https://api.cloudinary.com https://res.cloudinary.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com",
+      "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://*.gstatic.com https://api.flutterwave.com https://api.cloudinary.com https://res.cloudinary.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com",
       "frame-src 'self' https://checkout.flutterwave.com https://*.firebaseapp.com",
       "frame-ancestors 'self'",
       "object-src 'none'",
