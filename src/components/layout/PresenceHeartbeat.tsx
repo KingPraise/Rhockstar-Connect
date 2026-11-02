@@ -73,21 +73,27 @@ export default function PresenceHeartbeat() {
       where("participants", "array-contains", profile.uid)
     );
 
-    const unsubscribeChats = onSnapshot(chatsQuery, (snapshot) => {
-      let unreadCount = 0;
-      snapshot.docs.forEach((docSnap) => {
-        const data = docSnap.data();
-        if (data.unreadCount && data.unreadCount[profile.uid]) {
-          unreadCount += data.unreadCount[profile.uid];
-        }
-      });
+    const unsubscribeChats = onSnapshot(
+      chatsQuery,
+      (snapshot) => {
+        let unreadCount = 0;
+        snapshot.docs.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data.unreadCount && data.unreadCount[profile.uid]) {
+            unreadCount += data.unreadCount[profile.uid];
+          }
+        });
 
-      if (prevMessagesRef.current !== null && unreadCount > prevMessagesRef.current) {
-        playNotificationChime();
+        if (prevMessagesRef.current !== null && unreadCount > prevMessagesRef.current) {
+          playNotificationChime();
+        }
+        prevMessagesRef.current = unreadCount;
+        setUnreadMessages(unreadCount);
+      },
+      (error) => {
+        console.warn("[PresenceHeartbeat] Chats subscription notice:", error);
       }
-      prevMessagesRef.current = unreadCount;
-      setUnreadMessages(unreadCount);
-    });
+    );
 
     // Listen to unread notifications (excluding direct message notifications, which are tracked accurately by unreadMessages)
     const notifsQuery = query(
@@ -96,17 +102,23 @@ export default function PresenceHeartbeat() {
       where("read", "==", false)
     );
 
-    const unsubscribeNotifs = onSnapshot(notifsQuery, (snapshot) => {
-      // Exclude "message" type notifications so DM count is not double counted
-      const nonMessageNotifs = snapshot.docs.filter((docSnap) => docSnap.data().type !== 'message');
-      const count = nonMessageNotifs.length;
+    const unsubscribeNotifs = onSnapshot(
+      notifsQuery,
+      (snapshot) => {
+        // Exclude "message" type notifications so DM count is not double counted
+        const nonMessageNotifs = snapshot.docs.filter((docSnap) => docSnap.data().type !== 'message');
+        const count = nonMessageNotifs.length;
 
-      if (prevNotifsRef.current !== null && count > prevNotifsRef.current) {
-        playNotificationChime();
+        if (prevNotifsRef.current !== null && count > prevNotifsRef.current) {
+          playNotificationChime();
+        }
+        prevNotifsRef.current = count;
+        setUnreadNotifications(count);
+      },
+      (error) => {
+        console.warn("[PresenceHeartbeat] Notifications subscription notice:", error);
       }
-      prevNotifsRef.current = count;
-      setUnreadNotifications(count);
-    });
+    );
 
     return () => {
       unsubscribeChats();

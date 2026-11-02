@@ -1,10 +1,11 @@
-﻿"use client";
+"use client";
 
 import {
   useEffect,
   useState,
   useRef,
   useCallback,
+  Suspense,
 } from "react";
 
 import PostComposer from "@/components/feed/PostComposer";
@@ -194,7 +195,7 @@ const writeSidebarCache = (
   }
 };
 
-export default function FeedPage() {
+function FeedContent() {
   const { profile } =
     useAuthStore();
 
@@ -1638,5 +1639,19 @@ export default function FeedPage() {
         </div>
       </div>
     </PullToRefresh>
+  );
+}
+
+export default function FeedPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <FeedContent />
+    </Suspense>
   );
 }

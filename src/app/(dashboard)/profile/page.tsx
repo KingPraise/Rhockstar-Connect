@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import EditProfileModal from "@/components/profile/EditProfileModal";
@@ -9,7 +9,7 @@ import {
   Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap, 
   UserPlus, Target, CheckCircle2, MessageSquare, User, MoreHorizontal, 
   FileText, Briefcase, MapPin, Calendar, ExternalLink, Sparkles, ChevronDown, 
-  ChevronUp, ShieldCheck, Volume2, Flame 
+  ChevronUp, ShieldCheck, Volume2, Flame, Loader2 
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getUserById, getUserByUsername, trackProfileView, listenToUserProfile } from "@/lib/services/users";
@@ -29,7 +29,7 @@ import StreakBadge from "@/components/gamification/StreakBadge";
 
 import { getThemeClasses } from "@/lib/constants/themes";
 
-export default function ProfilePage() {
+function ProfileContent() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { profile: loggedInProfile } = useAuthStore();
@@ -1173,5 +1173,19 @@ export default function ProfilePage() {
         actionName="connect or follow users" 
       />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <ProfileContent />
+    </Suspense>
   );
 }

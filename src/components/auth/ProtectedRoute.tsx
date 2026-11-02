@@ -91,6 +91,8 @@ export default function ProtectedRoute({
               await updateDoc(doc(db, "users", profile.uid), {
                 subscriptionTier: "free",
                 subscriptionStatus: "inactive",
+              }).catch((err) => {
+                console.warn("[ProtectedRoute] Server rule protected subscriptionTier update:", err);
               });
 
               import("react-hot-toast").then(({ toast }) => {
@@ -105,7 +107,9 @@ export default function ProtectedRoute({
                 subscriptionStatus: "inactive",
               } as any);
             }
-          );
+          ).catch((err) => {
+            console.warn("[ProtectedRoute] Expiration check handler notice:", err);
+          });
         }
       }
     };

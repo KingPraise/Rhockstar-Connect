@@ -15,6 +15,9 @@ export default function AdminRoute({ children }: { children: React.ReactNode }) 
         router.replace("/admin/login");
       } else if (profile && profile.role !== "admin") {
         router.replace("/feed");
+      } else if (!profile && user) {
+        // Orphan user detected: authenticated in Auth but has no Firestore profile
+        router.replace("/admin/login");
       }
     }
   }, [user, profile, isLoading, router]);

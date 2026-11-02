@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { trackEvent } from "@/lib/analytics";
 // from "@/store/useAuthStore";
@@ -46,7 +46,7 @@ import { useSearchParams } from "next/navigation";
 
 const CATEGORY_FILTERS = ["All", "Sports", "Tech & Career", "Hobbies", "Campus", "General"];
 
-export default function MessagesPage() {
+function MessagesContent() {
   const { profile } = useAuthStore();
   const searchParams = useSearchParams();
   const targetUserParam = searchParams.get('chatId') || searchParams.get('user') || searchParams.get('uid');
@@ -2541,6 +2541,20 @@ export default function MessagesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <MessagesContent />
+    </Suspense>
   );
 }
 

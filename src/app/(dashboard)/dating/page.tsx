@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { 
@@ -30,7 +30,7 @@ import VerifiedBadge from "@/components/ui/VerifiedBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import toast from "react-hot-toast";
 
-export default function DatingPage() {
+function DatingContent() {
   const { profile } = useAuthStore();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1306,5 +1306,19 @@ export default function DatingPage() {
         description={lockDetails.desc}
       />
     </div>
+  );
+}
+
+export default function DatingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+        </div>
+      }
+    >
+      <DatingContent />
+    </Suspense>
   );
 }

@@ -76,6 +76,52 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Recipient user not found' }, { status: 404 });
     }
 
+    // Authorization & Anti-Spoofing: Verify sender is authorized to notify recipient
+    const isSelf = decodedToken.uid === userId;
+    const isAdmin = decodedToken.admin === true || decodedToken.role === 'admin';
+
+    if (!isSelf && !isAdmin) {
+      const chatId = [decodedToken.uid, userId].sort().join('_');
+      const [chatDoc, connDocA, connDocB] = await Promise.all([
+        adminDb.collection('chats').doc(chatId).get(),
+        adminDb.collection('connections').where('fromUserId', '==', decodedToken.uid).where('toUserId', '==', userId).limit(1).get(),
+        adminDb.collection('connections').where('fromUserId', '==', userId).where('toUserId', '==', decodedToken.uid).limit(1).get()
+      ]);
+
+      let isAuthorized = chatDoc.exists || !connDocA.empty || !connDocB.empty;
+
+      if (!isAuthorized) {
+        // Check if mutual dating match exists
+        const [matchDocA, matchDocB] = await Promise.all([
+          adminDb.collection('matches').doc(`${decodedToken.uid}_${userId}`).get(),
+          adminDb.collection('matches').doc(`${userId}_${decodedToken.uid}`).get()
+        ]);
+        isAuthorized = matchDocA.exists || matchDocB.exists;
+      }
+
+      if (!isAuthorized && safeUrl.includes('postId=')) {
+        // Check if caller is interacting with a post authored by the recipient
+        try {
+          const parsedUrl = new URL(safeUrl, 'https://rhockstarconnect.com');
+          const postId = parsedUrl.searchParams.get('postId');
+          if (postId) {
+            const postDoc = await adminDb.collection('posts').doc(postId).get();
+            if (postDoc.exists && postDoc.data()?.userId === userId) {
+              isAuthorized = true;
+            }
+          }
+        } catch {
+          // Ignore URL parse error
+        }
+      }
+
+      if (!isAuthorized) {
+        return NextResponse.json({ 
+          error: 'Forbidden: You do not have an active interaction with this recipient.' 
+        }, { status: 403 });
+      }
+    }
+
     const userData = userDoc.data();
     const fcmTokens = userData?.fcmTokens || [];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback, Suspense } from "react";
 import { getJobs, JobListing, JobFilters, applyForJob } from "@/lib/services/jobs";
 import { Briefcase, Search, MapPin, DollarSign, Clock, Building2, ExternalLink, Loader2, CheckCircle2, Filter, Sparkles } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -16,7 +16,7 @@ import CompleteProfileToApplyModal from "@/components/jobs/CompleteProfileToAppl
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import toast from "react-hot-toast";
 
-export default function JobsPage() {
+function JobsContent() {
   const { profile } = useAuthStore();
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -505,6 +505,20 @@ export default function JobsPage() {
         )}
       </div>
     </PullToRefresh>
+  );
+}
+
+export default function JobsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <JobsContent />
+    </Suspense>
   );
 }
 

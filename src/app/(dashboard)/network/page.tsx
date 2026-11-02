@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getAllUsers, UserBasic } from "@/lib/services/users";
 import { 
@@ -23,7 +23,7 @@ import { useSearchParams } from "next/navigation";
 type TabId = 'discover' | 'my-connections' | 'invitations' | 'sent-requests';
 type PremiumFilter = 'all' | 'verified' | 'executives' | 'topViews';
 
-export default function NetworkPage() {
+function NetworkContent() {
   const { profile } = useAuthStore();
   const searchParams = useSearchParams();
   
@@ -477,5 +477,19 @@ export default function NetworkPage() {
         description="Filter professionals by Verified Badges, Executive Seniority, High Industry Ratings, and Active Hiring Status."
       />
     </div>
+  );
+}
+
+export default function NetworkPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <NetworkContent />
+    </Suspense>
   );
 }
