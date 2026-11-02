@@ -81,7 +81,7 @@ const DANGEROUS_PATTERNS = [
   /(union(\s+all)?\s+select|select\s+.*\s+from)/i // Basic SQL injection probe
 ];
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // 1. Canonical Domain Redirection: Automatically redirect any *.netlify.app traffic to rhockstarconnect.com
   const host = request.headers.get('x-forwarded-host') || request.headers.get('host') || request.nextUrl.host || '';
   if (host.includes('.netlify.app')) {
