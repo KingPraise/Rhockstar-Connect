@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { FieldValue, FieldPath } from 'firebase-admin/firestore';
 
 async function verifyAdminCaller(req: Request) {
   if (!adminAuth || !adminDb) {
@@ -28,7 +28,7 @@ async function verifyAdminCaller(req: Request) {
   return { callerUid: decodedToken.uid };
 }
 
-// GET: Scan for orphaned Auth accounts (users in Firebase Auth with no Firestore document)
+// GET: Scan for orphaned Auth accounts with memory-bounded chunking and cursor support
 export async function GET(req: Request) {
   try {
     const authCheck = await verifyAdminCaller(req);
@@ -40,40 +40,41 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'Firebase Admin not available' }, { status: 500 });
     }
 
-    // 1. Fetch all Firestore user IDs (projection only uid/id to be fast)
-    const firestoreSnap = await adminDb.collection('users').select().get();
-    const firestoreUserIds = new Set(firestoreSnap.docs.map(doc => doc.id));
+    const url = new URL(req.url);
+    const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') || '500', 10), 10), 1000);
+    const pageToken = url.searchParams.get('pageToken') || undefined;
 
-    // 2. Fetch Auth users
-    const orphanedAuthUsers: Array<{
-      uid: string;
-      email?: string;
-      displayName?: string;
-      creationTime?: string;
-      lastSignInTime?: string;
-    }> = [];
+    // 1. Fetch batch of Auth users via paginated cursor
+    const list = await adminAuth.listUsers(limit, pageToken);
+    const batchAuthUids = list.users.map(u => u.uid);
 
-    let nextPageToken: string | undefined;
-    do {
-      const list = await adminAuth.listUsers(1000, nextPageToken);
-      for (const user of list.users) {
-        if (!firestoreUserIds.has(user.uid)) {
-          orphanedAuthUsers.push({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            creationTime: user.metadata.creationTime,
-            lastSignInTime: user.metadata.lastSignInTime,
-          });
-        }
+    // 2. Efficiently check existence in Firestore using chunked documentId lookups
+    const existingIds = new Set<string>();
+    for (let i = 0; i < batchAuthUids.length; i += 30) {
+      const chunk = batchAuthUids.slice(i, i + 30);
+      if (chunk.length > 0) {
+        const snap = await adminDb.collection('users').where(FieldPath.documentId(), 'in', chunk).select().get();
+        snap.docs.forEach(doc => existingIds.add(doc.id));
       }
-      nextPageToken = list.pageToken;
-    } while (nextPageToken);
+    }
+
+    // 3. Filter orphans in this batch
+    const orphanedAuthUsers = list.users
+      .filter(user => !existingIds.has(user.uid))
+      .map(user => ({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        creationTime: user.metadata.creationTime,
+        lastSignInTime: user.metadata.lastSignInTime,
+      }));
 
     return NextResponse.json({
       success: true,
+      scannedCount: list.users.length,
       orphanedCount: orphanedAuthUsers.length,
       orphans: orphanedAuthUsers,
+      nextPageToken: list.pageToken || null,
     });
   } catch (err: any) {
     console.error('Error scanning for orphaned users:', err);
@@ -81,7 +82,7 @@ export async function GET(req: Request) {
   }
 }
 
-// POST: Purge or Heal selected orphaned users
+// POST: Purge or Heal selected orphaned users (bounded to 100 per call)
 export async function POST(req: Request) {
   try {
     const authCheck = await verifyAdminCaller(req);
@@ -100,10 +101,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing or empty uids list' }, { status: 400 });
     }
 
+    // Safety Bound: Process at most 100 orphans per atomic call to prevent serverless execution timeouts
+    const boundedUids = uids.slice(0, 100);
+
     if (action === 'purge') {
       // Delete from Firebase Auth
       let deleted = 0;
-      for (const uid of uids) {
+      for (const uid of boundedUids) {
         try {
           await adminAuth.deleteUser(uid);
           deleted++;
@@ -113,13 +117,14 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({ success: true, message: `Successfully purged ${deleted} orphaned Auth accounts.` });
     } else if (action === 'heal') {
-      // Reconstruct default Firestore documents so they become full active accounts
+      // Reconstruct default Firestore documents with collision-resistant usernames
       let healed = 0;
-      for (const uid of uids) {
+      for (const uid of boundedUids) {
         try {
           const authUser = await adminAuth.getUser(uid);
           const rawPrefix = (authUser.email?.split('@')[0] || 'member').toLowerCase().replace(/[^a-z0-9_]/g, '');
-          const username = `${rawPrefix}${Math.floor(100 + Math.random() * 900)}`;
+          const uniqueSuffix = Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+          const username = `${rawPrefix}_${uniqueSuffix}`.slice(0, 30);
 
           await adminDb.collection('users').doc(uid).set({
             uid,

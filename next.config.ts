@@ -122,9 +122,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   reactCompiler: true,
   allowedDevOrigins: ['rhockstar-dev-999.loca.lt', 'localhost:3000'],
   images: {

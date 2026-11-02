@@ -34,6 +34,7 @@ export async function POST(req: Request) {
     if (!adminAuth || !adminDb) {
       return NextResponse.json({ error: 'Server initialization error: Firebase Admin SDK uninitialized.' }, { status: 503 });
     }
+    const db = adminDb;
 
     const authHeader = req.headers.get('authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
     }
 
     // 1. REPLAY ATTACK DEFENSE: Check if transaction has already been processed
-    const txDocRef = adminDb.collection('processed_transactions').doc(String(transaction_id));
+    const txDocRef = db.collection('processed_transactions').doc(String(transaction_id));
     const txDocSnap = await txDocRef.get();
 
     if (txDocSnap.exists) {
@@ -104,38 +105,54 @@ export async function POST(req: Request) {
       const expiration = new Date();
       expiration.setDate(expiration.getDate() + 30);
       
-      // Update user with paid subscription and clear acquisition source
-      await adminDb.collection('users').doc(decodedToken.uid).update({
-        subscriptionTier: tier,
-        subscriptionStatus: 'active',
-        subscriptionSource: 'paid', // Separates real revenue from giveaway rewards
-        acquisitionType: 'paid',
-        premiumUntil: expiration.toISOString(),
-        subscriptionRemindersSent: [],
-        lastPaymentRef: String(transaction_id),
-        lastPaymentDate: new Date().toISOString()
-      });
+      // Atomic Transaction: Verify replay and update subscription in one atomic write
+      try {
+        await db.runTransaction(async (transaction) => {
+          const freshTxSnap = await transaction.get(txDocRef);
+          if (freshTxSnap.exists) {
+            throw new Error('ALREADY_PROCESSED');
+          }
 
-      // Record transaction atomically to prevent replay
-      await txDocRef.set({
-        transactionId: String(transaction_id),
-        userId: decodedToken.uid,
-        userEmail: decodedToken.email || flwData.data?.customer?.email || '',
-        type: 'subscription',
-        tier,
-        amount: paidAmount,
-        currency,
-        flwTxRef: flwData.data.tx_ref || '',
-        paymentType: flwData.data.payment_type || '',
-        subscriptionSource: 'paid',
-        verifiedAt: new Date().toISOString()
-      });
+          const userDocRef = db.collection('users').doc(decodedToken.uid);
+          transaction.update(userDocRef, {
+            subscriptionTier: tier,
+            subscriptionStatus: 'active',
+            subscriptionSource: 'paid', // Separates real revenue from giveaway rewards
+            acquisitionType: 'paid',
+            premiumUntil: expiration.toISOString(),
+            subscriptionRemindersSent: [],
+            lastPaymentRef: String(transaction_id),
+            lastPaymentDate: new Date().toISOString()
+          });
+
+          transaction.set(txDocRef, {
+            transactionId: String(transaction_id),
+            userId: decodedToken.uid,
+            userEmail: decodedToken.email || flwData.data?.customer?.email || '',
+            type: 'subscription',
+            tier,
+            amount: paidAmount,
+            currency,
+            flwTxRef: flwData.data.tx_ref || '',
+            paymentType: flwData.data.payment_type || '',
+            subscriptionSource: 'paid',
+            verifiedAt: new Date().toISOString()
+          });
+        });
+      } catch (txErr: any) {
+        if (txErr.message === 'ALREADY_PROCESSED') {
+          return NextResponse.json({ 
+            error: 'Security Warning: This transaction has already been processed and cannot be reused.' 
+          }, { status: 409 });
+        }
+        throw txErr;
+      }
       
       return NextResponse.json({ success: true, message: 'Subscription upgraded successfully' });
     } 
     else if (type === 'ad' && adId) {
       // Validate ad ownership before activation
-      const adDocRef = adminDb.collection('advertisements').doc(adId);
+      const adDocRef = db.collection('advertisements').doc(adId);
       const adDocSnap = await adDocRef.get();
 
       if (!adDocSnap.exists) {
@@ -154,26 +171,42 @@ export async function POST(req: Request) {
         }, { status: 400 });
       }
 
-      await adDocRef.update({
-        status: 'active',
-        paidAt: new Date().toISOString(),
-        paymentRef: String(transaction_id),
-        amountPaid: paidAmount,
-        currency
-      });
+      // Atomic Transaction: Verify replay and update advertisement in one atomic write
+      try {
+        await db.runTransaction(async (transaction) => {
+          const freshTxSnap = await transaction.get(txDocRef);
+          if (freshTxSnap.exists) {
+            throw new Error('ALREADY_PROCESSED');
+          }
 
-      // Record transaction atomically to prevent replay
-      await txDocRef.set({
-        transactionId: String(transaction_id),
-        userId: decodedToken.uid,
-        userEmail: decodedToken.email || '',
-        type: 'ad',
-        adId,
-        amount: paidAmount,
-        currency,
-        flwTxRef: flwData.data.tx_ref || '',
-        verifiedAt: new Date().toISOString()
-      });
+          transaction.update(adDocRef, {
+            status: 'active',
+            paidAt: new Date().toISOString(),
+            paymentRef: String(transaction_id),
+            amountPaid: paidAmount,
+            currency
+          });
+
+          transaction.set(txDocRef, {
+            transactionId: String(transaction_id),
+            userId: decodedToken.uid,
+            userEmail: decodedToken.email || '',
+            type: 'ad',
+            adId,
+            amount: paidAmount,
+            currency,
+            flwTxRef: flwData.data.tx_ref || '',
+            verifiedAt: new Date().toISOString()
+          });
+        });
+      } catch (txErr: any) {
+        if (txErr.message === 'ALREADY_PROCESSED') {
+          return NextResponse.json({ 
+            error: 'Security Warning: This transaction has already been processed and cannot be reused.' 
+          }, { status: 409 });
+        }
+        throw txErr;
+      }
       
       return NextResponse.json({ success: true, message: 'Ad activated successfully' });
     }
