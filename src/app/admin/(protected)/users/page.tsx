@@ -5,6 +5,8 @@ import {
   Users, 
   Search, 
   ShieldCheck, 
+  ShieldAlert,
+  AlertTriangle,
   UserX, 
   UserCheck, 
   Star, 
@@ -17,6 +19,7 @@ import {
   Eye
 } from "lucide-react";
 import Image from "next/image";
+import { auth } from "@/lib/firebase";
 import { 
   getAllUsersAdmin, 
   updateUserRole, 

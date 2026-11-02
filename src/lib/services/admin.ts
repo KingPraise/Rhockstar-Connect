@@ -143,7 +143,8 @@ export const grantUserSubscription = async (
         subscriptionStatus: 'active',
         subscriptionSource: 'giveaway',
         acquisitionType: 'giveaway',
-        premiumUntil: expiryDate.toISOString()
+        premiumUntil: expiryDate.toISOString(),
+        subscriptionRemindersSent: []
       });
     }
 

@@ -107,6 +107,7 @@ export async function POST(req: Request) {
         subscriptionSource: 'paid', // Separates real revenue from giveaway rewards
         acquisitionType: 'paid',
         premiumUntil: expiration.toISOString(),
+        subscriptionRemindersSent: [],
         lastPaymentRef: String(transaction_id),
         lastPaymentDate: new Date().toISOString()
       });

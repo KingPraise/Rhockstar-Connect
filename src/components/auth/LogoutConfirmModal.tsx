@@ -1,7 +1,8 @@
 "use client";
 
 import { LogOut, X, AlertTriangle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { logoutUser } from "@/lib/auth";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useRouter } from "next/navigation";
@@ -16,8 +17,13 @@ export default function LogoutConfirmModal({ isOpen, onClose }: LogoutConfirmMod
   const { logout } = useAuthStore();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -33,8 +39,8 @@ export default function LogoutConfirmModal({ isOpen, onClose }: LogoutConfirmMod
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
       <div className="neo-card bg-slate-900 border border-white/10 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
         <button 
           onClick={onClose}
@@ -70,6 +76,7 @@ export default function LogoutConfirmModal({ isOpen, onClose }: LogoutConfirmMod
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -21,8 +21,9 @@ import {
   Shield,
   Search,
   Building2,
-  Plus
-, Megaphone } from "lucide-react";
+  Plus,
+  AlertTriangle,
+  Megaphone } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSearchStore } from "@/store/useSearchStore";
 import QuickCreateModal from "@/components/layout/QuickCreateModal";
@@ -259,9 +260,37 @@ export default function Sidebar() {
 
       {/* BOTTOM SECTION */}
       <div className="p-4 mt-8 space-y-4">
-        {/* PREMIUM CARD */}
-        {!isPremium && (
-          !isMinimized ? (
+        {/* PREMIUM / RENEWAL CARD */}
+        {!isPremium && (() => {
+          const isSubExpired = Boolean(
+            profile?.premiumUntil &&
+            new Date(profile.premiumUntil) < new Date() &&
+            (!isPremium || profile?.subscriptionTier === 'free' || profile?.subscriptionStatus === 'inactive')
+          );
+
+          if (isSubExpired) {
+            return !isMinimized ? (
+              <div className="neo-card p-4 bg-gradient-to-br from-rose-500/20 via-amber-500/10 to-slate-900 border border-rose-500/40 relative overflow-hidden group shadow-[0_0_20px_rgba(244,63,94,0.2)]">
+                <div className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors" />
+                <div className="relative z-10 text-center">
+                  <h4 className="font-extrabold text-rose-400 mb-1 flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider">
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+                    <span>Plan Expired</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-300 mb-3 leading-tight">Perks & verified badge paused. Renew to restore access.</p>
+                  <Link href="/premium" className="block w-full py-2 bg-gradient-to-r from-rose-500 to-amber-500 text-white text-xs font-black rounded-xl shadow-lg hover:brightness-110 transition-all uppercase tracking-wide">
+                    Renew Plan
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <Link href="/premium" className="flex items-center justify-center p-3 rounded-xl bg-gradient-to-br from-rose-500/20 to-amber-500/20 border border-rose-500/40 group hover:border-rose-500/70 transition-colors" title="Subscription Expired - Renew Plan">
+                <AlertTriangle className="w-5 h-5 text-rose-400 group-hover:scale-110 transition-transform animate-pulse" />
+              </Link>
+            );
+          }
+
+          return !isMinimized ? (
             <div className="neo-card p-4 bg-gradient-to-br from-brand-purple/20 to-brand/20 border-brand-purple/30 relative overflow-hidden group">
               <div className="absolute inset-0 bg-white/5 group-hover:bg-white/10 transition-colors" />
               <div className="relative z-10 text-center">
@@ -279,8 +308,8 @@ export default function Sidebar() {
             <Link href="/premium" className="flex items-center justify-center p-3 rounded-xl bg-gradient-to-br from-brand-purple/20 to-brand/20 border border-brand-purple/30 group hover:border-brand-purple/60 transition-colors" title="Upgrade to Premium">
               <Sparkles className="w-5 h-5 text-brand-purple group-hover:scale-110 transition-transform animate-pulse" />
             </Link>
-          )
-        )}
+          );
+        })()}
 
         {/* SUPER ADMIN SHORTCUT */}
         {profile?.role === 'admin' && (

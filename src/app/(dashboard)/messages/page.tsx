@@ -271,6 +271,7 @@ export default function MessagesPage() {
           // Check if targetUserParam was a legacy chat ID in Firestore whose partner is in chats
           try {
             const { getDoc, doc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase');
             const legacyDoc = await getDoc(doc(db, 'chats', targetUserParam));
             if (legacyDoc.exists()) {
               const participants = legacyDoc.data()?.participants || [];
@@ -2000,7 +2001,7 @@ export default function MessagesPage() {
                                   <div className="flex items-center gap-1.5 mb-1">
                                     <span className="text-[11px] font-bold text-brand flex items-center gap-1">
                                       {msg.senderName}
-                                      <VerifiedBadge tier={users[msg.senderId]?.subscriptionTier} size="xs" />
+                                      <VerifiedBadge tier={users[msg.senderId]?.subscriptionTier} size="sm" />
                                       {isCreator && (
                                         <span title="Community Creator">
                                           <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />

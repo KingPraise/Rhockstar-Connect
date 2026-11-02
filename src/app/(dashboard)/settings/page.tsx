@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { 
   Settings as SettingsIcon, User, Lock, Bell, 
   Shield, Eye, Smartphone, Globe, CreditCard,
@@ -89,8 +90,10 @@ const handlePasswordChange = async () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setSoundEnabled(isNotificationSoundEnabled());
   }, []);
 
@@ -433,8 +436,8 @@ const handlePasswordChange = async () => {
           <LogoutConfirmModal isOpen={showLogoutModal} onClose={() => setShowLogoutModal(false)} />
 
           {/* Delete Account Modal */}
-          {showDeleteModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          {showDeleteModal && mounted && createPortal(
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
               <div className="neo-card bg-slate-900 border border-rose-500/30 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
                 <button 
                   onClick={() => setShowDeleteModal(false)}
@@ -482,48 +485,76 @@ const handlePasswordChange = async () => {
                   </button>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
 
           {activeTab === "billing" && (
             <div className="neo-card p-8 bg-slate-900/40 backdrop-blur-md border-white/5 shadow-2xl space-y-8 animate-fade-in">
               <h2 className="text-2xl font-bold text-white border-b border-white/10 pb-4">Billing & Premium</h2>
               
-              <div className={`border rounded-2xl p-6 relative overflow-hidden ${
-                (profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite')
-                  ? 'bg-gradient-to-br from-emerald-500/20 via-brand/20 to-brand-purple/20 border-emerald-500/40'
-                  : 'bg-gradient-to-br from-brand-purple/20 to-brand/20 border-brand-purple/30'
-              }`}>
-                <div className="absolute inset-0 bg-white/5" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-white capitalize">
-                      {profile?.subscriptionTier && profile.subscriptionTier !== 'free' 
-                        ? `${profile.subscriptionTier} Plan` 
-                        : 'Free Plan'}
-                    </h3>
-                    {(profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite') && (
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase flex items-center gap-1">
-                        <Crown className="w-3.5 h-3.5" /> Active
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-slate-300 mb-6 text-sm">
-                    {(profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite')
-                      ? `Your ${profile.subscriptionTier.toUpperCase()} membership is active with full access to unlimited messaging, job applications, and premium analytics.`
-                      : 'You are currently on the free basic plan.'}
-                  </p>
-                  <a href="/premium" className={`inline-block font-bold py-3 px-8 rounded-xl shadow-lg hover:scale-105 transition-transform ${
-                    (profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite')
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                      : 'bg-gradient-to-r from-brand to-brand-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+              {(() => {
+                const isSubActive = (profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite') && profile?.subscriptionStatus !== 'inactive';
+                const isSubExpired = Boolean(
+                  profile?.premiumUntil &&
+                  new Date(profile.premiumUntil) < new Date() &&
+                  (!isSubActive || profile?.subscriptionTier === 'free' || profile?.subscriptionStatus === 'inactive')
+                );
+                const expiryDateStr = profile?.premiumUntil ? new Date(profile.premiumUntil).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : null;
+
+                return (
+                  <div className={`border rounded-2xl p-6 relative overflow-hidden ${
+                    isSubActive
+                      ? 'bg-gradient-to-br from-emerald-500/20 via-brand/20 to-brand-purple/20 border-emerald-500/40'
+                      : isSubExpired
+                      ? 'bg-gradient-to-br from-rose-500/20 via-amber-500/10 to-slate-900 border-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.15)]'
+                      : 'bg-gradient-to-br from-brand-purple/20 to-brand/20 border-brand-purple/30'
                   }`}>
-                    {(profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite')
-                      ? 'Manage Membership'
-                      : 'Upgrade to Premium'}
-                  </a>
-                </div>
-              </div>
+                    <div className="absolute inset-0 bg-white/5" />
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="text-xl font-bold text-white capitalize">
+                          {isSubActive
+                            ? `${profile?.subscriptionTier} Plan` 
+                            : isSubExpired
+                            ? 'Subscription Expired'
+                            : 'Free Basic Plan'}
+                        </h3>
+                        {isSubActive && (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase flex items-center gap-1">
+                            <Crown className="w-3.5 h-3.5" /> Active {expiryDateStr ? `(until ${expiryDateStr})` : ''}
+                          </span>
+                        )}
+                        {isSubExpired && (
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-rose-500/20 text-rose-400 border border-rose-500/30 uppercase flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5" /> Expired {expiryDateStr ? `on ${expiryDateStr}` : ''}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-slate-300 mb-6 text-sm">
+                        {isSubActive
+                          ? `Your ${profile?.subscriptionTier?.toUpperCase()} membership is active with full access to verified badges, unlimited messaging, job applications, and premium analytics.`
+                          : isSubExpired
+                          ? 'Your previous membership has ended and your perks (verified badge, dating boosts, unlimited chat) are currently paused. Renew now to restore full access.'
+                          : 'You are currently on the free basic plan. Upgrade to unlock verified badges, dating boosts, and unlimited messaging.'}
+                      </p>
+                      <a href="/premium" className={`inline-block font-bold py-3 px-8 rounded-xl shadow-lg hover:scale-105 transition-transform ${
+                        isSubActive
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                          : isSubExpired
+                          ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-[0_0_20px_rgba(244,63,94,0.4)]'
+                          : 'bg-gradient-to-r from-brand to-brand-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
+                      }`}>
+                        {isSubActive
+                          ? 'Manage Membership'
+                          : isSubExpired
+                          ? 'Renew Subscription Now'
+                          : 'Upgrade to Premium'}
+                      </a>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

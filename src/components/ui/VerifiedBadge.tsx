@@ -3,7 +3,7 @@
 
 interface VerifiedBadgeProps {
   tier?: 'free' | 'pro' | 'elite' | string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
@@ -13,6 +13,7 @@ export default function VerifiedBadge({ tier, size = 'sm', className = '' }: Ver
   const isElite = tier === 'elite';
 
   const sizeDimensions = {
+    xs: { width: 13, height: 13, checkSize: 'w-2 h-2' },
     sm: { width: 16, height: 16, checkSize: 'w-2.5 h-2.5' },
     md: { width: 18, height: 18, checkSize: 'w-3 h-3' },
     lg: { width: 22, height: 22, checkSize: 'w-3.5 h-3.5' },
