@@ -31,7 +31,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { calculateProfileProgress } from "@/lib/utils/profileProgress";
 
 export default function Sidebar() {
-  const { profile, logout, unreadNotifications, unreadMessages } = useAuthStore();
+  const { profile, logout, unreadNotifications, unreadMessages, unreadCommunities } = useAuthStore();
   const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
@@ -47,9 +47,15 @@ export default function Sidebar() {
     { name: "Network", href: "/network", icon: Users },
     { name: "Jobs", href: "/jobs", icon: Briefcase },
     ...(isEmployer ? [{ name: "Employer Portal", href: "/employer", icon: Building2 }] : []),
-    { name: "Messages", href: "/messages", icon: MessageSquare, badge: unreadMessages > 0 ? unreadMessages.toString() : undefined },
+    { 
+      name: "Messages", 
+      href: "/messages", 
+      icon: MessageSquare, 
+      badge: unreadMessages > 0 ? (unreadMessages > 99 ? '99+' : unreadMessages.toString()) : undefined,
+      hasIndicator: unreadMessages === 0 && unreadCommunities > 0,
+    },
     { name: "Dating", href: "/dating", icon: Heart },
-    { name: "Notifications", href: "/notifications", icon: Bell, badge: unreadNotifications > 0 ? unreadNotifications.toString() : undefined },
+    { name: "Notifications", href: "/notifications", icon: Bell, badge: unreadNotifications > 0 ? (unreadNotifications > 99 ? '99+' : unreadNotifications.toString()) : undefined },
   ].filter(item => !(item.name === "Dating" && profile?.accountType === 'employer'));
 
   const secondaryNavItems = [
@@ -192,8 +198,32 @@ export default function Sidebar() {
               }`}
               title={isMinimized ? item.name : undefined}
             >
-              <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive ? 'text-brand' : 'text-slate-500 group-hover:text-white'}`} />
-              {!isMinimized && <span>{item.name}</span>}
+              <div className="relative shrink-0">
+                <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive ? 'text-brand' : 'text-slate-500 group-hover:text-white'}`} />
+                {item.hasIndicator && !item.badge && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-900 animate-pulse" />
+                )}
+                {item.badge && isMinimized && (
+                  <span className="absolute -top-1.5 -right-2 px-1.5 py-0.2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-[9px] font-black rounded-full shadow-lg border border-slate-900">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+              {!isMinimized && (
+                <div className="flex-1 flex items-center justify-between min-w-0">
+                  <span className="truncate">{item.name}</span>
+                  {item.badge ? (
+                    <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-[10px] font-black rounded-full shadow-lg shadow-purple-500/20 shrink-0">
+                      {item.badge}
+                    </span>
+                  ) : item.hasIndicator ? (
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 animate-pulse shrink-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      New
+                    </span>
+                  ) : null}
+                </div>
+              )}
               {isActive && isMinimized && (
                 <div className="absolute right-1 w-1.5 h-1.5 rounded-full bg-brand" />
               )}

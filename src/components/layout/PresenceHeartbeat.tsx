@@ -5,6 +5,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { doc, updateDoc, serverTimestamp, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { playNotificationChime } from "@/lib/audioNotifications";
+import { Community, isCommunityUnread } from "@/lib/services/communities";
 
 // Badging API type declarations (not yet in default TypeScript lib)
 declare global {
@@ -15,9 +16,10 @@ declare global {
 }
 
 export default function PresenceHeartbeat() {
-  const { profile, setUnreadMessages, setUnreadNotifications } = useAuthStore();
+  const { profile, setUnreadMessages, setUnreadNotifications, setUnreadCommunities } = useAuthStore();
   const prevMessagesRef = useRef<number | null>(null);
   const prevNotifsRef = useRef<number | null>(null);
+  const prevCommunitiesRef = useRef<number | null>(null);
 
   // 1. Online Presence Heartbeat
   useEffect(() => {
@@ -63,11 +65,11 @@ export default function PresenceHeartbeat() {
     };
   }, [profile?.uid]);
 
-  // 2. Global Unread Messages & Notifications Subscription
+  // 2. Global Unread Messages, Notifications & Communities Subscription
   useEffect(() => {
     if (!profile?.uid) return;
 
-    // Listen to chats where unread messages exist for current user
+    // A. Listen to chats where unread messages exist for current user
     const chatsQuery = query(
       collection(db, "chats"),
       where("participants", "array-contains", profile.uid)
@@ -95,7 +97,7 @@ export default function PresenceHeartbeat() {
       }
     );
 
-    // Listen to unread notifications (excluding direct message notifications, which are tracked accurately by unreadMessages)
+    // B. Listen to unread notifications (excluding direct message notifications)
     const notifsQuery = query(
       collection(db, "notifications"),
       where("userId", "==", profile.uid),
@@ -105,7 +107,6 @@ export default function PresenceHeartbeat() {
     const unsubscribeNotifs = onSnapshot(
       notifsQuery,
       (snapshot) => {
-        // Exclude "message" type notifications so DM count is not double counted
         const nonMessageNotifs = snapshot.docs.filter((docSnap) => docSnap.data().type !== 'message');
         const count = nonMessageNotifs.length;
 
@@ -120,11 +121,54 @@ export default function PresenceHeartbeat() {
       }
     );
 
+    // C. Listen to communities joined by current user to track unread activity
+    let cachedCommDocs: any[] = [];
+    const communitiesQuery = query(
+      collection(db, "communities"),
+      where("members", "array-contains", profile.uid)
+    );
+
+    const checkCommunityUnread = (docs: any[]) => {
+      let unreadCount = 0;
+      docs.forEach((docSnap) => {
+        const comm = { id: docSnap.id, ...docSnap.data() } as Community;
+        // Don't mark as unread if the last message was sent by the user themselves
+        if (comm.lastSenderId === profile.uid) return;
+        if (isCommunityUnread(comm)) {
+          unreadCount++;
+        }
+      });
+
+      if (prevCommunitiesRef.current !== null && unreadCount > prevCommunitiesRef.current) {
+        playNotificationChime();
+      }
+      prevCommunitiesRef.current = unreadCount;
+      setUnreadCommunities(unreadCount);
+    };
+
+    const unsubscribeCommunities = onSnapshot(
+      communitiesQuery,
+      (snapshot) => {
+        cachedCommDocs = snapshot.docs;
+        checkCommunityUnread(snapshot.docs);
+      },
+      (error) => {
+        console.warn("[PresenceHeartbeat] Communities subscription notice:", error);
+      }
+    );
+
+    const handleCommunityReadEvent = () => {
+      checkCommunityUnread(cachedCommDocs);
+    };
+    window.addEventListener("rhockstar:community-read", handleCommunityReadEvent);
+
     return () => {
       unsubscribeChats();
       unsubscribeNotifs();
+      unsubscribeCommunities();
+      window.removeEventListener("rhockstar:community-read", handleCommunityReadEvent);
     };
-  }, [profile?.uid, setUnreadMessages, setUnreadNotifications]);
+  }, [profile?.uid, setUnreadMessages, setUnreadNotifications, setUnreadCommunities]);
 
   // 3. PWA App Icon Badge Count (shows number on app icon like WhatsApp, TikTok, Messenger)
   useEffect(() => {
@@ -182,17 +226,14 @@ export default function PresenceHeartbeat() {
 
     const setupPushNotifications = async () => {
       try {
-        // Don't prompt if user has already denied
         if ('Notification' in window && Notification.permission === 'denied') return;
 
-        // Register the Firebase Cloud Messaging service worker
         if ('serviceWorker' in navigator) {
           await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
             scope: '/firebase-cloud-messaging-push-scope'
           });
         }
 
-        // Request notification permission and save FCM token to Firestore
         const { requestNotificationPermission } = await import('@/lib/services/notifications');
         await requestNotificationPermission(profile.uid);
       } catch (err) {
@@ -200,7 +241,6 @@ export default function PresenceHeartbeat() {
       }
     };
 
-    // Delay slightly to avoid blocking initial page render
     const timer = setTimeout(setupPushNotifications, 3000);
     return () => clearTimeout(timer);
   }, [profile?.uid]);

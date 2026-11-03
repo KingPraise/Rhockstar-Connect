@@ -4,12 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Heart, Briefcase, MessageSquare, User } from "lucide-react";
 import { useEffect, useState } from "react";
-
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function MobileNav() {
   const pathname = usePathname();
-  const { unreadMessages } = useAuthStore();
+  const { unreadMessages, unreadCommunities } = useAuthStore();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
@@ -68,10 +67,14 @@ export default function MobileNav() {
               )}
               <div className="relative">
                 <item.icon className={`w-6 h-6 transition-transform ${isActive ? 'scale-110' : ''} ${isDating && isActive ? 'fill-rose-500/20' : ''}`} />
-                {item.href === '/messages' && unreadMessages > 0 && (
-                  <span className="absolute -top-1 -right-2 min-w-[16px] h-[16px] flex items-center justify-center bg-brand text-[9px] font-bold text-white rounded-full px-1 border border-slate-900 shadow-md">
-                    {unreadMessages > 99 ? '99+' : unreadMessages}
-                  </span>
+                {item.href === '/messages' && (
+                  unreadMessages > 0 ? (
+                    <span className="absolute -top-1 -right-2 min-w-[16px] h-[16px] flex items-center justify-center bg-brand text-[9px] font-bold text-white rounded-full px-1 border border-slate-900 shadow-md">
+                      {unreadMessages > 99 ? '99+' : unreadMessages}
+                    </span>
+                  ) : unreadCommunities > 0 ? (
+                    <span className="absolute -top-0.5 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900 shadow-md animate-pulse" />
+                  ) : null
                 )}
               </div>
               <span className="text-[10px] font-bold">{item.name}</span>
@@ -82,5 +85,3 @@ export default function MobileNav() {
     </nav>
   );
 }
-
-

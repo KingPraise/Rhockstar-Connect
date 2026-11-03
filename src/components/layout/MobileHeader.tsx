@@ -40,7 +40,7 @@ export default function MobileHeader() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const lastScrollY = useRef(0);
   
-  const { profile, logout, unreadNotifications, unreadMessages } = useAuthStore();
+  const { profile, logout, unreadNotifications, unreadMessages, unreadCommunities } = useAuthStore();
   const { openSearch } = useSearchStore();
   const pathname = usePathname();
   const router = useRouter();
@@ -152,11 +152,13 @@ export default function MobileHeader() {
             aria-label="Messages"
           >
             <MessageSquare className="w-5 h-5" />
-            {unreadMessages > 0 && (
+            {unreadMessages > 0 ? (
               <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] flex items-center justify-center bg-brand text-[10px] font-bold text-white rounded-full px-1 border-2 border-slate-900 animate-in zoom-in">
                 {unreadMessages > 99 ? '99+' : unreadMessages}
               </span>
-            )}
+            ) : unreadCommunities > 0 ? (
+              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-slate-900 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+            ) : null}
           </Link>
 
           <Link
@@ -266,6 +268,23 @@ export default function MobileHeader() {
                           <item.icon className={`w-5 h-5 ${isActive ? 'text-brand' : 'text-slate-400'}`} />
                           <span>{item.name}</span>
                         </div>
+                        {item.name === "Messages" && (
+                          unreadMessages > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand text-slate-950">
+                              {unreadMessages}
+                            </span>
+                          ) : unreadCommunities > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                              New
+                            </span>
+                          ) : null
+                        )}
+                        {item.name === "Notifications" && unreadNotifications > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white">
+                            {unreadNotifications}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
