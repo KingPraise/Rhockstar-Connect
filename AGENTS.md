@@ -11,19 +11,20 @@ Always run a full local build (e.g., `npm run build`) and ensure it completes su
 <!-- END:deployment-rules -->
 
 <!-- BEGIN:bug-triage-rules -->
-# User Bug Triage & Verification Protocol
+# User Bug Triage & Verification Protocol (Proof-First Rule)
 
-When the user reports an issue or bug experienced by a user on Rhockstar Connect:
+When the user reports an issue, failure, or bug on Rhockstar Connect:
 
-1. **Verify & Replicate First**:
-   - Never assume or blindly change code without validating the report.
+1. **Reproduce & Isolate Before Modifying Code (Non-Negotiable)**:
+   - NEVER make speculative code edits without first proving the bug exists.
    - Trace the exact user journey, data requirements, and conditions described.
-   - Test if the bug can be reproduced locally or logically deduced from the code/state.
+   - Create or run an empirical reproduction probe (e.g. targeted node test script, API curl, or isolated unit check) to trigger the exact failure mode.
+   - Document the failure evidence (e.g., HTTP 500, unhandled exception, bad payload, or UI mismatch).
 
 2. **If the Bug is Confirmed (True)**:
    - Identify the exact failure point (client state, service call, Firestore security rule, or API endpoint).
    - Implement the targeted fix.
-   - Verify the fix against the reproduction steps.
+   - Re-run the exact reproduction probe from step 1 to prove that the bug is resolved (e.g., HTTP 200 or expected state returned).
 
 3. **If Unable to Replicate (False / Works as Expected)**:
    - Do NOT simply dismiss the issue or say "it works on my end".
@@ -33,6 +34,11 @@ When the user reports an issue or bug experienced by a user on Rhockstar Connect
      - Network/device/environment edge cases (e.g., offline mode, mobile viewport, service worker caching, Safari vs. Chromium).
      - UI state or race conditions (e.g., unhandled loading/error states, empty states masquerading as bugs).
    - Clarify the root cause and provide actionable guidance or defensive safeguards.
+
+4. **Mandatory Post-Fix Regression Guard**:
+   - Always execute type checking (`npx tsc --noEmit`).
+   - Execute the auth integrity suite if auth/user/rules were touched (`npm run test:auth`).
+   - Run a clean production build (`npm run build`) and confirm exit code 0 before finalizing.
 <!-- END:bug-triage-rules -->
 
 <!-- BEGIN:collaborator-update-rules -->
