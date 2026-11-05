@@ -5,7 +5,7 @@ import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Ed
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, updatePost, updateComment, toggleCommentVisibility, votePoll, Post } from "@/lib/services/posts";
-import { getUserById } from "@/lib/services/users";
+import { getUserById, getAllUsers, type UserBasic } from "@/lib/services/users";
 import { useAuthStore } from "@/store/useAuthStore";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -27,6 +27,12 @@ export default function PostCard({ post }: PostCardProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [mentionUsers, setMentionUsers] = useState<UserBasic[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState<number | null>(null);
+  const [mentionEnd, setMentionEnd] = useState<number | null>(null);
+  const [isLoadingMentionUsers, setIsLoadingMentionUsers] = useState(false);
+  const mentionUsersRequestedRef = useRef(false);
   const [isCommenting, setIsCommenting] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authActionName, setAuthActionName] = useState("interact");
@@ -114,12 +120,92 @@ export default function PostCard({ post }: PostCardProps) {
       return;
     }
     setReplyingTo({ id: commentId, name: userName });
+    setMentionQuery(null);
+    setMentionStart(null);
+    setMentionEnd(null);
     setCommentText(`@${userName} `);
     if (!showComments) setShowComments(true);
     setTimeout(() => {
       commentInputRef.current?.focus();
     }, 100);
   };
+
+  const handleCommentInputChange = (value: string) => {
+    setCommentText(value);
+
+    if (value === "") {
+      setReplyingTo(null);
+    }
+
+    const cursor = commentInputRef.current?.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursor);
+    const match = textBeforeCursor.match(/(^|[\\s(])@([a-zA-Z0-9_]*)$/);
+
+    if (!match) {
+      setMentionQuery(null);
+      setMentionStart(null);
+      setMentionEnd(null);
+      return;
+    }
+
+    const token = match[0];
+    const start = cursor - token.length + match[1].length;
+
+    setMentionQuery(match[2]);
+    setMentionStart(start);
+    setMentionEnd(cursor);
+
+    if (!mentionUsersRequestedRef.current) {
+      mentionUsersRequestedRef.current = true;
+      setIsLoadingMentionUsers(true);
+
+      getAllUsers()
+        .then((result) => {
+          if (result.success && result.users) {
+            setMentionUsers(result.users);
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to load mention suggestions:", error);
+        })
+        .finally(() => {
+          setIsLoadingMentionUsers(false);
+        });
+    }
+  };
+
+  const handleSelectMention = (selectedUser: UserBasic) => {
+    if (mentionStart === null || mentionEnd === null) return;
+
+    const mention = `@${selectedUser.username}`;
+    const updatedText =
+      commentText.slice(0, mentionStart) +
+      mention +
+      " " +
+      commentText.slice(mentionEnd);
+
+    const cursorPosition = mentionStart + mention.length + 1;
+
+    setCommentText(updatedText);
+    setMentionQuery(null);
+    setMentionStart(null);
+    setMentionEnd(null);
+
+    requestAnimationFrame(() => {
+      commentInputRef.current?.focus();
+      commentInputRef.current?.setSelectionRange(cursorPosition, cursorPosition);
+    });
+  };
+
+  const filteredMentionUsers = mentionQuery === null
+    ? []
+    : mentionUsers
+        .filter((mentionUser) =>
+          mentionUser.uid !== profile?.uid &&
+          mentionUser.username &&
+          mentionUser.username.toLowerCase().includes(mentionQuery.toLowerCase())
+        )
+        .slice(0, 6);
 
   // Check if current user liked it
   const isLiked = profile ? post.likes?.includes(profile.uid) : false;
@@ -277,6 +363,167 @@ export default function PostCard({ post }: PostCardProps) {
       }
     }
   }, [post.id, searchParams]);
+
+
+  // Render comments recursively so replies can have their own replies.
+  const comments = post.comments ?? [];
+  const renderComment = (comment: (typeof comments)[number], depth = 0): React.ReactNode => {
+    const replies = comments.filter(item => item.replyToId === comment.id);
+    const created = new Date(comment.createdAt);
+    const commentTime = !isNaN(created.getTime())
+      ? formatDistanceToNow(created, { addSuffix: true })
+      : "Just now";
+    const isOwnComment = profile?.uid === comment.userId;
+    const canModerate = post.userId === profile?.uid || profile?.role === "admin";
+    const canManage = isOwnComment || profile?.role === "admin";
+    const displayName = comment.userId === profile?.uid
+      ? profile?.fullName
+      : comment.user.name;
+
+    return (
+      <div
+        key={comment.id}
+        id={`comment-${comment.id}`}
+        className="flex flex-col gap-2 transition-all duration-300"
+        style={{ marginLeft: `${Math.min(depth, 5) * 16}px` }}
+      >
+        <div className="flex gap-3">
+          <Link href={`/profile?uid=${comment.userId}`} className="shrink-0">
+            <UserAvatar
+              src={comment.userId === profile?.uid ? profile?.avatar : comment.user.avatar}
+              name={displayName}
+              className="w-9 h-9 shadow-inner"
+              textClassName="text-xs font-bold"
+            />
+          </Link>
+
+          <div className="flex-1 min-w-0 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <Link
+                href={`/profile?uid=${comment.userId}`}
+                className="font-bold text-white text-sm hover:text-brand transition-colors flex items-center gap-1 min-w-0"
+              >
+                <span className="truncate">{displayName}</span>
+                <VerifiedBadge
+                  tier={comment.userId === profile?.uid
+                    ? (profile as any)?.subscriptionTier
+                    : ((comment.user as any)?.subscriptionTier ||
+                      (comment.user?.name?.includes("Elijah") ? "elite" : undefined))}
+                />
+              </Link>
+              <span className="text-[10px] text-slate-500 shrink-0">{commentTime}</span>
+            </div>
+
+            {editingCommentId === comment.id ? (
+              <div className="mt-1 mb-2">
+                <textarea
+                  value={editCommentText}
+                  onChange={(e) => setEditCommentText(e.target.value)}
+                  className="w-full bg-slate-900 text-sm text-white p-2 rounded-lg border border-brand/50 focus:outline-none resize-none"
+                />
+                <div className="flex justify-end gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingCommentId(null)}
+                    className="text-xs text-slate-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSaveCommentEdit(comment.id, comment.content)}
+                    className="text-xs bg-brand text-white px-3 py-1 rounded"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className={`text-sm whitespace-pre-wrap break-words ${
+                comment.isHidden ? "text-slate-500 italic" : "text-slate-300"
+              }`}>
+                {comment.isHidden && !canModerate
+                  ? "This comment has been hidden."
+                  : comment.content.split(/(@[a-zA-Z0-9_]+)/g).map((part, index) =>
+                      part.startsWith("@") ? (
+                        <span
+                          key={`${comment.id}-mention-${index}`}
+                          className="text-brand font-semibold"
+                        >
+                          {part}
+                        </span>
+                      ) : (
+                        <span key={`${comment.id}-text-${index}`}>{part}</span>
+                      )
+                    )}
+              </p>
+            )}
+
+            <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => handleReplyComment(comment.id, comment.user.handle || comment.user.name)}
+                className="text-xs font-semibold text-slate-400 hover:text-brand flex items-center gap-1 transition-colors"
+              >
+                <Reply className="w-3.5 h-3.5" />
+                Reply
+              </button>
+
+              <div className="flex items-center gap-3">
+                {canManage && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCommentId(comment.id);
+                        setEditCommentText(comment.content);
+                      }}
+                      className="text-xs text-slate-500 hover:text-white transition-colors"
+                      aria-label="Edit comment"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteComment(comment.id)}
+                      className="text-xs text-slate-500 hover:text-red-400 transition-colors"
+                      aria-label="Delete comment"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+
+                {canModerate && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleCommentVisibility(comment.id, !!comment.isHidden)}
+                    className={`text-xs transition-colors ${
+                      comment.isHidden
+                        ? "text-amber-500 hover:text-amber-400"
+                        : "text-slate-500 hover:text-white"
+                    }`}
+                    title={comment.isHidden ? "Unhide comment" : "Hide comment"}
+                    aria-label={comment.isHidden ? "Unhide comment" : "Hide comment"}
+                  >
+                    {comment.isHidden
+                      ? <Eye className="w-3.5 h-3.5" />
+                      : <EyeOff className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {replies.length > 0 && (
+          <div className="ml-3 pl-3 border-l border-white/10 space-y-3">
+            {replies.map(reply => renderComment(reply, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div id={`post-${post.id}`} className="neo-card p-4 sm:p-4 mb-2 sm:mb-3.5 border-y sm:border border-white/5 bg-slate-900/60 rounded-none sm:rounded-2xl hover:border-white/10 transition-all duration-300">
@@ -566,206 +813,9 @@ export default function PostCard({ post }: PostCardProps) {
       {/* Comments Section */}
       {showComments && (
         <div className="mt-4 pt-4 border-t border-white/5 animate-in fade-in slide-in-from-top-2">
-          {post.comments && post.comments.length > 0 ? (
+          {comments.length > 0 ? (
             <div className="space-y-4 mb-4">
-              {post.comments.filter(c => !c.replyToId).map((comment) => {
-                let cTimeAgo = "Just now";
-                const cCreatedAt = new Date(comment.createdAt);
-                if (!isNaN(cCreatedAt.getTime())) {
-                  cTimeAgo = formatDistanceToNow(cCreatedAt, { addSuffix: true });
-                }
-                
-                // Get replies for this comment
-                const replies = post.comments?.filter(c => c.replyToId === comment.id) || [];
-                
-                return (
-                  <div key={comment.id} id={`comment-${comment.id}`} className="flex flex-col gap-3 transition-all duration-300">
-                    <div className="flex gap-3">
-                      <Link href={`/profile?uid=${comment.userId}`}>
-                        <UserAvatar src={comment.userId === profile?.uid ? profile?.avatar : comment.user.avatar} name={comment.userId === profile?.uid ? profile?.fullName : comment.user.name} className="w-10 h-10 shadow-inner" textClassName="text-xs font-bold" />
-                      </Link>
-                      <div className="flex-1 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
-                        <div className="flex items-center justify-between mb-1">
-                          <Link href={`/profile?uid=${comment.userId}`} className="font-bold text-white text-sm hover:text-brand transition-colors flex items-center gap-1">
-                              {comment.userId === profile?.uid ? profile?.fullName : comment.user.name}
-                              <VerifiedBadge tier={comment.userId === profile?.uid ? (profile as any)?.subscriptionTier : ((comment.user as any)?.subscriptionTier || (comment.user?.name?.includes('Elijah') ? 'elite' : undefined))} />
-                            </Link>
-                          <span className="text-xs text-slate-500">{cTimeAgo}</span>
-                        </div>
-                        {editingCommentId === comment.id ? (
-                          <div className="mt-1 mb-2">
-                            <textarea
-                              value={editCommentText}
-                              onChange={(e) => setEditCommentText(e.target.value)}
-                              className="w-full bg-slate-900 text-sm text-white p-2 rounded-lg border border-brand/50 focus:outline-none resize-none"
-                            />
-                            <div className="flex justify-end gap-2 mt-2">
-                              <button onClick={() => setEditingCommentId(null)} className="text-xs text-slate-400 hover:text-white">Cancel</button>
-                              <button onClick={() => handleSaveCommentEdit(comment.id, comment.content)} className="text-xs bg-brand text-white px-3 py-1 rounded">Save</button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className={`text-sm ${comment.isHidden ? 'text-slate-500 italic' : 'text-slate-300'}`}>
-                            {comment.isHidden && (post.userId !== profile?.uid && profile?.role !== 'admin') 
-                              ? "This comment has been hidden." 
-                              : comment.content}
-                          </p>
-                        )}
-                        <div className="mt-2 pt-1 border-t border-white/5 flex items-center justify-between">
-                          <button
-                            type="button"
-                            onClick={() => handleReplyComment(comment.id, comment.user.name)}
-                            className="text-xs font-semibold text-slate-400 hover:text-brand flex items-center gap-1 transition-colors"
-                          >
-                            <Reply className="w-3.5 h-3.5" />
-                            Reply
-                          </button>
-                          {profile?.uid === comment.userId ? (
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => { setEditingCommentId(comment.id); setEditCommentText(comment.content); }}
-                                className="text-xs font-semibold text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteComment(comment.id)}
-                                className="text-xs font-semibold text-slate-500 hover:text-red-400 flex items-center gap-1 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ) : profile?.role === "admin" ? (
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => { setEditingCommentId(comment.id); setEditCommentText(comment.content); }}
-                                className="text-xs font-semibold text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteComment(comment.id)}
-                                className="text-xs font-semibold text-slate-500 hover:text-red-400 flex items-center gap-1 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ) : null}
-                          {(post.userId === profile?.uid || profile?.role === 'admin') && (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleCommentVisibility(comment.id, !!comment.isHidden)}
-                              className={`text-xs font-semibold flex items-center gap-1 transition-colors ${comment.isHidden ? 'text-amber-500 hover:text-amber-400' : 'text-slate-500 hover:text-white'}`}
-                              title={comment.isHidden ? "Unhide comment" : "Hide comment"}
-                            >
-                              {comment.isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Render Replies */}
-                    {replies.length > 0 && (
-                      <div className="ml-11 space-y-3 relative before:absolute before:left-[-22px] before:top-0 before:bottom-4 before:w-px before:bg-white/10">
-                        {replies.map((reply) => {
-                          let rTimeAgo = "Just now";
-                          const rCreatedAt = new Date(reply.createdAt);
-                          if (!isNaN(rCreatedAt.getTime())) {
-                            rTimeAgo = formatDistanceToNow(rCreatedAt, { addSuffix: true });
-                          }
-                          return (
-                            <div key={reply.id} id={`comment-${reply.id}`} className="flex gap-3 relative before:absolute before:left-[-22px] before:top-4 before:w-4 before:h-px before:bg-white/10 transition-all duration-300">
-                              <Link href={`/profile?uid=${reply.userId}`}>
-                                <UserAvatar src={reply.userId === profile?.uid ? profile?.avatar : reply.user.avatar} name={reply.userId === profile?.uid ? profile?.fullName : reply.user.name} className="w-8 h-8 shrink-0 shadow-inner" textClassName="text-[10px] font-bold" />
-                              </Link>
-                              <div className="flex-1 bg-slate-900/50 rounded-2xl rounded-tl-sm p-3 border border-white/5">
-                                <div className="flex items-center justify-between mb-1">
-                                  <Link href={`/profile?uid=${reply.userId}`} className="font-bold text-white text-xs hover:text-brand transition-colors flex items-center gap-1">
-                                    <span>{reply.userId === profile?.uid ? profile?.fullName : reply.user.name}</span>
-                                    <VerifiedBadge tier={reply.userId === profile?.uid ? (profile as any)?.subscriptionTier : ((reply.user as any)?.subscriptionTier || (reply.user?.name?.includes('Elijah') ? 'elite' : undefined))} />
-                                  </Link>
-                                  <span className="text-[10px] text-slate-500">{rTimeAgo}</span>
-                                </div>
-                                {editingCommentId === reply.id ? (
-                                  <div className="mt-1">
-                                    <textarea
-                                      value={editCommentText}
-                                      onChange={(e) => setEditCommentText(e.target.value)}
-                                      className="w-full bg-slate-800 text-xs text-white p-2 rounded-lg border border-brand/50 focus:outline-none resize-none"
-                                    />
-                                    <div className="flex justify-end gap-2 mt-1">
-                                      <button onClick={() => setEditingCommentId(null)} className="text-[10px] text-slate-400 hover:text-white">Cancel</button>
-                                      <button onClick={() => handleSaveCommentEdit(reply.id, reply.content)} className="text-[10px] bg-brand text-white px-2 py-0.5 rounded">Save</button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <p className={`text-xs ${reply.isHidden ? 'text-slate-500 italic' : 'text-slate-300'}`}>
-                                    {reply.isHidden && (post.userId !== profile?.uid && profile?.role !== 'admin')
-                                      ? "This reply has been hidden."
-                                      : reply.content}
-                                  </p>
-                                )}
-                                <div className="mt-1 pt-1 border-t border-white/5 flex justify-end gap-2">
-                                  {profile?.uid === reply.userId ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => { setEditingCommentId(reply.id); setEditCommentText(reply.content); }}
-                                        className="text-[10px] font-semibold text-slate-500 hover:text-white transition-colors flex items-center gap-1"
-                                      >
-                                        <Edit2 className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteComment(reply.id)}
-                                        className="text-[10px] font-semibold text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    </>
-                                  ) : profile?.role === "admin" ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => { setEditingCommentId(reply.id); setEditCommentText(reply.content); }}
-                                        className="text-[10px] font-semibold text-slate-500 hover:text-white transition-colors flex items-center gap-1"
-                                      >
-                                        <Edit2 className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteComment(reply.id)}
-                                        className="text-[10px] font-semibold text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    </>
-                                  ) : null}
-                                  {(post.userId === profile?.uid || profile?.role === 'admin') && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleCommentVisibility(reply.id, !!reply.isHidden)}
-                                      className={`text-[10px] font-semibold flex items-center gap-1 transition-colors ${reply.isHidden ? 'text-amber-500 hover:text-amber-400' : 'text-slate-500 hover:text-white'}`}
-                                      title={reply.isHidden ? "Unhide reply" : "Hide reply"}
-                                    >
-                                      {reply.isHidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {comments.filter(comment => !comment.replyToId).map(comment => renderComment(comment))}
             </div>
           ) : (
             <div className="text-center text-sm text-slate-500 py-2">
@@ -776,18 +826,66 @@ export default function PostCard({ post }: PostCardProps) {
           {/* Add Comment Input */}
           <form onSubmit={handleAddComment} className="flex gap-2 items-center mt-4">
             <UserAvatar src={profile?.avatar} name={profile?.fullName} className="w-10 h-10 shadow-md shrink-0" textClassName="text-sm font-bold" />
-            <input
-              ref={commentInputRef}
-              type="text"
-              value={commentText}
-              onChange={(e) => {
-                setCommentText(e.target.value);
-                if (e.target.value === "") setReplyingTo(null); // Clear reply state if input is completely cleared
-              }}
-              placeholder={replyingTo ? `Replying to ${replyingTo.name}...` : "Write a comment..."}
-              className="flex-1 bg-slate-900/50 border border-white/10 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-brand/50"
-              disabled={isCommenting}
-            />
+
+            <div className="relative flex-1 min-w-0">
+              {mentionQuery !== null && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto rounded-xl border border-white/10 bg-slate-900 shadow-2xl z-30">
+                  {isLoadingMentionUsers ? (
+                    <div className="px-4 py-3 text-xs text-slate-400">
+                      Finding people...
+                    </div>
+                  ) : filteredMentionUsers.length > 0 ? (
+                    filteredMentionUsers.map((mentionUser) => (
+                      <button
+                        key={mentionUser.uid}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => handleSelectMention(mentionUser)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/5 transition-colors"
+                      >
+                        <UserAvatar
+                          src={mentionUser.avatar}
+                          name={mentionUser.fullName}
+                          className="w-8 h-8 shrink-0"
+                          textClassName="text-xs"
+                        />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-semibold text-white truncate">
+                            {mentionUser.fullName}
+                          </span>
+                          <span className="block text-xs text-slate-400 truncate">
+                            @{mentionUser.username}
+                          </span>
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-xs text-slate-400">
+                      No users found.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <input
+                ref={commentInputRef}
+                type="text"
+                value={commentText}
+                onChange={(e) => handleCommentInputChange(e.target.value)}
+                onBlur={() => {
+                  // Allow suggestion clicks to complete before closing the list.
+                  window.setTimeout(() => {
+                    setMentionQuery(null);
+                    setMentionStart(null);
+                    setMentionEnd(null);
+                  }, 150);
+                }}
+                placeholder={replyingTo ? `Replying to ${replyingTo.name}...` : "Write a comment..."}
+                className="w-full bg-slate-900/50 border border-white/10 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-brand/50"
+                disabled={isCommenting}
+              />
+            </div>
+
             <button
               type="submit"
               disabled={!commentText.trim() || isCommenting}

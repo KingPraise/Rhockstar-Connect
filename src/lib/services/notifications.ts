@@ -1,3 +1,4 @@
+import { app } from '../firebase';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -32,11 +33,17 @@ export interface Notification {
 export const createNotification = async (notification: Omit<Notification, 'id' | 'read' | 'createdAt'>) => {
   try {
     const notifRef = collection(db, 'notifications');
-    const newNotif = {
+    const notificationData = {
       ...notification,
       read: false,
       createdAt: serverTimestamp()
     };
+
+    // Firestore rejects undefined values, so omit optional fields that are undefined.
+    const newNotif = Object.fromEntries(
+      Object.entries(notificationData).filter(([, value]) => value !== undefined)
+    );
+
     await addDoc(notifRef, newNotif);
     return { success: true };
   } catch (error) {
@@ -118,8 +125,14 @@ export const requestNotificationPermission = async (userId: string) => {
 
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      const messaging = getMessaging();
+      const registration = await navigator.serviceWorker.register(
+        '/firebase-messaging-sw.js',
+        { scope: '/firebase-cloud-messaging-push-scope' }
+      );
+
+      const messaging = getMessaging(app);
       const token = await getToken(messaging, {
+        serviceWorkerRegistration: registration,
         vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY
       });
 

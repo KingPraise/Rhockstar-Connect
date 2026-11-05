@@ -1,3 +1,4 @@
+import { sendPushNotification } from './pushNotifications';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -175,16 +176,12 @@ export const sendMessage = async (
         });
 
         // Trigger FCM Push Notification
-        fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        void sendPushNotification({
             userId: recipientId,
             title,
             body: messageBody,
             url: `/messages?chatId=${chatId}`
-          })
-        }).catch(console.error);
+          });
       }
     }
 

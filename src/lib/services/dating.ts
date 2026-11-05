@@ -1,3 +1,4 @@
+import { sendPushNotification } from './pushNotifications';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -104,16 +105,12 @@ export const recordDatingAction = async (fromUserId: string, toUserId: string, a
         });
 
         // Trigger FCM push to recipient
-        fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        void sendPushNotification({
             userId: toUserId,
             title: "It's a Match! 💖",
             body: `You and ${fromName} liked each other! Start chatting now.`,
             url: `/messages?chatId=${chatId}`
-          })
-        }).catch(console.error);
+          });
 
         return { success: true, isMatch: true, matchPartner: toUser };
       } else {
@@ -131,16 +128,12 @@ export const recordDatingAction = async (fromUserId: string, toUserId: string, a
         });
 
         // Trigger FCM push
-        fetch('/api/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        void sendPushNotification({
             userId: toUserId,
             title: "Someone is interested in you! 💖",
             body: `${fromName} liked your dating profile. Tap to check out their profile!`,
             url: '/dating?tab=interested'
-          })
-        }).catch(console.error);
+          });
       }
     }
     

@@ -1,3 +1,4 @@
+import { sendPushNotification } from './pushNotifications';
 import { db } from '../firebase';
 import { 
   collection, 
@@ -418,16 +419,12 @@ export const toggleLike = async (postId: string, userId: string) => {
               senderAvatar: userRes.success && userRes.user ? userRes.user.avatar : ''
             });
 
-            fetch('/api/notify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+            void sendPushNotification({
                 userId: postData.userId,
                 title,
                 body: messageBody,
                 url: `/feed?postId=${postData.id}#post-${postData.id}`
-              })
-            }).catch(console.error);
+              });
           } catch (e) {
             console.error(e);
           }
@@ -512,16 +509,12 @@ export const addComment = async (postId: string, user: UserProfile, content: str
                 senderAvatar: user.avatar || ''
               });
 
-              fetch('/api/notify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+              void sendPushNotification({
                   userId: parentComment.userId,
                   title,
                   body: messageBody,
                   url: replyUrl
-                })
-              }).catch(console.error);
+                });
             }
           }
 
@@ -543,16 +536,12 @@ export const addComment = async (postId: string, user: UserProfile, content: str
               senderAvatar: user.avatar || ''
             });
 
-            fetch('/api/notify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+            void sendPushNotification({
                 userId: postData.userId,
                 title,
                 body: messageBody,
                 url: commentUrl
-              })
-            }).catch(console.error);
+              });
           }
 
           const mentionMatches = content.match(/@([a-zA-Z0-9_]+)/g);
@@ -584,16 +573,12 @@ export const addComment = async (postId: string, user: UserProfile, content: str
                     senderAvatar: user.avatar || ''
                   });
 
-                  fetch('/api/notify', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
+                  void sendPushNotification({
                       userId: targetUser.uid,
                       title,
                       body: messageBody,
                       url: mentionUrl
-                    })
-                  }).catch(console.error);
+                    });
                 }
               }
             }
@@ -643,20 +628,46 @@ export const deleteComment = async (postId: string, commentId: string) => {
     const postRef = doc(db, 'posts', postId);
     const postSnap = await getDoc(postRef);
 
-    if (postSnap.exists()) {
-      const currentComments = postSnap.data().comments || [];
-      const updatedComments = currentComments.filter((c: Comment) => c.id !== commentId && c.replyToId !== commentId);
-      
-      const removedCount = currentComments.length - updatedComments.length;
-      
-      await updateDoc(postRef, {
-        comments: updatedComments,
-        commentsCount: Math.max(0, (postSnap.data().commentsCount || 0) - removedCount)
-      });
-
-      return { success: true };
+    if (!postSnap.exists()) {
+      return { success: false, error: "Post not found" };
     }
-    return { success: false, error: "Post not found" };
+
+    const currentComments = (postSnap.data().comments || []) as Comment[];
+
+    // Collect the selected comment and every descendant reply.
+    const childrenByParent = new Map<string, string[]>();
+    for (const comment of currentComments) {
+      if (!comment.replyToId) continue;
+      const children = childrenByParent.get(comment.replyToId) || [];
+      children.push(comment.id);
+      childrenByParent.set(comment.replyToId, children);
+    }
+
+    const idsToRemove = new Set<string>();
+    const queue = [commentId];
+
+    for (let index = 0; index < queue.length; index++) {
+      const currentId = queue[index];
+      if (idsToRemove.has(currentId)) continue;
+
+      idsToRemove.add(currentId);
+      queue.push(...(childrenByParent.get(currentId) || []));
+    }
+
+    const updatedComments = currentComments.filter(
+      comment => !idsToRemove.has(comment.id)
+    );
+    const removedCount = currentComments.length - updatedComments.length;
+
+    await updateDoc(postRef, {
+      comments: updatedComments,
+      commentsCount: Math.max(
+        0,
+        (postSnap.data().commentsCount || 0) - removedCount
+      )
+    });
+
+    return { success: true };
   } catch (error: unknown) {
     console.error("Error deleting comment:", error);
     return { success: false, error: (error as Error).message };

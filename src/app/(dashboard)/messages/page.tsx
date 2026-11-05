@@ -1,5 +1,7 @@
 "use client";
-
+import MessageInput from "@/components/messages/MessageInput";
+import DMHeader from "@/components/messages/DMHeader";
+import DMMessageFeed from "@/components/messages/DMMessageFeed";
 import { useEffect, useState, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { trackEvent } from "@/lib/analytics";
@@ -7,20 +9,20 @@ import { trackEvent } from "@/lib/analytics";
 import { subscribeToChats, subscribeToMessages, sendMessage, Chat, Message, getOrCreateChat, updateTypingStatus, markMessagesAsRead, editMessage, deleteMessage, toggleArchiveChat, deleteChatForUser, markChatAsUnread } from "@/lib/services/messages";
 import { getAllUsers, UserBasic, getUserById, getUserByUsername, listenToUserProfile } from "@/lib/services/users";
 import { formatDistanceToNow } from "date-fns";
-import { 
-  subscribeToCommunities, 
-  subscribeToCommunityMessages, 
-  sendCommunityMessage, 
-  joinCommunity, 
-  leaveCommunity, 
-  deleteCommunityMessage, 
-  removeMemberFromCommunity, 
+import {
+  subscribeToCommunities,
+  subscribeToCommunityMessages,
+  sendCommunityMessage,
+  joinCommunity,
+  leaveCommunity,
+  deleteCommunityMessage,
+  removeMemberFromCommunity,
   requestToJoinCommunity,
   cancelJoinRequest,
   acceptJoinRequest,
   declineJoinRequest,
   updateCommunityAccess,
-  Community, 
+  Community,
   CommunityMessage,
   CommunityAccessType,
   JoinRequestDetail,
@@ -41,6 +43,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import UserAvatar from "@/components/ui/UserAvatar";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import { db } from "@/lib/firebase";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -50,7 +53,7 @@ export default function MessagesPage() {
   const { profile } = useAuthStore();
   const searchParams = useSearchParams();
   const targetUserParam = searchParams.get('chatId') || searchParams.get('user') || searchParams.get('uid');
-  
+
   // Check and maintain daily streak on mount
   useEffect(() => {
     if (profile?.uid) {
@@ -66,7 +69,15 @@ export default function MessagesPage() {
   const [chats, setChats] = useState<Chat[]>([]);
   const [isChatsLoaded, setIsChatsLoaded] = useState(false);
   const [activeChat, setActiveChat] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesState, setMessagesState] = useState<{
+    chatId: string | null;
+    items: Message[];
+  }>({ chatId: null, items: [] });
+
+  const messages =
+    activeChat && messagesState.chatId === activeChat.id
+      ? messagesState.items
+      : [];
   const [newMessage, setNewMessage] = useState("");
   const [users, setUsers] = useState<Record<string, UserBasic>>({});
   const [friends, setFriends] = useState<string[]>([]);
@@ -81,7 +92,15 @@ export default function MessagesPage() {
   const [leveledUpRank, setLeveledUpRank] = useState<StardomRank | null>(null);
   const [communities, setCommunities] = useState<Community[]>([]);
   const [activeCommunity, setActiveCommunity] = useState<Community | null>(null);
-  const [communityMessages, setCommunityMessages] = useState<CommunityMessage[]>([]);
+  const [communityMessagesState, setCommunityMessagesState] = useState<{
+    communityId: string | null;
+    items: CommunityMessage[];
+  }>({ communityId: null, items: [] });
+
+  const communityMessages =
+    activeCommunity && communityMessagesState.communityId === activeCommunity.id
+      ? communityMessagesState.items
+      : [];
   const [communityCategory, setCommunityCategory] = useState<string>('All');
   const [communityViewTab, setCommunityViewTab] = useState<'all' | 'joined' | 'discover'>('all');
   const [newCommunityMessageText, setNewCommunityMessageText] = useState("");
@@ -93,18 +112,17 @@ export default function MessagesPage() {
   // Media upload & editing state
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [, setIsUploadingImage] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [openMessageMenuId, setOpenMessageMenuId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | CommunityMessage | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Voice Recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -162,29 +180,51 @@ export default function MessagesPage() {
     setSwipeOffset(0);
   };
 
-  // Helper for last seen status — strictly checks timestamp to prevent "stuck online" bugs
-  const getUserStatus = (user: any) => {
-    const lastSeen = user?.lastSeen || user?.lastLogin;
-    if (!lastSeen) return { isOnline: false, text: "Offline" };
-    
-    // Parse timestamp safely
-    const date = (lastSeen as any)?.toDate ? (lastSeen as any).toDate() : new Date(lastSeen as any);
-    const diffInMinutes = (new Date().getTime() - date.getTime()) / (1000 * 60);
-    
+  // Convert Firestore timestamps and standard date values safely.
+const toTimestampDate = (value: unknown): Date | null => {
+  let date: Date;
+
+  if (value instanceof Date) {
+    date = value;
+  } else if (
+    typeof value === "object" &&
+    value !== null &&
+    "toDate" in value &&
+    typeof value.toDate === "function"
+  ) {
+    date = (value as { toDate: () => Date }).toDate();
+  } else if (typeof value === "string" || typeof value === "number") {
+    date = new Date(value);
+  } else {
+    return null;
+  }
+
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+// Helper for last seen status — strictly checks timestamp to prevent "stuck online" bugs
+  const getUserStatus = (user: UserBasic) => {
+    const date = toTimestampDate(user.lastSeen || user.lastLogin);
+    if (!date) return { isOnline: false, text: "Offline" };
+
+    // This freshness check intentionally reads the current time.
+  // eslint-disable-next-line react-hooks/purity
+  const diffInMinutes = (new Date().getTime() - date.getTime()) / (1000 * 60);
+
     // They are ONLY online if they have connected within the last 3 minutes AND the flag is true
     // (This prevents users being stuck 'Online' if their phone died or disconnected without sending visibilitychange)
     if (diffInMinutes < 3 && user?.isOnline === true) {
       return { isOnline: true, text: "Online" };
     }
-    
+
     return { isOnline: false, text: `Last seen ${formatDistanceToNow(date, { addSuffix: true })}` };
   };
 
   // Helper to format timestamps
-  const formatMessageTime = (createdAt: any) => {
-    if (!createdAt) return "";
-    const date = (createdAt as any)?.toDate ? (createdAt as any).toDate() : new Date(createdAt as any);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatMessageTime = (createdAt: unknown) => {
+    const date = toTimestampDate(createdAt);
+    if (!date) return "";
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   // Load users & friends
@@ -282,7 +322,7 @@ export default function MessagesPage() {
     const unsubscribe = subscribeToChats(profile.uid, async (updatedChats) => {
       setChats(updatedChats);
       setIsChatsLoaded(true);
-      
+
       const missingUserIds = new Set<string>();
       updatedChats.forEach(chat => {
         const otherUserId = chat.participants.find(p => p !== profile.uid);
@@ -315,40 +355,44 @@ export default function MessagesPage() {
   }, [profile?.uid, activeChat?.id]);
 
   // Subscribe to DM Messages & Real-time Presence
+  const activeChatId = activeChat?.id;
+  const activeChatParticipants = activeChat?.participants;
+
   useEffect(() => {
-    if (!activeChat) {
-      setMessages([]);
-      return;
-    }
-    const unsubscribeMsgs = subscribeToMessages(activeChat.id, (newMessages) => {
-      setMessages(newMessages);
+    if (!activeChatId || !activeChatParticipants) return;
+
+    const unsubscribeMsgs = subscribeToMessages(activeChatId, (newMessages) => {
+      setMessagesState({ chatId: activeChatId, items: newMessages });
     });
+
     if (profile?.uid) {
-      markMessagesAsRead(activeChat.id, profile.uid);
+      markMessagesAsRead(activeChatId, profile.uid);
     }
-    
-    // Subscribe to the other user's presence
-    const otherUserId = activeChat.participants.find((id: string) => id !== profile?.uid);
+
+    const otherUserId = activeChatParticipants.find(
+      (id: string) => id !== profile?.uid
+    );
+
     let unsubscribePresence: (() => void) | undefined;
+
     if (otherUserId) {
       unsubscribePresence = listenToUserProfile(otherUserId, (updatedUser) => {
-        setUsers(prev => ({
+        setUsers((prev) => ({
           ...prev,
           [otherUserId]: {
             ...prev[otherUserId],
             ...updatedUser,
-            // Ensure we keep existing UserBasic fields if updatedUser is missing some
-            uid: otherUserId
-          }
+            uid: otherUserId,
+          },
         }));
       });
     }
 
     return () => {
       unsubscribeMsgs();
-      if (unsubscribePresence) unsubscribePresence();
+      unsubscribePresence?.();
     };
-  }, [activeChat?.id, activeChat?.participants, profile?.uid]);
+  }, [activeChatId, activeChatParticipants, profile?.uid]);
 
   // Subscribe to Public Communities
   useEffect(() => {
@@ -359,21 +403,28 @@ export default function MessagesPage() {
   }, []);
 
   // Subscribe to Active Community Messages
+  const activeCommunityId = activeCommunity?.id;
+
   useEffect(() => {
-    if (!activeCommunity) {
-      setCommunityMessages([]);
-      return;
-    }
-    const unsubscribe = subscribeToCommunityMessages(activeCommunity.id, (msgs) => {
-      setCommunityMessages(msgs);
-    });
+    if (!activeCommunityId) return;
+
+    const unsubscribe = subscribeToCommunityMessages(
+      activeCommunityId,
+      (msgs) => {
+        setCommunityMessagesState({
+          communityId: activeCommunityId,
+          items: msgs,
+        });
+      }
+    );
+
     return () => unsubscribe();
-  }, [activeCommunity?.id]);
+  }, [activeCommunityId]);
 
   // Auto-scroll DMs
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, activeChat]);
+  }, [messages, activeChatId]);
 
   // Auto-scroll Communities
   useEffect(() => {
@@ -392,10 +443,10 @@ export default function MessagesPage() {
     setMediaFile(null);
     setMediaPreviewUrl(null);
     setReplyingTo(null);
-    
+
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     updateTypingStatus(activeChat.id, profile.uid, false);
-    
+
     let uploadedMediaUrl = undefined;
     let type: 'text' | 'image' | 'audio' | 'document' = 'text';
     let finalMsgText = text;
@@ -404,11 +455,11 @@ export default function MessagesPage() {
       try {
         setIsUploadingImage(true);
         uploadedMediaUrl = await uploadMediaToCloudinary(file, `chats_${activeChat.id}`, file.type.startsWith('image/') ? 'image' : 'auto');
-        
+
         if (file.type.startsWith('image/')) type = 'image';
         else if (file.type.startsWith('audio/') || file.type.includes('mp4') || file.type.includes('webm') || file.name.endsWith('.webm') || file.name.endsWith('.mp3') || file.name.endsWith('.ogg') || file.name.endsWith('.m4a') || file.name.endsWith('.wav')) type = 'audio';
         else type = 'document';
-        
+
         if (!finalMsgText) {
           if (type === 'image') finalMsgText = "Sent an image";
           else if (type === 'audio') finalMsgText = "Sent an audio message";
@@ -422,10 +473,10 @@ export default function MessagesPage() {
     }
 
     await sendMessage(
-      activeChat.id, 
-      profile.uid, 
-      finalMsgText, 
-      type, 
+      activeChat.id,
+      profile.uid,
+      finalMsgText,
+      type,
       uploadedMediaUrl,
       replyingTo?.id,
       replyingTo?.text
@@ -440,8 +491,8 @@ export default function MessagesPage() {
   };
 
   // Send Community Message
-  const handleSendCommunityMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendCommunityMessage = async (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
     if (!newCommunityMessageText.trim() || !activeCommunity || !profile) return;
 
     try {
@@ -472,7 +523,7 @@ export default function MessagesPage() {
           setLeveledUpRank(res.newRank);
         }
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error sending community message:", err);
       toast.error("Failed to send message");
     } finally {
@@ -486,7 +537,7 @@ export default function MessagesPage() {
       toast.error("Please log in to join communities");
       return;
     }
-    
+
     if (comm.accessType === 'locked') {
       toast.error("This community is locked and not accepting new members.");
       return;
@@ -500,8 +551,8 @@ export default function MessagesPage() {
         avatar: profile.avatar,
       });
       if (res.success) {
-          trackEvent("join_community", { community_id: comm.id, access_type: comm.accessType, status: "pending" });
-          toast.success("Join request sent to community admin! 🔒");
+        trackEvent("join_community", { community_id: comm.id, access_type: comm.accessType, status: "pending" });
+        toast.success("Join request sent to community admin! 🔒");
       } else {
         toast.error(res.error || "Failed to send request");
       }
@@ -583,27 +634,35 @@ export default function MessagesPage() {
       mediaRecorder.onstop = () => {
         const mimeType = mediaRecorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        
+
         let ext = 'webm';
         if (mimeType.includes('mp4')) ext = 'mp4';
         else if (mimeType.includes('ogg')) ext = 'ogg';
         else if (mimeType.includes('mpeg') || mimeType.includes('mp3')) ext = 'mp3';
-        
+
         const audioFile = new File([audioBlob], `voice-note-${Date.now()}.${ext}`, { type: mimeType });
+
+        // Replace any previous attachment preview URL.
+        if (mediaPreviewUrl) URL.revokeObjectURL(mediaPreviewUrl);
+
+        // Create a local URL so the recorded audio can be played before sending.
+        const previewUrl = URL.createObjectURL(audioBlob);
         setMediaFile(audioFile);
+        setMediaPreviewUrl(previewUrl);
+
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start();
       setIsRecording(true);
-      
+
       let time = 0;
       recordingTimerRef.current = setInterval(() => {
         time++;
         setRecordingTime(time);
       }, 1000);
-      
-    } catch (err) {
+
+    } catch {
       toast.error("Microphone access denied");
     }
   };
@@ -617,18 +676,9 @@ export default function MessagesPage() {
     }
   };
 
-  // File Select Handler
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setMediaFile(file);
-      if (file.type.startsWith('image/')) {
-        setMediaPreviewUrl(URL.createObjectURL(file));
-      } else {
-        setMediaPreviewUrl(null);
-      }
-    }
-  };
+
+
+
 
   // DM actions
   const handleToggleArchive = async (chatId: string, isArchived: boolean, e?: React.MouseEvent) => {
@@ -694,16 +744,16 @@ export default function MessagesPage() {
 
   // Filter available users for DM
   const availableUsers = Object.values(users).filter(
-    (u) => u.uid !== profile.uid && 
-           (u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.username.toLowerCase().includes(searchQuery.toLowerCase()))
+    (u) => u.uid !== profile.uid &&
+      (u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.username.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Filter public communities
   const filteredCommunities = communities.filter((c) => {
     const matchesCategory = communityCategory === 'All' || c.category === communityCategory;
     const matchesSearch = c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          c.description.toLowerCase().includes(searchQuery.toLowerCase());
+      c.description.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -718,16 +768,16 @@ export default function MessagesPage() {
 
   return (
     <div className="flex-1 flex flex-col md:flex-row max-w-[1600px] mx-auto w-full h-[calc(100dvh-10rem)] md:h-[calc(100vh-4rem)] max-h-[920px] gap-2 md:gap-4 p-2 md:p-3 lg:p-4 lg:gap-5 overflow-hidden">
-      
+
       {/* SIDEBAR */}
       <div className={`${(activeChat || activeCommunity) ? 'hidden md:flex' : 'flex'} w-full md:w-[340px] lg:w-[380px] h-full flex-col neo-card bg-slate-900/60 border border-white/5 rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl shrink-0`}>
-        
+
         {/* Header & Mode Bar */}
         <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-slate-900/80 backdrop-blur-md">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white">Messages</h2>
             {messagesMode === 'direct' ? (
-              <button 
+              <button
                 onClick={() => setShowNewChat(true)}
                 className="p-2 rounded-xl bg-brand/10 text-brand hover:bg-brand/20 transition-colors flex items-center gap-1.5 text-xs font-bold"
                 title="Start New Chat"
@@ -736,7 +786,7 @@ export default function MessagesPage() {
                 <span className="hidden sm:inline">New Chat</span>
               </button>
             ) : (
-              <button 
+              <button
                 onClick={() => setIsCreateCommunityOpen(true)}
                 className="p-2 rounded-xl bg-gradient-to-r from-brand to-brand-purple text-slate-950 hover:opacity-90 transition-opacity flex items-center gap-1.5 text-xs font-extrabold shadow-md"
                 title="Create Community"
@@ -759,27 +809,24 @@ export default function MessagesPage() {
           <div className="flex bg-slate-950 p-1 rounded-2xl border border-white/10 gap-1">
             <button
               onClick={() => { setMessagesMode('direct'); setActiveCommunity(null); }}
-              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
-                messagesMode === 'direct' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
-              }`}
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${messagesMode === 'direct' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
+                }`}
             >
               <MessageSquare className="w-3 h-3" />
               Direct
             </button>
             <button
               onClick={() => { setMessagesMode('communities'); setActiveChat(null); }}
-              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
-                messagesMode === 'communities' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
-              }`}
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${messagesMode === 'communities' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
+                }`}
             >
               <Globe className="w-3 h-3" />
               Community 🌐
             </button>
             <button
               onClick={() => { setMessagesMode('leaderboard'); setActiveChat(null); setActiveCommunity(null); }}
-              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
-                messagesMode === 'leaderboard' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
-              }`}
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${messagesMode === 'leaderboard' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
+                }`}
             >
               <Trophy className="w-3 h-3" />
               Ranks ⭐
@@ -791,18 +838,16 @@ export default function MessagesPage() {
             <div className="flex bg-slate-800/60 p-1 rounded-xl border border-white/5 gap-1">
               <button
                 onClick={() => { setChatTab('inbox'); setShowNewChat(false); }}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                  chatTab === 'inbox' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${chatTab === 'inbox' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 <Inbox className="w-3.5 h-3.5" />
                 Inbox
               </button>
               <button
                 onClick={() => { setChatTab('archived'); setShowNewChat(false); }}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 relative ${
-                  chatTab === 'archived' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
-                }`}
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 relative ${chatTab === 'archived' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  }`}
               >
                 <Archive className="w-3.5 h-3.5" />
                 Archived
@@ -822,11 +867,10 @@ export default function MessagesPage() {
                 <button
                   key={cat}
                   onClick={() => setCommunityCategory(cat)}
-                  className={`px-3 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${
-                    communityCategory === cat 
-                      ? 'bg-brand/20 text-brand border border-brand/40' 
+                  className={`px-3 py-1 rounded-xl text-[11px] font-bold shrink-0 transition-all ${communityCategory === cat
+                      ? 'bg-brand/20 text-brand border border-brand/40'
                       : 'bg-slate-800/80 text-slate-400 hover:text-white border border-white/5'
-                  }`}
+                    }`}
                 >
                   {cat}
                 </button>
@@ -848,7 +892,7 @@ export default function MessagesPage() {
                 className="w-full pl-9 pr-4 py-2 bg-slate-800/50 border border-white/5 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand/50 transition-colors"
               />
               {searchQuery && (
-                <button 
+                <button
                   onClick={() => setSearchQuery("")}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                 >
@@ -862,22 +906,20 @@ export default function MessagesPage() {
               <div className="flex items-center gap-1.5 pt-0.5">
                 <button
                   onClick={() => setCommunityViewTab('all')}
-                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all text-center ${
-                    communityViewTab === 'all'
+                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all text-center ${communityViewTab === 'all'
                       ? 'bg-slate-700 text-white shadow-sm'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                  }`}
+                    }`}
                 >
                   All ({filteredCommunities.length})
                 </button>
 
                 <button
                   onClick={() => setCommunityViewTab('joined')}
-                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
-                    communityViewTab === 'joined'
+                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${communityViewTab === 'joined'
                       ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 shadow-sm'
                       : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/60'
-                  }`}
+                    }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                   Joined ({joinedCommunities.length})
@@ -885,11 +927,10 @@ export default function MessagesPage() {
 
                 <button
                   onClick={() => setCommunityViewTab('discover')}
-                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${
-                    communityViewTab === 'discover'
+                  className={`flex-1 py-1 px-2 rounded-lg text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1.5 ${communityViewTab === 'discover'
                       ? 'bg-purple-600/30 text-purple-300 border border-purple-500/40 shadow-sm'
                       : 'text-slate-400 hover:text-purple-300 hover:bg-slate-800/60'
-                  }`}
+                    }`}
                 >
                   <Compass className="w-3 h-3 shrink-0" />
                   Discover ({discoverCommunities.length})
@@ -928,7 +969,7 @@ export default function MessagesPage() {
                     </button>
                   ))
                 ) : (
-                  <p className="p-4 text-center text-slate-400 text-xs">No professionals found matching "{searchQuery}"</p>
+                  <p className="p-4 text-center text-slate-400 text-xs">No professionals found matching &quot;{searchQuery}&quot;</p>
                 )}
               </div>
             ) : (
@@ -975,16 +1016,14 @@ export default function MessagesPage() {
                   const isArchived = chat.archivedFor?.includes(profile.uid);
 
                   return (
-                    <div 
-                      key={chat.id} 
-                      className={`relative border-b border-white/5 last:border-0 group/swipe select-none bg-slate-950 ${
-                        activeMenuChatId === chat.id ? 'z-50 overflow-visible' : 'z-0 overflow-hidden'
-                      }`}
+                    <div
+                      key={chat.id}
+                      className={`relative border-b border-white/5 last:border-0 group/swipe select-none bg-slate-950 ${activeMenuChatId === chat.id ? 'z-50 overflow-visible' : 'z-0 overflow-hidden'
+                        }`}
                     >
                       {/* Swipe actions */}
-                      <div className={`absolute right-0 top-0 bottom-0 flex items-center h-full z-0 transition-opacity duration-150 ${
-                        swipedChatId === chat.id || swipingChatId === chat.id ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-                      }`}>
+                      <div className={`absolute right-0 top-0 bottom-0 flex items-center h-full z-0 transition-opacity duration-150 ${swipedChatId === chat.id || swipingChatId === chat.id ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+                        }`}>
                         <button
                           onClick={(e) => {
                             setSwipedChatId(null);
@@ -1027,19 +1066,17 @@ export default function MessagesPage() {
                           }
                         }}
                         style={{
-                          transform: `translateX(${
-                            swipingChatId === chat.id 
-                              ? `${swipeOffset}px` 
+                          transform: `translateX(${swipingChatId === chat.id
+                              ? `${swipeOffset}px`
                               : (swipedChatId === chat.id ? '-140px' : '0px')
-                          })`
+                            })`
                         }}
-                        className={`w-full p-4 flex items-center justify-between gap-3 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${
-                          isActive 
-                            ? 'bg-slate-800 text-white shadow-md border-l-4 border-brand' 
-                            : isUnread 
-                              ? 'bg-slate-900 border-l-4 border-brand/70' 
+                        className={`w-full p-4 flex items-center justify-between gap-3 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${isActive
+                            ? 'bg-slate-800 text-white shadow-md border-l-4 border-brand'
+                            : isUnread
+                              ? 'bg-slate-900 border-l-4 border-brand/70'
                               : 'bg-slate-900 hover:bg-slate-850'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div className="relative shrink-0">
@@ -1132,7 +1169,7 @@ export default function MessagesPage() {
                   );
                 }) : (
                   <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                    <EmptyState 
+                    <EmptyState
                       icon={chatTab === 'archived' ? Archive : MessageSquarePlus}
                       title={chatTab === 'archived' ? "No archived chats" : "No messages yet"}
                       description={chatTab === 'archived' ? "Archived conversations will appear here." : "Search for any professional to start a conversation!"}
@@ -1162,11 +1199,10 @@ export default function MessagesPage() {
                     }
                   }}
                   onClick={() => setActiveCommunity(comm)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                    isActive 
-                      ? 'bg-slate-800 border-brand/50 shadow-lg' 
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isActive
+                      ? 'bg-slate-800 border-brand/50 shadow-lg'
                       : 'bg-slate-900/80 hover:bg-slate-800/60 border-white/5'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="w-11 h-11 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
@@ -1305,7 +1341,7 @@ export default function MessagesPage() {
                       </div>
                     ) : (
                       <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-dashed border-white/10 text-center">
-                        <p className="text-xs font-semibold text-slate-300">You haven't joined any communities in this category</p>
+                        <p className="text-xs font-semibold text-slate-300">You haven&apos;t joined any communities in this category</p>
                         <p className="text-[11px] text-slate-400 mt-0.5">Explore the communities below and join conversations!</p>
                       </div>
                     )}
@@ -1332,7 +1368,7 @@ export default function MessagesPage() {
                     ) : (
                       <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-dashed border-white/10 text-center">
                         <p className="text-xs font-semibold text-slate-300">No new communities to join in this category</p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">You're already part of all available communities here!</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">You&apos;re already part of all available communities here!</p>
                       </div>
                     )}
                   </div>
@@ -1402,313 +1438,108 @@ export default function MessagesPage() {
       {/* VIEW 1: ACTIVE DM CHAT */}
       {messagesMode === 'direct' && activeChat && (
         <div className="flex-1 h-full flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative min-w-0">
-          
+
           {/* DM Header */}
-          <div className="p-4 sm:p-5 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-4 shrink-0">
-            <div className="flex items-center gap-4 min-w-0">
-              <button 
-                className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
-                onClick={() => setActiveChat(null)}
-              >
-                ← Back
-              </button>
-              
-              {(() => {
-                const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
-                const otherUser = users[otherUserId];
-                
-                return otherUser ? (
-                  <Link href={`/profile?uid=${otherUserId}`} className="flex items-center gap-4 group cursor-pointer">
-                    <div className="relative">
-                      <UserAvatar src={otherUser.avatar} name={otherUser.fullName} className="w-12 h-12 group-hover:shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-shadow" textClassName="text-lg font-bold" />
-                      {getUserStatus(otherUser).isOnline && (
-                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 rounded-full border-2 border-slate-900" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <h2 className="text-lg font-bold text-white leading-tight group-hover:text-brand transition-colors">{otherUser.fullName}</h2>
-                        <VerifiedBadge tier={otherUser.subscriptionTier} />
-                      </div>
-                      <p className={`text-xs font-medium ${getUserStatus(otherUser).isOnline ? 'text-emerald-400' : 'text-slate-400'}`}>
-                        {getUserStatus(otherUser).text}
-                      </p>
-                    </div>
-                  </Link>
-                ) : (
-                  <div className="flex items-center gap-3">
-                    <UserAvatar name="Member" className="w-10 h-10" textClassName="text-sm font-bold" />
-                    <h2 className="text-base font-bold text-white">Rhockstar Member</h2>
-                  </div>
-                );
-              })()}
-            </div>
+          <DMHeader
+            activeChat={activeChat}
+            currentUserId={profile.uid}
+            otherUser={users[
+              activeChat.participants.find((id) => id !== profile.uid) ||
+              activeChat.participants[0]
+            ]}
+            isOnline={(() => {
+              const otherUserId =
+                activeChat.participants.find((id) => id !== profile.uid) ||
+                activeChat.participants[0];
 
-            {/* DM Options */}
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setHeaderMenuOpen(!headerMenuOpen)}
-                className="p-2 text-slate-400 hover:text-white rounded-xl bg-slate-800/50 hover:bg-slate-800 transition-colors border border-white/5"
-                title="Conversation Options"
-              >
-                <MoreVertical className="w-5 h-5" />
-              </button>
+              const user = users[otherUserId];
+              return user ? getUserStatus(user).isOnline : false;
+            })()}
+            statusText={(() => {
+              const otherUserId =
+                activeChat.participants.find((id) => id !== profile.uid) ||
+                activeChat.participants[0];
 
-              {headerMenuOpen && (
-                <div className="absolute right-0 top-12 w-48 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 p-1 animate-in fade-in zoom-in-95 duration-150">
-                  {(() => {
-                    const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
-                    const isArchived = activeChat.archivedFor?.includes(profile.uid);
-                    return (
-                      <>
-                        <Link
-                          href={`/profile?uid=${otherUserId}`}
-                          className="w-full px-3.5 py-2.5 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
-                          onClick={() => setHeaderMenuOpen(false)}
-                        >
-                          <User className="w-3.5 h-3.5 text-brand" />
-                          View Profile
-                        </Link>
-
-                        <button
-                          onClick={() => {
-                            setHeaderMenuOpen(false);
-                            handleToggleArchive(activeChat.id, !!isArchived);
-                          }}
-                          className="w-full px-3.5 py-2.5 text-xs text-left text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors flex items-center gap-2"
-                        >
-                          <Archive className="w-3.5 h-3.5 text-amber-400" />
-                          {isArchived ? "Unarchive Chat" : "Archive Chat"}
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setHeaderMenuOpen(false);
-                            handleDeleteChat(activeChat.id);
-                          }}
-                          className="w-full px-3.5 py-2.5 text-xs text-left text-red-400 hover:bg-red-500/10 rounded-xl transition-colors flex items-center gap-2"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete Chat
-                        </button>
-                      </>
-                    );
-                  })()}
-                </div>
-              )}
-            </div>
-          </div>
+              const user = users[otherUserId];
+              return user ? getUserStatus(user).text : "";
+            })()}
+            menuOpen={headerMenuOpen}
+            onBack={() => setActiveChat(null)}
+            onToggleMenu={() => setHeaderMenuOpen(!headerMenuOpen)}
+            onCloseMenu={() => setHeaderMenuOpen(false)}
+            onToggleArchive={handleToggleArchive}
+            onDeleteChat={handleDeleteChat}
+          />
 
           {/* DM Message Feed */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
-            {(() => {
-              let dmLastDate: Date | null = null;
-              const otherUserId = activeChat.participants.find(p => p !== profile.uid) || activeChat.participants[0];
-              const otherUser = users[otherUserId];
-              
-              return messages.map((msg) => {
-                const isMe = msg.senderId === profile.uid;
-                const isEditingThis = editingMessageId === msg.id;
-                const isMenuOpen = openMessageMenuId === msg.id;
-
-                if (msg.deletedForMe?.includes(profile.uid)) return null;
-
-                const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date((msg.createdAt as any) || Date.now());
-                const now = new Date();
-                const yesterday = new Date(now);
-                yesterday.setDate(yesterday.getDate() - 1);
-                
-                const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-                const showDateHeader = !dmLastDate || !isSameDay(dmLastDate, msgDate);
-                if (showDateHeader) {
-                  dmLastDate = msgDate;
-                }
-                
-                let dateLabel = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                if (isSameDay(msgDate, now)) dateLabel = 'Today';
-                else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
-
-                return (
-                  <div key={msg.id} id={msg.id} className="flex flex-col w-full">
-                    {showDateHeader && (
-                      <div className="flex justify-center my-3">
-                        <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
-                          {dateLabel}
-                        </span>
-                      </div>
-                    )}
-                    <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
-                      <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                        <UserAvatar 
-                          src={isMe ? profile?.avatar : otherUser?.avatar} 
-                          name={isMe ? profile?.fullName : (otherUser?.fullName || "Member")} 
-                          className="w-7 h-7 rounded-full shrink-0 mb-1" 
-                          textClassName="text-[10px] font-bold" 
-                        />
-
-                        <div 
-  onClick={() => !isEditingThis && !msg.isDeleted && setOpenMessageMenuId(isMenuOpen ? null : msg.id)}
-  className={`rounded-2xl px-4 py-2.5 space-y-1 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}>
-                          {/* Reply preview */}
-                          {msg.replyToText && (
-                            <div 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (msg.replyToId) {
-                                  const el = document.getElementById(msg.replyToId);
-                                  if (el) {
-                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    el.classList.add('animate-pulse', 'bg-brand/20');
-                                    setTimeout(() => el.classList.remove('animate-pulse', 'bg-brand/20'), 2000);
-                                  }
-                                }
-                              }}
-                              className="p-2 rounded-xl bg-black/20 border-l-2 border-slate-950 text-xs mb-1.5 opacity-80 cursor-pointer hover:opacity-100 transition-opacity"
-                            >
-                              <span className="font-bold block text-[10px]">Replying to:</span>
-                              <span className="line-clamp-2 text-[11px] whitespace-normal break-words">{msg.replyToText}</span>
-                            </div>
-                          )}
-
-                          {/* Inline Editing view */}
-                          {isEditingThis ? (
-                            <div className="space-y-2">
-                              <input
-                                type="text"
-                                value={editingText}
-                                onChange={(e) => setEditingText(e.target.value)}
-                                className="w-full px-3 py-1.5 bg-slate-900 text-white text-xs rounded-xl border border-brand focus:outline-none"
-                              />
-                              <div className="flex justify-end gap-2 text-xs">
-                                <button
-                                  onClick={() => setEditingMessageId(null)}
-                                  className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (editingText.trim()) {
-                                      await editMessage(activeChat.id, msg.id, editingText.trim());
-                                      setEditingMessageId(null);
-                                      toast.success("Message updated");
-                                    }
-                                  }}
-                                  className="px-2.5 py-1 rounded-lg bg-slate-950 text-brand font-bold"
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            </div>
-                          ) : msg.isDeleted ? (
-                            <p className="text-xs italic opacity-60 flex items-center gap-1">
-                              <Trash2 className="w-3 h-3" /> This message was deleted
-                            </p>
-                          ) : (
-                            <>
-                              {msg.type === 'image' && msg.mediaUrl && (
-                                <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="block w-full">
-                                  <img src={msg.mediaUrl} alt="Shared" className="rounded-xl max-h-60 w-full object-cover mb-2 cursor-pointer hover:opacity-95 transition-opacity shadow-sm" title="Click to view full image" />
-                                </a>
-                              )}
-                              {msg.type === 'audio' && msg.mediaUrl && (
-                                <div className="mb-2 w-full min-w-[220px] sm:min-w-[260px] max-w-full">
-                                  <audio controls src={msg.mediaUrl} className="w-full h-10" />
-                                </div>
-                              )}
-                              {msg.type === 'document' && msg.mediaUrl && (
-                                  <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2.5 mb-2 rounded-xl bg-black/20 hover:bg-black/30 transition-colors border border-white/10 w-full">
-                                    <span className="text-sm font-medium truncate flex-1">{msg.text || "View Document"}</span>
-                                  </a>
-                                )}
-                                {(msg.type === 'text' || (msg.type === 'image' && msg.text !== 'Sent an image') || (msg.type === 'document' && !msg.mediaUrl)) && msg.text && <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
-                            </>
-                          )}
-
-                          <div className={`flex items-center justify-end gap-1.5 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
-                            {msg.isEdited && !msg.isDeleted && <span className="italic font-normal">(edited)</span>}
-                            <span>{formatMessageTime(msg.createdAt)}</span>
-                            {isMe && !msg.isDeleted && (
-                              <div className="flex items-center ml-0.5">
-                                {msg.status === 'read' ? (
-                                  <span title={`Read at ${formatMessageTime(msg.readAt || msg.createdAt)}`}>
-                                    <CheckCheck className="w-3.5 h-3.5 text-blue-600" />
-                                  </span>
-                                ) : (
-                                  <Check className="w-3 h-3 text-slate-950/60" />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Action Menu Trigger (Dropdown) - Hidden by default, appears smoothly on hover or when open */}
-                        {!msg.isDeleted && !isEditingThis && (
-                          <div className={`relative flex items-center self-center transition-opacity ${isMenuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-                            <button
-                              onClick={() => setOpenMessageMenuId(isMenuOpen ? null : msg.id)}
-                              className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                              title="Message options"
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
-
-                            {isMenuOpen && (
-                              <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
-                                <button
-                                  onClick={() => { setReplyingTo(msg); setOpenMessageMenuId(null); setTimeout(() => textareaRef.current?.focus(), 0); }}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
-                                >
-                                  <Reply className="w-3.5 h-3.5" /> Reply
-                                </button>
-                                {isMe && (
-                                  <button
-                                    onClick={() => {
-                                      setEditingMessageId(msg.id);
-                                      setEditingText(msg.text);
-                                      setOpenMessageMenuId(null);
-                                    }}
-                                    className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" /> Edit
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => { navigator.clipboard.writeText(msg.text); toast.success("Copied to clipboard"); setOpenMessageMenuId(null); }}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copy
-                                </button>
-                                <button
-                                  onClick={() => { setForwardingMessage(msg); setOpenMessageMenuId(null); }}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg> Forward
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (window.confirm(isMe ? "Delete message for everyone?" : "Delete message for you?")) {
-                                      await deleteMessage(activeChat.id, msg.id, profile.uid, isMe ? 'forEveryone' : 'forMe');
-                                      toast.success("Message deleted");
-                                    }
-                                    setOpenMessageMenuId(null);
-                                  }}
-                                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-rose-400"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" /> Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+          <DMMessageFeed
+            messages={messages}
+            currentUserId={profile.uid}
+            currentUserAvatar={profile.avatar}
+            currentUserName={profile.fullName}
+            otherUser={
+              users[
+                activeChat.participants.find((id) => id !== profile.uid) ||
+                activeChat.participants[0]
+              ]
+            }
+            editingMessageId={editingMessageId}
+            editingText={editingText}
+            setEditingText={setEditingText}
+            onCancelEdit={() => setEditingMessageId(null)}
+            onSaveEdit={async (msg) => {
+              if (editingText.trim()) {
+                await editMessage(activeChat.id, msg.id, editingText.trim());
+                setEditingMessageId(null);
+                toast.success("Message updated");
+              }
+            }}
+            openMessageMenuId={openMessageMenuId}
+            onToggleMenu={(messageId) =>
+              setOpenMessageMenuId(
+                openMessageMenuId === messageId ? null : messageId
+              )
+            }
+            onReply={(msg) => {
+              setReplyingTo(msg);
+              setOpenMessageMenuId(null);
+              setTimeout(() => textareaRef.current?.focus(), 0);
+            }}
+            onEdit={(msg) => {
+              setEditingMessageId(msg.id);
+              setEditingText(msg.text);
+              setOpenMessageMenuId(null);
+            }}
+            onCopy={(msg) => {
+              navigator.clipboard.writeText(msg.text);
+              toast.success("Copied to clipboard");
+              setOpenMessageMenuId(null);
+            }}
+            onForward={(msg) => {
+              setForwardingMessage(msg);
+              setOpenMessageMenuId(null);
+            }}
+            onDelete={async (msg, isOwnMessage) => {
+              if (
+                window.confirm(
+                  isOwnMessage
+                    ? "Delete message for everyone?"
+                    : "Delete message for you?"
+                )
+              ) {
+                await deleteMessage(
+                  activeChat.id,
+                  msg.id,
+                  profile.uid,
+                  isOwnMessage ? "forEveryone" : "forMe"
                 );
-              });
-            })()}
-            <div ref={messagesEndRef} />
-          </div>
+                toast.success("Message deleted");
+              }
+              setOpenMessageMenuId(null);
+            }}
+            formatMessageTime={formatMessageTime}
+            messagesEndRef={messagesEndRef}
+          />
 
           {/* New Reply Banner */}
           {replyingTo && (
@@ -1726,130 +1557,37 @@ export default function MessagesPage() {
               </div>
             </div>
           )}
-          {/* DM Input Bar */}
-          <form onSubmit={handleSendMessage} className="p-3 sm:p-4 border-t border-white/5 bg-slate-900/95 flex flex-col gap-2.5 shrink-0">
-            {/* Media Preview Box */}
-            {mediaFile && !isRecording && (
-              <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl relative self-start">
-                {mediaFile.type.startsWith('image/') ? (
-                  <img src={URL.createObjectURL(mediaFile)} alt="preview" className="h-16 rounded-md object-cover" />
-                ) : mediaFile.type.startsWith('audio/') ? (
-                  <audio src={URL.createObjectURL(mediaFile)} controls className="h-10 w-[250px]" />
-                ) : (
-                  <div className="flex items-center gap-2 text-slate-300 px-2">
-                    <FileText className="w-5 h-5 text-brand" />
-                    <span className="text-sm font-medium truncate max-w-[150px]">{mediaFile.name}</span>
-                  </div>
-                )}
-                <button 
-                  type="button" 
-                  onClick={() => { setMediaFile(null); setMediaPreviewUrl(null); }}
-                  className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-md"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-            
-            <div className="flex items-end gap-3 w-full">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                className="hidden"
-                accept="image/*,.pdf,.doc,.docx"
-              />
-              {!isRecording && (
-                <button 
-                  type="button" 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-2.5 mb-0.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors shrink-0"
-                >
-                  <Paperclip className="w-5 h-5" />
-                </button>
-              )}
-              <button 
-                type="button" 
-                onClick={isRecording ? stopRecording : startRecording}
-                className={`p-2.5 mb-0.5 rounded-xl transition-colors shrink-0 ${isRecording ? 'bg-red-500/20 text-red-500 hover:bg-red-500/30' : 'text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700'}`}
-              >
-                {isRecording ? <Square className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              </button>
-              
-              {isRecording ? (
-                <div className="flex-1 flex items-center justify-between bg-slate-800 border border-brand/50 rounded-2xl px-4 py-3 min-h-[46px] mb-0.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-                    <span className="text-red-400 font-mono text-sm font-medium tracking-wider">
-                      {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
-                    </span>
-                  </div>
-                  {/* Animated Sound Waves */}
-                  <div className="flex items-center gap-1 h-5 overflow-hidden">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <div 
-                        key={i} 
-                        className="w-1 bg-brand rounded-full animate-pulse" 
-                        style={{ height: `${Math.max(4, Math.random() * 16 + 4)}px`, animationDelay: `${i * 0.15}s` }} 
-                      />
-                    ))}
-                  </div>
-                  <button type="button" onClick={() => { stopRecording(); setTimeout(() => setMediaFile(null), 50); }} className="p-1 text-slate-400 hover:text-red-500 transition-colors" title="Cancel Recording">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <textarea
-                  ref={textareaRef}
-                  rows={1}
-                  placeholder="Write a message..."
-                  value={newMessage}
-                  onChange={(e) => {
-                    setNewMessage(e.target.value);
-                    e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-                    if (!e.target.value) e.target.style.height = 'auto';
-                  }}
-                  onKeyDown={(e) => {
-                    // On desktop physical keyboard without Shift, Enter sends.
-                    // On mobile touch keyboards (where users expect Enter to break lines) or with Shift/Ctrl, Enter inserts a new line.
-                    const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-                    if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !isTouchDevice) {
-                      e.preventDefault();
-                      handleSendMessage(e as any);
-                      e.currentTarget.style.height = 'auto';
-                    }
-                  }}
-                  className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand resize-none min-h-[44px] max-h-[140px] overflow-y-auto"
-                />
-              )}
-              
-              <button
-                type="submit"
-                disabled={!newMessage.trim() && !mediaFile}
-                className="p-3 mb-0.5 bg-brand text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity shrink-0"
-              >
-                <Send className="w-5 h-5" />
-              </button>
-            </div>
-          </form>
+          <MessageInput
+            newMessage={newMessage}
+            setNewMessage={setNewMessage}
+            mediaFile={mediaFile}
+            mediaPreviewUrl={mediaPreviewUrl}
+            setMediaFile={setMediaFile}
+            setMediaPreviewUrl={setMediaPreviewUrl}
+            isRecording={isRecording}
+            recordingTime={recordingTime}
+            startRecording={startRecording}
+            stopRecording={stopRecording}
+            onSendMessage={handleSendMessage}
+            textareaRef={textareaRef}
+          />
         </div>
       )}
 
       {/* VIEW 2: ACTIVE PUBLIC COMMUNITY CHAT */}
       {messagesMode === 'communities' && activeCommunity && (
         <div className="flex-1 h-full flex flex-col neo-card bg-slate-900/60 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative min-w-0">
-          
+
           {/* Community Header */}
           <div className="p-4 sm:p-5 border-b border-white/5 bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 flex items-center justify-between gap-3 shrink-0">
             <div className="flex items-center gap-3 min-w-0">
-              <button 
+              <button
                 className="md:hidden p-2 -ml-2 text-slate-400 hover:text-white"
                 onClick={() => setActiveCommunity(null)}
               >
                 ← Back
               </button>
-              
+
               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
                 {activeCommunity.icon || "💬"}
               </div>
@@ -1880,11 +1618,10 @@ export default function MessagesPage() {
             {/* Info & Members Drawer Trigger */}
             <button
               onClick={() => setIsCommunityInfoOpen(!isCommunityInfoOpen)}
-              className={`relative p-2.5 rounded-xl border transition-all ${
-                isCommunityInfoOpen 
-                  ? 'bg-brand/20 text-brand border-brand/40' 
+              className={`relative p-2.5 rounded-xl border transition-all ${isCommunityInfoOpen
+                  ? 'bg-brand/20 text-brand border-brand/40'
                   : 'bg-slate-800/80 text-slate-400 hover:text-white border-white/5'
-              }`}
+                }`}
               title="Community Members & Info"
             >
               <Users className="w-5 h-5" />
@@ -1897,155 +1634,155 @@ export default function MessagesPage() {
           </div>
 
           <div className="flex-1 flex overflow-hidden relative">
-            
+
             {/* Group Chat Messages Stream or Non-Member Gated View */}
             {(activeCommunity.members || []).includes(profile.uid) ? (
               <div className="flex-1 flex flex-col justify-between overflow-hidden">
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
                   {communityMessages.length > 0 ? (
                     (() => {
-                    let commLastDate: Date | null = null;
-                    
-                    return communityMessages.map((msg) => {
-                      const isMe = msg.senderId === profile.uid;
-                      const isCreator = msg.senderId === activeCommunity.creatorId;
-                      
-                      const msgDate = (msg.createdAt as any)?.toDate ? (msg.createdAt as any).toDate() : new Date((msg.createdAt as any) || Date.now());
-                      const now = new Date();
-                      const yesterday = new Date(now);
-                      yesterday.setDate(yesterday.getDate() - 1);
-                      
-                      const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-                      const showDateHeader = !commLastDate || !isSameDay(commLastDate, msgDate);
-                      if (showDateHeader) {
-                        commLastDate = msgDate;
-                      }
-                      
-                      let dateLabel = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                      if (isSameDay(msgDate, now)) dateLabel = 'Today';
-                      else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
+                      let commLastDate: Date | null = null;
 
-                      return (
-                        <div key={msg.id} id={msg.id} className="flex flex-col w-full">
-                          {showDateHeader && (
-                            <div className="flex justify-center my-3">
-                              <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
-                                {dateLabel}
-                              </span>
-                            </div>
-                          )}
-                          <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
-                            <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[75%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                              <UserAvatar 
-                                src={isMe ? profile?.avatar : msg.senderAvatar} 
-                                name={isMe ? profile?.fullName : msg.senderName} 
-                                className="w-8 h-8 rounded-full shrink-0 mb-1" 
-                                textClassName="text-[10px] font-bold" 
-                              />
-                              
-                              <div 
-                                onClick={() => !msg.isDeleted && setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}
-                                className={`rounded-2xl px-4 py-2.5 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}
-                              >
-                                {!isMe && (
-                                  <div className="flex items-center gap-1.5 mb-1">
-                                    <span className="text-[11px] font-bold text-brand flex items-center gap-1">
-                                      {msg.senderName}
-                                      <VerifiedBadge tier={users[msg.senderId]?.subscriptionTier} size="xs" />
-                                      {isCreator && (
-                                        <span title="Community Creator">
-                                          <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                        </span>
-                                      )}
-                                    </span>
-                                    {users[msg.senderId]?.stardomXP !== undefined && (
-                                      <StardomBadge xp={users[msg.senderId]?.stardomXP || 0} variant="compact" />
-                                    )}
-                                    {users[msg.senderId]?.streakCount && (users[msg.senderId]?.streakCount || 0) > 0 ? (
-                                      <StreakBadge streakCount={users[msg.senderId]?.streakCount || 0} size="sm" />
-                                    ) : null}
-                                  </div>
-                                )}
-                                {msg.replyToText && (
-                                  <div 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (msg.replyToId) {
-                                        const el = document.getElementById(msg.replyToId);
-                                        if (el) {
-                                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                          el.classList.add('animate-pulse', 'bg-brand/20');
-                                          setTimeout(() => el.classList.remove('animate-pulse', 'bg-brand/20'), 2000);
-                                        }
-                                      }
-                                    }}
-                                    className={`p-2 rounded-xl ${isMe ? 'bg-black/20' : 'bg-slate-700/50'} border-l-2 border-brand text-xs mb-1.5 cursor-pointer hover:opacity-100 transition-opacity opacity-80`}
-                                  >
-                                    <span className="font-bold block text-[10px] text-brand">{msg.replyToSenderName || 'User'}</span>
-                                    <span className="line-clamp-2 text-[11px] whitespace-normal break-words">{msg.replyToText}</span>
-                                  </div>
-                                )}
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                                <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
-                                  <span>{formatMessageTime(msg.createdAt)}</span>
-                                </div>
+                      return communityMessages.map((msg) => {
+                        const isMe = msg.senderId === profile.uid;
+                        const isCreator = msg.senderId === activeCommunity.creatorId;
+
+                        const msgDate = toTimestampDate(msg.createdAt) ?? new Date();
+                        const now = new Date();
+                        const yesterday = new Date(now);
+                        yesterday.setDate(yesterday.getDate() - 1);
+
+                        const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+                        const showDateHeader = !commLastDate || !isSameDay(commLastDate, msgDate);
+                        if (showDateHeader) {
+                          commLastDate = msgDate;
+                        }
+
+                        let dateLabel = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        if (isSameDay(msgDate, now)) dateLabel = 'Today';
+                        else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
+
+                        return (
+                          <div key={msg.id} id={msg.id} className="flex flex-col w-full">
+                            {showDateHeader && (
+                              <div className="flex justify-center my-3">
+                                <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
+                                  {dateLabel}
+                                </span>
                               </div>
+                            )}
+                            <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
+                              <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[75%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                                <UserAvatar
+                                  src={isMe ? profile?.avatar : msg.senderAvatar}
+                                  name={isMe ? profile?.fullName : msg.senderName}
+                                  className="w-8 h-8 rounded-full shrink-0 mb-1"
+                                  textClassName="text-[10px] font-bold"
+                                />
 
-                              {/* Message Actions (Dropdown) */}
-                              {!msg.isDeleted && (
-                                <div className={`relative flex items-center self-center transition-opacity ${openMessageMenuId === msg.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
-                                  <button
-                                    onClick={() => setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}
-                                    className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                                    title="Message options"
-                                  >
-                                    <MoreHorizontal className="w-4 h-4" />
-                                  </button>
-
-                                  {openMessageMenuId === msg.id && (
-                                    <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
-                                      <button
-                                        onClick={() => { setCommunityReplyingTo(msg); setOpenMessageMenuId(null); }}
-                                        className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
-                                      >
-                                        <Reply className="w-3.5 h-3.5" /> Reply
-                                      </button>
-                                      <button
-                                        onClick={() => { navigator.clipboard.writeText(msg.text); toast.success("Copied to clipboard"); setOpenMessageMenuId(null); }}
-                                        className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copy
-                                      </button>
-                                      <button
-                                        onClick={() => { setForwardingMessage(msg as any); setOpenMessageMenuId(null); }}
-                                        className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
-                                      >
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg> Forward
-                                      </button>
-                                      {(isMe || activeCommunity.creatorId === profile.uid) && (
-                                        <button
-                                          onClick={async () => {
-                                            if (window.confirm("Delete this message?")) {
-                                              await deleteCommunityMessage(activeCommunity.id, msg.id);
-                                              toast.success("Message deleted");
-                                            }
-                                            setOpenMessageMenuId(null);
-                                          }}
-                                          className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-rose-400"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" /> Delete
-                                        </button>
+                                <div
+                                  onClick={() => !msg.isDeleted && setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}
+                                  className={`rounded-2xl px-4 py-2.5 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}
+                                >
+                                  {!isMe && (
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                      <span className="text-[11px] font-bold text-brand flex items-center gap-1">
+                                        {msg.senderName}
+                                        <VerifiedBadge tier={users[msg.senderId]?.subscriptionTier} size="sm" />
+                                        {isCreator && (
+                                          <span title="Community Creator">
+                                            <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                          </span>
+                                        )}
+                                      </span>
+                                      {users[msg.senderId]?.stardomXP !== undefined && (
+                                        <StardomBadge xp={users[msg.senderId]?.stardomXP || 0} variant="compact" />
                                       )}
+                                      {users[msg.senderId]?.streakCount && (users[msg.senderId]?.streakCount || 0) > 0 ? (
+                                        <StreakBadge streakCount={users[msg.senderId]?.streakCount || 0} size="sm" />
+                                      ) : null}
                                     </div>
                                   )}
+                                  {msg.replyToText && (
+                                    <div
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (msg.replyToId) {
+                                          const el = document.getElementById(msg.replyToId);
+                                          if (el) {
+                                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                            el.classList.add('animate-pulse', 'bg-brand/20');
+                                            setTimeout(() => el.classList.remove('animate-pulse', 'bg-brand/20'), 2000);
+                                          }
+                                        }
+                                      }}
+                                      className={`p-2 rounded-xl ${isMe ? 'bg-black/20' : 'bg-slate-700/50'} border-l-2 border-brand text-xs mb-1.5 cursor-pointer hover:opacity-100 transition-opacity opacity-80`}
+                                    >
+                                      <span className="font-bold block text-[10px] text-brand">{msg.replyToSenderName || 'User'}</span>
+                                      <span className="line-clamp-2 text-[11px] whitespace-normal break-words">{msg.replyToText}</span>
+                                    </div>
+                                  )}
+                                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                  <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
+                                    <span>{formatMessageTime(msg.createdAt)}</span>
+                                  </div>
                                 </div>
-                              )}
+
+                                {/* Message Actions (Dropdown) */}
+                                {!msg.isDeleted && (
+                                  <div className={`relative flex items-center self-center transition-opacity ${openMessageMenuId === msg.id ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                                    <button
+                                      onClick={() => setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}
+                                      className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                                      title="Message options"
+                                    >
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </button>
+
+                                    {openMessageMenuId === msg.id && (
+                                      <div className={`absolute top-full ${isMe ? "right-0" : "left-0"} mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}>
+                                        <button
+                                          onClick={() => { setCommunityReplyingTo(msg); setOpenMessageMenuId(null); }}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                        >
+                                          <Reply className="w-3.5 h-3.5" /> Reply
+                                        </button>
+                                        <button
+                                          onClick={() => { navigator.clipboard.writeText(msg.text); toast.success("Copied to clipboard"); setOpenMessageMenuId(null); }}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copy
+                                        </button>
+                                        <button
+                                          onClick={() => { setForwardingMessage(msg); setOpenMessageMenuId(null); }}
+                                          className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-slate-300"
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg> Forward
+                                        </button>
+                                        {(isMe || activeCommunity.creatorId === profile.uid) && (
+                                          <button
+                                            onClick={async () => {
+                                              if (window.confirm("Delete this message?")) {
+                                                await deleteCommunityMessage(activeCommunity.id, msg.id);
+                                                toast.success("Message deleted");
+                                              }
+                                              setOpenMessageMenuId(null);
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-slate-800 text-rose-400"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  })()
+                        );
+                      })
+                    })()
                   ) : (
                     <div className="h-full flex flex-col items-center justify-center p-8 text-center">
                       <EmptyState
@@ -2082,16 +1819,16 @@ export default function MessagesPage() {
                     placeholder={`Message ${activeCommunity.name}...`}
                     value={newCommunityMessageText}
                     onChange={(e) => {
-                       setNewCommunityMessageText(e.target.value);
-                       e.target.style.height = 'auto';
-                       e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
-                       if (!e.target.value) e.target.style.height = 'auto';
+                      setNewCommunityMessageText(e.target.value);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+                      if (!e.target.value) e.target.style.height = 'auto';
                     }}
                     onKeyDown={(e) => {
                       const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
                       if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !isTouchDevice) {
                         e.preventDefault();
-                        handleSendCommunityMessage(e as any);
+                        handleSendCommunityMessage();
                         e.currentTarget.style.height = 'auto';
                       }
                     }}
@@ -2216,16 +1953,15 @@ export default function MessagesPage() {
                     <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-brand border border-brand/20">
                       {activeCommunity.category}
                     </span>
-                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md border flex items-center gap-1 ${
-                      activeCommunity.accessType === 'private'
+                    <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md border flex items-center gap-1 ${activeCommunity.accessType === 'private'
                         ? 'bg-purple-950/80 text-purple-300 border-purple-500/30'
                         : activeCommunity.accessType === 'locked'
-                        ? 'bg-rose-950/80 text-rose-300 border-rose-500/30'
-                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/30'
-                    }`}>
+                          ? 'bg-rose-950/80 text-rose-300 border-rose-500/30'
+                          : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/30'
+                      }`}>
                       {activeCommunity.accessType === 'private' ? <><Lock className="w-2.5 h-2.5" /> Private</> :
-                       activeCommunity.accessType === 'locked' ? <><Lock className="w-2.5 h-2.5" /> Locked</> :
-                       <><Globe className="w-2.5 h-2.5" /> Public</>}
+                        activeCommunity.accessType === 'locked' ? <><Lock className="w-2.5 h-2.5" /> Locked</> :
+                          <><Globe className="w-2.5 h-2.5" /> Public</>}
                     </span>
                   </div>
                 </div>
@@ -2243,39 +1979,36 @@ export default function MessagesPage() {
                     <div className="grid grid-cols-3 gap-1.5">
                       <button
                         onClick={() => handleUpdateCommunityAccess(activeCommunity, 'public')}
-                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${
-                          (activeCommunity.accessType || 'public') === 'public'
+                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${(activeCommunity.accessType || 'public') === 'public'
                             ? 'bg-emerald-600 text-white shadow-md'
                             : 'bg-slate-800 text-slate-400 hover:text-white'
-                        }`}
+                          }`}
                       >
                         Public
                       </button>
                       <button
                         onClick={() => handleUpdateCommunityAccess(activeCommunity, 'private')}
-                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${
-                          activeCommunity.accessType === 'private'
+                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${activeCommunity.accessType === 'private'
                             ? 'bg-purple-600 text-white shadow-md'
                             : 'bg-slate-800 text-slate-400 hover:text-white'
-                        }`}
+                          }`}
                       >
                         Private
                       </button>
                       <button
                         onClick={() => handleUpdateCommunityAccess(activeCommunity, 'locked')}
-                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${
-                          activeCommunity.accessType === 'locked'
+                        className={`py-1.5 px-2 rounded-xl text-[10px] font-bold transition-all ${activeCommunity.accessType === 'locked'
                             ? 'bg-rose-600 text-white shadow-md'
                             : 'bg-slate-800 text-slate-400 hover:text-white'
-                        }`}
+                          }`}
                       >
                         Locked
                       </button>
                     </div>
                     <p className="text-[10px] text-slate-400 leading-tight">
                       {activeCommunity.accessType === 'private' ? 'New members must request and be approved.' :
-                       activeCommunity.accessType === 'locked' ? 'No new members can request or join.' :
-                       'Anyone can join with 1-click.'}
+                        activeCommunity.accessType === 'locked' ? 'No new members can request or join.' :
+                          'Anyone can join with 1-click.'}
                     </p>
                   </div>
                 )}
@@ -2493,13 +2226,3 @@ export default function MessagesPage() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
