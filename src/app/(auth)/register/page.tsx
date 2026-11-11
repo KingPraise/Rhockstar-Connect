@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -24,6 +24,7 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { profile } = useAuthStore();
+  const isSubmittingRef = useRef(false);
 
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
@@ -75,72 +76,85 @@ function RegisterForm() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isFormValid || loading) return;
+    // Prevent simultaneous double-taps or duplicate submissions synchronously
+    if (!isFormValid || loading || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
     setError("");
     setLoading(true);
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long");
-      setLoading(false);
-      return;
-    }
+    try {
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters long");
+        setLoading(false);
+        isSubmittingRef.current = false;
+        return;
+      }
 
-    if (password !== confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        setLoading(false);
+        isSubmittingRef.current = false;
+        return;
+      }
 
-    if (!dobYear || !dobMonth || !dobDay) {
-      setError("Please complete your date of birth");
-      setLoading(false);
-      return;
-    }
+      if (!dobYear || !dobMonth || !dobDay) {
+        setError("Please complete your date of birth");
+        setLoading(false);
+        isSubmittingRef.current = false;
+        return;
+      }
 
-    const dateOfBirth = `${dobYear}-${dobMonth}-${dobDay}`;
+      const dateOfBirth = `${dobYear}-${dobMonth}-${dobDay}`;
 
-    // Check age >= 18
-    const dob = new Date(dateOfBirth);
-    const today = new Date();
+      // Check age >= 18
+      const dob = new Date(dateOfBirth);
+      const today = new Date();
 
-    let age = today.getFullYear() - dob.getFullYear();
-    const m = today.getMonth() - dob.getMonth();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
 
-    if (
-      m < 0 ||
-      (m === 0 && today.getDate() < dob.getDate())
-    ) {
-      age--;
-    }
+      if (
+        m < 0 ||
+        (m === 0 && today.getDate() < dob.getDate())
+      ) {
+        age--;
+      }
 
-    if (age < 18) {
-      setError(
-        "You must be at least 18 years old to join Rhockstar Connect, as per our Terms of Service."
+      if (age < 18) {
+        setError(
+          "You must be at least 18 years old to join Rhockstar Connect, as per our Terms of Service."
+        );
+        setLoading(false);
+        isSubmittingRef.current = false;
+        return;
+      }
+
+      const { user, error } = await registerUser(
+        email,
+        password,
+        fullName,
+        username,
+        referralCode,
+        accountType
       );
+
+      if (error) {
+        setError(error);
+        setLoading(false);
+        isSubmittingRef.current = false;
+      } else if (user) {
+        trackEvent("sign_up", {
+          method: "email",
+          account_type: accountType,
+        });
+
+        router.push("/feed?welcome=true");
+      }
+    } catch (err: any) {
+      setError(err?.message || "Registration failed. Please try again.");
       setLoading(false);
-      return;
-    }
-
-    const { user, error } = await registerUser(
-      email,
-      password,
-      fullName,
-      username,
-      referralCode,
-      accountType
-    );
-
-    if (error) {
-      setError(error);
-      setLoading(false);
-    } else if (user) {
-      trackEvent("sign_up", {
-        method: "email",
-        account_type: accountType,
-      });
-
-      router.push("/feed?welcome=true");
+      isSubmittingRef.current = false;
     }
   };
 
@@ -189,8 +203,20 @@ function RegisterForm() {
 
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-start gap-3 backdrop-blur-md">
-              <span className="mt-0.5">⚠️</span>
-              <p>{error}</p>
+              <span className="mt-0.5 text-base">⚠️</span>
+              <div className="flex-1">
+                <p className="font-medium">{error}</p>
+                {(error.toLowerCase().includes("already registered") || error.toLowerCase().includes("already in use") || error.toLowerCase().includes("email-already-in-use")) && (
+                  <div className="mt-3 flex items-center gap-3 pt-2 border-t border-red-500/20">
+                    <Link
+                      href="/login"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-purple text-white text-xs font-bold hover:bg-brand-purple/80 transition-colors shadow-sm"
+                    >
+                      Log In to your Account &rarr;
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

@@ -2,7 +2,7 @@
 import MessageInput from "@/components/messages/MessageInput";
 import DMHeader from "@/components/messages/DMHeader";
 import DMMessageFeed from "@/components/messages/DMMessageFeed";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { trackEvent } from "@/lib/analytics";
 // from "@/store/useAuthStore";
@@ -27,7 +27,9 @@ import {
   CommunityAccessType,
   JoinRequestDetail,
   deleteCommunity,
-  updateCommunity
+  updateCommunity,
+  markCommunityAsRead,
+  isCommunityUnread
 } from "@/lib/services/communities";
 import CreateCommunityModal from "@/components/chat/CreateCommunityModal";
 import StardomBadge from "@/components/gamification/StardomBadge";
@@ -47,10 +49,36 @@ import { db } from "@/lib/firebase";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
+const toTimestampDate = (value: unknown): Date | null => {
+  if (value == null) return null;
+
+  try {
+    let date: Date;
+
+    if (value instanceof Date) {
+      date = value;
+    } else if (
+      typeof value === "object" &&
+      "toDate" in value &&
+      typeof value.toDate === "function"
+    ) {
+      date = value.toDate();
+    } else if (typeof value === "string" || typeof value === "number") {
+      date = new Date(value);
+    } else {
+      return null;
+    }
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
+  }
+};
+
 const CATEGORY_FILTERS = ["All", "Sports", "Tech & Career", "Hobbies", "Campus", "General"];
 
-export default function MessagesPage() {
-  const { profile } = useAuthStore();
+function MessagesContent() {
+  const { profile, unreadCommunities } = useAuthStore();
   const searchParams = useSearchParams();
   const targetUserParam = searchParams.get('chatId') || searchParams.get('user') || searchParams.get('uid');
 
@@ -133,74 +161,91 @@ export default function MessagesPage() {
   const [swipeOffset, setSwipeOffset] = useState<number>(0);
   const touchStartXRef = useRef<number>(0);
   const touchStartYRef = useRef<number>(0);
-  const isHorizontalSwipeRef = useRef<boolean | null>(null);
+  const touchStartTimeRef = useRef<number>(0);
+  const hasMovedRef = useRef<boolean>(false);
+  const isHorizontalSwipeRef = useRef<boolean>(false);
+  const lastTapTimeRef = useRef<number>(0);
+  const activeChatRef = useRef<Chat | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const communityMessagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Touch handlers for chat card swipe left
+  // Touch handlers for chat card swipe left & instant tap response
   const handleTouchStart = (chatId: string, e: React.TouchEvent) => {
     touchStartXRef.current = e.touches[0].clientX;
     touchStartYRef.current = e.touches[0].clientY;
-    isHorizontalSwipeRef.current = null;
-    setSwipingChatId(chatId);
+    touchStartTimeRef.current = Date.now();
+    hasMovedRef.current = false;
+    isHorizontalSwipeRef.current = false;
+    // CRITICAL: Do NOT call setSwipingChatId here!
+    // Triggering a state change and re-render on touch-down interrupts mobile Safari's tap recognition,
+    // causing the synthetic click to be dropped and requiring the user to tap multiple times.
   };
 
   const handleTouchMove = (chatId: string, e: React.TouchEvent) => {
     const diffX = e.touches[0].clientX - touchStartXRef.current;
     const diffY = e.touches[0].clientY - touchStartYRef.current;
 
-    if (isHorizontalSwipeRef.current === null) {
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 8) {
+    if (Math.abs(diffX) > 8 || Math.abs(diffY) > 8) {
+      hasMovedRef.current = true;
+    }
+
+    // Only initiate horizontal swipe if movement is predominantly horizontal and passes threshold
+    if (!isHorizontalSwipeRef.current) {
+      if (Math.abs(diffX) > Math.abs(diffY) * 1.4 && Math.abs(diffX) > 14) {
         isHorizontalSwipeRef.current = true;
-      } else if (Math.abs(diffY) > 8) {
-        isHorizontalSwipeRef.current = false;
+        setSwipingChatId(chatId);
       }
     }
 
     if (isHorizontalSwipeRef.current) {
       if (diffX < 0) {
         setSwipeOffset(Math.max(diffX, -160));
+      } else if (swipedChatId === chatId) {
+        // Swiping right to close a previously swiped item
+        setSwipeOffset(Math.min(0, -140 + diffX));
       } else {
         setSwipeOffset(0);
       }
     }
   };
 
-  const handleTouchEnd = (chatId: string) => {
+  const handleTouchEnd = (chat: Chat, e: React.TouchEvent) => {
+    const duration = Date.now() - touchStartTimeRef.current;
+    const endX = e.changedTouches?.[0]?.clientX ?? touchStartXRef.current;
+    const endY = e.changedTouches?.[0]?.clientY ?? touchStartYRef.current;
+    const totalDiffX = Math.abs(endX - touchStartXRef.current);
+    const totalDiffY = Math.abs(endY - touchStartYRef.current);
+
+    // Direct Tap Detection:
+    // If there was no horizontal swipe and minimal movement within 500ms, it was a clean tap!
+    if (!isHorizontalSwipeRef.current && totalDiffX < 12 && totalDiffY < 12 && duration < 500) {
+      lastTapTimeRef.current = Date.now();
+      if (swipedChatId === chat.id) {
+        setSwipedChatId(null);
+      } else {
+        // Instant 0ms response on mobile tap:
+        setActiveChat(chat);
+      }
+      setSwipingChatId(null);
+      setSwipeOffset(0);
+      isHorizontalSwipeRef.current = false;
+      return;
+    }
+
+    // Horizontal Swipe Detection:
     if (isHorizontalSwipeRef.current) {
       if (swipeOffset < -60) {
-        setSwipedChatId(chatId);
+        setSwipedChatId(chat.id);
       } else {
         setSwipedChatId(null);
       }
     }
     setSwipingChatId(null);
     setSwipeOffset(0);
+    isHorizontalSwipeRef.current = false;
   };
-
-  // Convert Firestore timestamps and standard date values safely.
-const toTimestampDate = (value: unknown): Date | null => {
-  let date: Date;
-
-  if (value instanceof Date) {
-    date = value;
-  } else if (
-    typeof value === "object" &&
-    value !== null &&
-    "toDate" in value &&
-    typeof value.toDate === "function"
-  ) {
-    date = (value as { toDate: () => Date }).toDate();
-  } else if (typeof value === "string" || typeof value === "number") {
-    date = new Date(value);
-  } else {
-    return null;
-  }
-
-  return Number.isNaN(date.getTime()) ? null : date;
-};
 
 // Helper for last seen status — strictly checks timestamp to prevent "stuck online" bugs
   const getUserStatus = (user: UserBasic) => {
@@ -225,6 +270,26 @@ const toTimestampDate = (value: unknown): Date | null => {
     const date = toTimestampDate(createdAt);
     if (!date) return "";
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const formatCommunityTime = (createdAt: unknown) => {
+    const date = toTimestampDate(createdAt);
+    if (!date) return "";
+
+    const now = new Date();
+
+    if (date.toDateString() === now.toDateString()) {
+      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === yesterday.toDateString()) {
+      return "Yesterday";
+    }
+
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   // Load users & friends
@@ -272,6 +337,7 @@ const toTimestampDate = (value: unknown): Date | null => {
           // Check if targetUserParam was a legacy chat ID in Firestore whose partner is in chats
           try {
             const { getDoc, doc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase');
             const legacyDoc = await getDoc(doc(db, 'chats', targetUserParam));
             if (legacyDoc.exists()) {
               const participants = legacyDoc.data()?.participants || [];
@@ -316,6 +382,11 @@ const toTimestampDate = (value: unknown): Date | null => {
     initiateChat();
   }, [targetUserParam, profile?.uid, isChatsLoaded, chats, users]);
 
+  // Keep activeChatRef synced
+  useEffect(() => {
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+
   // Subscribe to DMs
   useEffect(() => {
     if (!profile?.uid) return;
@@ -346,13 +417,13 @@ const toTimestampDate = (value: unknown): Date | null => {
         }
       }
 
-      if (activeChat) {
-        const current = updatedChats.find(c => c.id === activeChat.id);
+      if (activeChatRef.current) {
+        const current = updatedChats.find(c => c.id === activeChatRef.current?.id);
         if (current) setActiveChat(current);
       }
     });
     return () => unsubscribe();
-  }, [profile?.uid, activeChat?.id]);
+  }, [profile?.uid]);
 
   // Subscribe to DM Messages & Real-time Presence
   const activeChatId = activeChat?.id;
@@ -406,17 +477,17 @@ const toTimestampDate = (value: unknown): Date | null => {
   const activeCommunityId = activeCommunity?.id;
 
   useEffect(() => {
-    if (!activeCommunityId) return;
+    if (!activeCommunityId) {
+      setCommunityMessagesState({ communityId: null, items: [] });
+      return;
+    }
 
-    const unsubscribe = subscribeToCommunityMessages(
-      activeCommunityId,
-      (msgs) => {
-        setCommunityMessagesState({
-          communityId: activeCommunityId,
-          items: msgs,
-        });
-      }
-    );
+    const unsubscribe = subscribeToCommunityMessages(activeCommunityId, (msgs) => {
+      setCommunityMessagesState({
+        communityId: activeCommunityId,
+        items: msgs,
+      });
+    });
 
     return () => unsubscribe();
   }, [activeCommunityId]);
@@ -763,9 +834,16 @@ const toTimestampDate = (value: unknown): Date | null => {
   });
 
   // Split filtered communities into "Joined" (My Communities) and "Discover" (Unjoined)
-  const joinedCommunities = filteredCommunities.filter((c) =>
-    (c.members || []).includes(profile?.uid || "")
-  );
+  const joinedCommunities = filteredCommunities
+    .filter((c) => (c.members || []).includes(profile?.uid || ""))
+    .sort((a, b) => {
+      const aUnread = isCommunityUnread(a) && a.lastSenderId !== profile.uid ? 1 : 0;
+      const bUnread = isCommunityUnread(b) && b.lastSenderId !== profile.uid ? 1 : 0;
+      if (aUnread !== bUnread) return bUnread - aUnread;
+      const aTime = (a.lastMessageTime as any)?.toMillis?.() || (a.lastMessageTime as any)?.seconds * 1000 || 0;
+      const bTime = (b.lastMessageTime as any)?.toMillis?.() || (b.lastMessageTime as any)?.seconds * 1000 || 0;
+      return bTime - aTime;
+    });
 
   const discoverCommunities = filteredCommunities.filter(
     (c) => !(c.members || []).includes(profile?.uid || "")
@@ -822,11 +900,19 @@ const toTimestampDate = (value: unknown): Date | null => {
             </button>
             <button
               onClick={() => { setMessagesMode('communities'); setActiveChat(null); }}
-              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${messagesMode === 'communities' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
-                }`}
+              className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1 ${
+                messagesMode === 'communities' ? 'bg-brand text-slate-950 shadow-md font-extrabold' : 'text-slate-400 hover:text-white'
+              }`}
             >
               <Globe className="w-3 h-3" />
-              Community 🌐
+              <span>Community 🌐</span>
+              {unreadCommunities > 0 && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                  messagesMode === 'communities' ? 'bg-slate-950 text-brand' : 'bg-emerald-500 text-white animate-pulse'
+                }`}>
+                  {unreadCommunities > 99 ? '99+' : unreadCommunities}
+                </span>
+              )}
             </button>
             <button
               onClick={() => { setMessagesMode('leaderboard'); setActiveChat(null); setActiveCommunity(null); }}
@@ -1062,8 +1148,11 @@ const toTimestampDate = (value: unknown): Date | null => {
                         }}
                         onTouchStart={(e) => handleTouchStart(chat.id, e)}
                         onTouchMove={(e) => handleTouchMove(chat.id, e)}
-                        onTouchEnd={() => handleTouchEnd(chat.id)}
+                        onTouchEnd={(e) => handleTouchEnd(chat, e)}
                         onClick={() => {
+                          if (Date.now() - lastTapTimeRef.current < 500) {
+                            return;
+                          }
                           if (swipedChatId === chat.id) {
                             setSwipedChatId(null);
                           } else {
@@ -1076,7 +1165,8 @@ const toTimestampDate = (value: unknown): Date | null => {
                               : (swipedChatId === chat.id ? '-140px' : '0px')
                             })`
                         }}
-                        className={`w-full p-4 flex items-center justify-between gap-3 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${isActive
+                                              className={`w-full p-4 flex items-center justify-between gap-3 transition-transform duration-200 ease-out text-left relative z-10 cursor-pointer ${
+                          isActive
                             ? 'bg-slate-800 text-white shadow-md border-l-4 border-brand'
                             : isUnread
                               ? 'bg-slate-900 border-l-4 border-brand/70'
@@ -1192,6 +1282,8 @@ const toTimestampDate = (value: unknown): Date | null => {
               const hasRequested = comm.pendingRequests?.includes(profile.uid);
               const isLocked = comm.accessType === 'locked';
               const isPrivate = comm.accessType === 'private';
+              const isUnread = isJoined && isCommunityUnread(comm) && comm.lastSenderId !== profile.uid;
+              const lastTimeStr = comm.lastMessageTime ? formatCommunityTime(comm.lastMessageTime) : "";
 
               return (
                 <div
@@ -1200,27 +1292,52 @@ const toTimestampDate = (value: unknown): Date | null => {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
+                      markCommunityAsRead(comm.id);
                       setActiveCommunity(comm);
                     }
                   }}
                   onClick={() => setActiveCommunity(comm)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isActive
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                    isActive
                       ? 'bg-slate-800 border-brand/50 shadow-lg'
                       : 'bg-slate-900/80 hover:bg-slate-800/60 border-white/5'
                     }`}
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="w-11 h-11 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center shrink-0 border border-brand/20 shadow-inner">
-                      {comm.icon || "💬"}
+                    <div className="relative shrink-0">
+                      <div className="w-11 h-11 rounded-2xl bg-brand/10 text-2xl flex items-center justify-center border border-brand/20 shadow-inner">
+                        {comm.icon || "💬"}
+                      </div>
+                      {isUnread && (
+                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-slate-900 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h3 className="font-bold text-white text-sm truncate">{comm.name}</h3>
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-slate-400 border border-white/5">
-                          {comm.category}
-                        </span>
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h3 className={`font-bold text-sm truncate ${isUnread ? 'text-white' : 'text-slate-100'}`}>{comm.name}</h3>
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-slate-800 text-slate-400 border border-white/5 shrink-0">
+                            {comm.category}
+                          </span>
+                        </div>
+                        {lastTimeStr && (
+                          <span className={`text-[10px] shrink-0 font-medium ${isUnread ? 'text-emerald-400 font-bold' : 'text-slate-500'}`}>
+                            {lastTimeStr}
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-slate-400 truncate mb-1">{comm.description}</p>
+                      {comm.lastMessage ? (
+                        <p className={`text-xs truncate mb-1 ${isUnread ? 'text-slate-200 font-semibold' : 'text-slate-400'}`}>
+                          {comm.lastSenderName ? (
+                            <span className={comm.lastSenderId === profile.uid ? 'text-brand' : 'text-slate-300 font-medium'}>
+                              {comm.lastSenderId === profile.uid ? 'You: ' : `${comm.lastSenderName}: `}
+                            </span>
+                          ) : null}
+                          {comm.lastMessage}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-slate-400 truncate mb-1">{comm.description}</p>
+                      )}
                       <div className="flex items-center gap-2 text-[10px] text-slate-400">
                         <Users className="w-3 h-3 text-brand" />
                         <span>{comm.memberCount} members</span>
@@ -1234,6 +1351,11 @@ const toTimestampDate = (value: unknown): Date | null => {
                             • Member
                           </span>
                         )}
+                        {isUnread && (
+                          <span className="ml-auto text-[10px] font-black uppercase text-emerald-400 tracking-wider">
+                            New Activity
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1245,11 +1367,16 @@ const toTimestampDate = (value: unknown): Date | null => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            markCommunityAsRead(comm.id);
                             setActiveCommunity(comm);
                           }}
-                          className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-white/10 transition-all shrink-0"
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+                            isUnread
+                              ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-400'
+                              : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-white/10'
+                          }`}
                         >
-                          Open
+                          {isUnread ? 'Chat' : 'Open'}
                         </button>
                       );
                     }
@@ -1652,86 +1779,100 @@ const toTimestampDate = (value: unknown): Date | null => {
                         const isMe = msg.senderId === profile.uid;
                         const isCreator = msg.senderId === activeCommunity.creatorId;
 
-                        const msgDate = toTimestampDate(msg.createdAt) ?? new Date();
+                        const msgDate = toTimestampDate(msg.createdAt);
                         const now = new Date();
                         const yesterday = new Date(now);
                         yesterday.setDate(yesterday.getDate() - 1);
 
-                        const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-                        const showDateHeader = !commLastDate || !isSameDay(commLastDate, msgDate);
-                        if (showDateHeader) {
+                        const isSameDay = (d1: Date, d2: Date) =>
+                          d1.getFullYear() === d2.getFullYear() &&
+                          d1.getMonth() === d2.getMonth() &&
+                          d1.getDate() === d2.getDate();
+
+                        const showDateHeader = Boolean(
+                          msgDate && (!commLastDate || !isSameDay(commLastDate, msgDate))
+                        );
+
+                        if (msgDate && showDateHeader) {
                           commLastDate = msgDate;
                         }
 
-                        let dateLabel = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                        if (isSameDay(msgDate, now)) dateLabel = 'Today';
-                        else if (isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
+                        let dateLabel = msgDate
+                          ? msgDate.toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : '';
 
-                        return (
-                          <div key={msg.id} id={msg.id} className="flex flex-col w-full">
-                            {showDateHeader && (
-                              <div className="flex justify-center my-3">
-                                <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
-                                  {dateLabel}
-                                </span>
-                              </div>
-                            )}
-                            <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
-                              <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[75%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                                <UserAvatar
-                                  src={isMe ? profile?.avatar : msg.senderAvatar}
-                                  name={isMe ? profile?.fullName : msg.senderName}
-                                  className="w-8 h-8 rounded-full shrink-0 mb-1"
-                                  textClassName="text-[10px] font-bold"
-                                />
+                        if (msgDate && isSameDay(msgDate, now)) dateLabel = 'Today';
+                        else if (msgDate && isSameDay(msgDate, yesterday)) dateLabel = 'Yesterday';
 
-                                <div
-                                  onClick={() => !msg.isDeleted && setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}
-                                  className={`rounded-2xl px-4 py-2.5 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}
-                                >
-                                  {!isMe && (
-                                    <div className="flex items-center gap-1.5 mb-1">
-                                      <span className="text-[11px] font-bold text-brand flex items-center gap-1">
-                                        {msg.senderName}
-                                        <VerifiedBadge tier={users[msg.senderId]?.subscriptionTier} size="sm" />
-                                        {isCreator && (
-                                          <span title="Community Creator">
-                                            <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
-                                          </span>
-                                        )}
-                                      </span>
-                                      {users[msg.senderId]?.stardomXP !== undefined && (
-                                        <StardomBadge xp={users[msg.senderId]?.stardomXP || 0} variant="compact" />
+                      return (
+                        <div key={msg.id} id={msg.id} className="flex flex-col w-full">
+                          {showDateHeader && (
+                            <div className="flex justify-center my-3">
+                              <span className="px-3 py-1 rounded-full bg-slate-800/90 border border-white/10 text-[11px] font-semibold text-slate-400 shadow-sm backdrop-blur-sm">
+                                {dateLabel}
+                              </span>
+                            </div>
+                          )}
+                          <div className={`flex w-full ${isMe ? "justify-end" : "justify-start"} mb-1`}>
+                            <div className={`flex items-end gap-2 group relative max-w-[85vw] sm:max-w-[75%] ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                              <UserAvatar
+                                src={isMe ? profile?.avatar : msg.senderAvatar}
+                                name={isMe ? profile?.fullName : msg.senderName}
+                                className="w-8 h-8 rounded-full shrink-0 mb-1"
+                                textClassName="text-[10px] font-bold"
+                              />
+
+                              <div
+                                onClick={() => !msg.isDeleted && setOpenMessageMenuId(openMessageMenuId === msg.id ? null : msg.id)}
+                                className={`rounded-2xl px-4 py-2.5 relative shadow-md transition-all cursor-pointer ${isMe ? "bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-medium rounded-br-xs shadow-brand/10" : "bg-slate-800/90 text-white border border-white/10 rounded-bl-xs"}`}
+                              >
+                                {!isMe && (
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <span className="text-[11px] font-bold text-brand flex items-center gap-1">
+                                      {msg.senderName}
+                                      <VerifiedBadge tier={users[msg.senderId]?.subscriptionTier} size="xs" />
+                                      {isCreator && (
+                                        <span title="Community Creator">
+                                          <Crown className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                        </span>
                                       )}
-                                      {users[msg.senderId]?.streakCount && (users[msg.senderId]?.streakCount || 0) > 0 ? (
-                                        <StreakBadge streakCount={users[msg.senderId]?.streakCount || 0} size="sm" />
-                                      ) : null}
-                                    </div>
-                                  )}
-                                  {msg.replyToText && (
-                                    <div
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (msg.replyToId) {
-                                          const el = document.getElementById(msg.replyToId);
-                                          if (el) {
-                                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                            el.classList.add('animate-pulse', 'bg-brand/20');
-                                            setTimeout(() => el.classList.remove('animate-pulse', 'bg-brand/20'), 2000);
-                                          }
-                                        }
-                                      }}
-                                      className={`p-2 rounded-xl ${isMe ? 'bg-black/20' : 'bg-slate-700/50'} border-l-2 border-brand text-xs mb-1.5 cursor-pointer hover:opacity-100 transition-opacity opacity-80`}
-                                    >
-                                      <span className="font-bold block text-[10px] text-brand">{msg.replyToSenderName || 'User'}</span>
-                                      <span className="line-clamp-2 text-[11px] whitespace-normal break-words">{msg.replyToText}</span>
-                                    </div>
-                                  )}
-                                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
-                                  <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
-                                    <span>{formatMessageTime(msg.createdAt)}</span>
+                                    </span>
+                                    {users[msg.senderId]?.stardomXP !== undefined && (
+                                      <StardomBadge xp={users[msg.senderId]?.stardomXP || 0} variant="compact" />
+                                    )}
+                                    {users[msg.senderId]?.streakCount && (users[msg.senderId]?.streakCount || 0) > 0 ? (
+                                      <StreakBadge streakCount={users[msg.senderId]?.streakCount || 0} size="sm" />
+                                    ) : null}
                                   </div>
+                                )}
+                                {msg.replyToText && (
+                                  <div
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (msg.replyToId) {
+                                        const el = document.getElementById(msg.replyToId);
+                                        if (el) {
+                                          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                          el.classList.add('animate-pulse', 'bg-brand/20');
+                                          setTimeout(() => el.classList.remove('animate-pulse', 'bg-brand/20'), 2000);
+                                        }
+                                      }
+                                    }}
+                                    className={`p-2 rounded-xl ${isMe ? 'bg-black/20' : 'bg-slate-700/50'} border-l-2 border-brand text-xs mb-1.5 cursor-pointer hover:opacity-100 transition-opacity opacity-80`}
+                                  >
+                                    <span className="font-bold block text-[10px] text-brand">{msg.replyToSenderName || 'User'}</span>
+                                    <span className="line-clamp-2 text-[11px] whitespace-normal break-words">{msg.replyToText}</span>
+                                  </div>
+                                )}
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
+                                  <span>{formatMessageTime(msg.createdAt)}</span>
                                 </div>
+                              </div>
 
                                 {/* Message Actions (Dropdown) */}
                                 {!msg.isDeleted && (
@@ -2229,5 +2370,28 @@ const toTimestampDate = (value: unknown): Date | null => {
         </div>
       )}
     </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
+        </div>
+      }
+    >
+      <MessagesContent />
+    </Suspense>
   );
 }

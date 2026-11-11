@@ -526,7 +526,7 @@ export default function PostCard({ post }: PostCardProps) {
   };
 
   return (
-    <div id={`post-${post.id}`} className="neo-card p-4 sm:p-4 mb-2 sm:mb-3.5 border-y sm:border border-white/5 bg-slate-900/60 rounded-none sm:rounded-2xl hover:border-white/10 transition-all duration-300">
+    <div id={`post-${post.id}`} className="neo-card p-4 sm:p-4 mb-2 sm:mb-3.5 border-y sm:border border-white/5 bg-slate-900/60 rounded-none sm:rounded-2xl hover:border-white/10 transition-colors duration-150">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <Link href={`/profile?uid=${post.userId}`} className="flex items-center gap-3 group min-w-0">
@@ -815,7 +815,9 @@ export default function PostCard({ post }: PostCardProps) {
         <div className="mt-4 pt-4 border-t border-white/5 animate-in fade-in slide-in-from-top-2">
           {comments.length > 0 ? (
             <div className="space-y-4 mb-4">
-              {comments.filter(comment => !comment.replyToId).map(comment => renderComment(comment))}
+              {comments
+                .filter((comment) => !comment.replyToId)
+                .map((comment) => renderComment(comment))}
             </div>
           ) : (
             <div className="text-center text-sm text-slate-500 py-2">

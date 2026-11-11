@@ -74,6 +74,7 @@ export const createAdvertisement = async (adData: {
     const adsRef = collection(db, 'advertisements');
     const newDoc = await addDoc(adsRef, {
       ...adData,
+      price: adData.price || 15000,
       durationDays: adData.durationDays || 7,
       status: 'pending',
       viewsCount: 0,

@@ -74,6 +74,8 @@ interface AuthState {
   setUnreadNotifications: (count: number) => void;
   unreadMessages: number;
   setUnreadMessages: (count: number) => void;
+  unreadCommunities: number;
+  setUnreadCommunities: (count: number) => void;
   aiWidgetVisible: boolean;
   setAiWidgetVisible: (visible: boolean) => void;
   logout: () => void;
@@ -85,12 +87,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
   unreadNotifications: 0,
   unreadMessages: 0,
+  unreadCommunities: 0,
   aiWidgetVisible: true,
   setUser: (user) => set({ user }),
   setProfile: (profile) => set({ profile }),
   setLoading: (isLoading) => set({ isLoading }),
   setUnreadNotifications: (count) => set({ unreadNotifications: count }),
   setUnreadMessages: (count) => set({ unreadMessages: count }),
+  setUnreadCommunities: (count) => set({ unreadCommunities: count }),
   setAiWidgetVisible: (visible) => set({ aiWidgetVisible: visible }),
-  logout: () => set({ user: null, profile: null, isLoading: false, unreadNotifications: 0, unreadMessages: 0, aiWidgetVisible: true })
+  logout: () => set({ user: null, profile: null, isLoading: false, unreadNotifications: 0, unreadMessages: 0, unreadCommunities: 0, aiWidgetVisible: true })
 }));

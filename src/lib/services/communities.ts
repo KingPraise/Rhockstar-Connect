@@ -11,8 +11,13 @@ import {
   deleteDoc,
   arrayUnion,
   arrayRemove,
-  increment
+  increment,
+  where,
+  getDocs,
+  getDoc
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { createNotification } from './notifications';
 
 export type CommunityAccessType = 'public' | 'private' | 'locked';
 
@@ -41,6 +46,8 @@ export interface Community {
   pendingRequestDetails?: JoinRequestDetail[]; // Detailed requests for admin review
   lastMessage?: string;
   lastMessageTime?: unknown;
+  lastSenderName?: string;
+  lastSenderId?: string;
   createdAt?: unknown;
 }
 
@@ -59,6 +66,41 @@ export interface CommunityMessage {
   replyToText?: string;
   replyToSenderName?: string;
 }
+
+// Local read timestamp tracking for immediate client-side responsiveness
+export const markCommunityAsRead = (communityId: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`rhockstar_comm_read_${communityId}`, String(Date.now()));
+    window.dispatchEvent(new CustomEvent('rhockstar:community-read', { detail: { communityId } }));
+  } catch (e) {
+    console.warn('Failed to save community read marker:', e);
+  }
+};
+
+export const getCommunityLastRead = (communityId: string): number => {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const val = localStorage.getItem(`rhockstar_comm_read_${communityId}`);
+    return val ? Number(val) : 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const isCommunityUnread = (community: Community, lastReadTimestamp?: number): boolean => {
+  if (!community.lastMessageTime) return false;
+  const readTime = lastReadTimestamp !== undefined ? lastReadTimestamp : getCommunityLastRead(community.id);
+  let msgTime = 0;
+  if (typeof (community.lastMessageTime as any)?.toMillis === 'function') {
+    msgTime = (community.lastMessageTime as any).toMillis();
+  } else if (community.lastMessageTime instanceof Date) {
+    msgTime = community.lastMessageTime.getTime();
+  } else if (typeof community.lastMessageTime === 'number') {
+    msgTime = community.lastMessageTime;
+  }
+  return msgTime > readTime;
+};
 
 // Create a new public community
 export const createCommunity = async (data: {
@@ -87,8 +129,13 @@ export const createCommunity = async (data: {
       admins: [data.creatorId],
       lastMessage: 'Community created! Welcome everyone 👋',
       lastMessageTime: serverTimestamp(),
+      lastSenderName: data.creatorName,
+      lastSenderId: data.creatorId,
       createdAt: serverTimestamp(),
     });
+
+    // Mark as read for creator
+    markCommunityAsRead(newDoc.id);
 
     // Send initial welcome message
     const messagesRef = collection(db, 'communities', newDoc.id, 'messages');
@@ -133,6 +180,8 @@ export const joinCommunity = async (communityId: string, userId: string) => {
       members: arrayUnion(userId),
       memberCount: increment(1),
     });
+    // Mark as read upon joining
+    markCommunityAsRead(communityId);
     return { success: true };
   } catch (error: any) {
     console.error('Error joining community:', error);
@@ -155,7 +204,7 @@ export const leaveCommunity = async (communityId: string, userId: string) => {
   }
 };
 
-// Send message inside a community
+// Send message inside a community with smart @mention and reply alerts
 export const sendCommunityMessage = async (
   communityId: string,
   senderId: string,
@@ -166,7 +215,8 @@ export const sendCommunityMessage = async (
   mediaUrl?: string,
   replyToId?: string,
   replyToText?: string,
-  replyToSenderName?: string
+  replyToSenderName?: string,
+  communityName?: string
 ) => {
   try {
     const messagesRef = collection(db, 'communities', communityId, 'messages');
@@ -191,12 +241,98 @@ export const sendCommunityMessage = async (
     }
     await addDoc(messagesRef, messageData);
 
-    // Update community last message
+    // Update community last message & sender details
     const communityRef = doc(db, 'communities', communityId);
     await updateDoc(communityRef, {
       lastMessage: text || (type === 'image' ? 'Sent an image' : 'Attachment'),
       lastMessageTime: serverTimestamp(),
+      lastSenderName: senderName || 'Member',
+      lastSenderId: senderId,
     });
+
+    // Sender has read their own message
+    markCommunityAsRead(communityId);
+
+    // Asynchronously dispatch targeted mention & reply notifications without blocking message delivery
+    (async () => {
+      try {
+        const recipientsToNotify = new Set<string>();
+
+        // 1. Reply alert
+        if (replyToId) {
+          try {
+            const repliedMsgDoc = await getDoc(doc(db, 'communities', communityId, 'messages', replyToId));
+            if (repliedMsgDoc.exists()) {
+              const originalSenderId = repliedMsgDoc.data()?.senderId;
+              if (originalSenderId && originalSenderId !== senderId) {
+                recipientsToNotify.add(originalSenderId);
+              }
+            }
+          } catch (replyErr) {
+            console.warn('Reply target lookup notice:', replyErr);
+          }
+        }
+
+        // 2. Mention alerts (@username)
+        const mentionMatches = text.match(/@([a-zA-Z0-9_]+)/g);
+        if (mentionMatches && mentionMatches.length > 0) {
+          const rawUsernames = [...new Set(mentionMatches.map((m) => m.slice(1).toLowerCase()))];
+          for (const handle of rawUsernames.slice(0, 5)) {
+            try {
+              const userQuery = query(collection(db, 'users'), where('username', '==', handle));
+              const snap = await getDocs(userQuery);
+              if (!snap.empty) {
+                const targetUid = snap.docs[0].id;
+                if (targetUid !== senderId) {
+                  recipientsToNotify.add(targetUid);
+                }
+              }
+            } catch (mentionErr) {
+              console.warn('Mention target lookup notice:', mentionErr);
+            }
+          }
+        }
+
+        if (recipientsToNotify.size > 0) {
+          const auth = getAuth();
+          const authToken = auth.currentUser ? await auth.currentUser.getIdToken().catch(() => null) : null;
+          const commTitle = communityName || 'Community';
+
+          for (const targetUid of recipientsToNotify) {
+            // In-app Firestore notification
+            createNotification({
+              userId: targetUid,
+              type: 'message',
+              title: `Mentioned in ${commTitle}`,
+              message: `${senderName}: ${text.slice(0, 100)}`,
+              link: `/messages?communityId=${communityId}`,
+              senderId,
+              senderName,
+              senderAvatar,
+            }).catch(() => {});
+
+            // Push notification via /api/notify if authenticated
+            if (authToken) {
+              fetch('/api/notify', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({
+                  userId: targetUid,
+                  title: `Mention in ${commTitle}`,
+                  body: `${senderName}: ${text.slice(0, 120)}`,
+                  url: `/messages?communityId=${communityId}`,
+                }),
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch (notifDispatchErr) {
+        console.warn('Community notification dispatch notice:', notifDispatchErr);
+      }
+    })();
 
     return { success: true };
   } catch (error: any) {
@@ -351,7 +487,6 @@ export const updateCommunityAccess = async (communityId: string, accessType: Com
     return { success: false, error: error.message };
   }
 };
-
 
 // Update community details (Admin only)
 export const updateCommunity = async (communityId: string, updates: Partial<Community>) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Heart, MessageSquare, Briefcase, UserPlus, Check, ThumbsUp, MessageCircle } from "lucide-react";
+import { Bell, Heart, MessageSquare, Briefcase, UserPlus, Check, ThumbsUp, MessageCircle, Crown } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { 
   Notification, 
@@ -77,8 +77,11 @@ export default function NotificationsPage() {
       case "match":
         router.push("/dating");
         break;
+      case "subscription":
+        router.push(notification.link || "/premium");
+        break;
       default:
-        router.push("/feed");
+        router.push(notification.link || "/feed");
         break;
     }
   };
@@ -91,6 +94,7 @@ export default function NotificationsPage() {
       case "job": return { icon: Briefcase, color: "text-emerald-500", bg: "bg-emerald-500/10" };
       case "like": return { icon: ThumbsUp, color: "text-blue-500", bg: "bg-blue-500/10" };
       case "comment": return { icon: MessageCircle, color: "text-amber-500", bg: "bg-amber-500/10" };
+      case "subscription": return { icon: Crown, color: "text-amber-400", bg: "bg-amber-400/10" };
       default: return { icon: Bell, color: "text-slate-400", bg: "bg-slate-800" };
     }
   };

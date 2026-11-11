@@ -12,7 +12,7 @@ export default function ATSDashboard() {
   const params = useParams();
   const router = useRouter();
   const username = params.username as string;
-  const { profile } = useAuthStore();
+  const { profile, isLoading: authLoading } = useAuthStore();
   
   const [candidates, setCandidates] = useState<JobApplication[]>([]);
   const [jobs, setJobs] = useState<JobListing[]>([]);
@@ -21,8 +21,10 @@ export default function ATSDashboard() {
   const [draggedAppId, setDraggedAppId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile?.username !== username && profile?.role !== 'admin') {
-      router.push('/feed');
+    if (authLoading) return;
+
+    if (!profile || (profile.username !== username && profile.role !== 'admin')) {
+      router.replace('/feed');
       return;
     }
     
@@ -44,7 +46,7 @@ export default function ATSDashboard() {
     };
     
     loadData();
-  }, [profile, username, router]);
+  }, [profile, username, router, authLoading]);
 
   const filteredCandidates = activeJobId === "all" 
     ? candidates 
@@ -81,7 +83,7 @@ export default function ATSDashboard() {
     }
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <Loader2 className="w-8 h-8 animate-spin text-brand" />

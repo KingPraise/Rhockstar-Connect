@@ -23,7 +23,49 @@ const withPWA = withPWAInit({
             statuses: [0, 200],
           },
           expiration: {
-            maxEntries: 150,
+            maxEntries: 200,
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/(lh3|[a-z0-9-]+)\.googleusercontent\.com\/.*$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "rhockstar-google-avatars",
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+          expiration: {
+            maxEntries: 200,
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "rhockstar-firebase-storage-images",
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+          expiration: {
+            maxEntries: 100,
+            maxAgeSeconds: 30 * 24 * 60 * 60,
+          },
+        },
+      },
+      {
+        urlPattern: /^https:\/\/images\.unsplash\.com\/.*$/i,
+        handler: "CacheFirst",
+        options: {
+          cacheName: "rhockstar-unsplash-images",
+          cacheableResponse: {
+            statuses: [0, 200],
+          },
+          expiration: {
+            maxEntries: 100,
             maxAgeSeconds: 30 * 24 * 60 * 60,
           },
         },
@@ -65,12 +107,12 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://checkout.flutterwave.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://apis.google.com https://www.gstatic.com https://checkout.flutterwave.com https://www.googletagmanager.com https://*.googletagmanager.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https://images.unsplash.com https://firebasestorage.googleapis.com https://lh3.googleusercontent.com https://res.cloudinary.com https://*.googleusercontent.com https://*.gstatic.com",
       "font-src 'self' https://fonts.gstatic.com data:",
       "media-src 'self' blob: data: https://res.cloudinary.com https://firebasestorage.googleapis.com",
-      "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://api.flutterwave.com https://api.cloudinary.com https://res.cloudinary.com",
+      "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.gstatic.com https://*.gstatic.com https://api.flutterwave.com https://api.cloudinary.com https://res.cloudinary.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com",
       "frame-src 'self' https://checkout.flutterwave.com https://*.firebaseapp.com",
       "frame-ancestors 'self'",
       "object-src 'none'",
@@ -80,9 +122,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   reactCompiler: true,
   allowedDevOrigins: ['rhockstar-dev-999.loca.lt', 'localhost:3000'],
   images: {

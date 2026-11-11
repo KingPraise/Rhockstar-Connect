@@ -9,12 +9,17 @@ import { adminDb } from '@/lib/firebase-admin';
  */
 export async function POST(req: Request) {
   try {
-    // 1. Verify Webhook Signature
-    const secretHash = process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH || process.env.FLUTTERWAVE_SECRET_HASH || '';
+    if (!adminDb) {
+      console.warn('[Webhook] adminDb not initialized on server');
+      return NextResponse.json({ error: 'Database service unavailable' }, { status: 503 });
+    }
+
+    // 1. Verify Webhook Signature (Fail-closed)
+    const secretHash = process.env.FLUTTERWAVE_WEBHOOK_SECRET_HASH || process.env.FLUTTERWAVE_SECRET_HASH;
     const signature = req.headers.get('verif-hash');
 
-    if (secretHash && (!signature || signature !== secretHash)) {
-      console.warn('[Webhook Security Alert] Invalid or missing Flutterwave verif-hash header.');
+    if (!secretHash || !signature || signature !== secretHash) {
+      console.warn('[Webhook Security Alert] Unauthorized or unconfigured Flutterwave webhook signature attempt.');
       return NextResponse.json({ error: 'Unauthorized webhook signature' }, { status: 401 });
     }
 

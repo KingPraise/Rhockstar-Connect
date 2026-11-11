@@ -70,23 +70,57 @@ export default function PremiumPage() {
   const { formatPrice, currency } = useCurrencyStore();
   const [processingTier, setProcessingTier] = useState<'pro' | 'elite' | null>(null);
 
-  const handleSubscribe = async (tier: 'pro' | 'elite') => {
+  const handleSubscribe = async (tier: 'pro' | 'elite', transactionId?: string | number) => {
     if (!profile?.uid) return;
     setProcessingTier(tier);
     try {
-      const { updateUserProfile } = await import('@/lib/services/users');
-      const res = await updateUserProfile(profile.uid, {
-        subscriptionTier: tier,
-        subscriptionStatus: 'active'
-      });
-      if (res.success) {
-        setProfile({ ...profile, subscriptionTier: tier, subscriptionStatus: 'active' } as any);
-        toast.success(`Successfully upgraded to ${tier.toUpperCase()} plan!`);
-      } else {
-        toast.error("Failed to upgrade plan.");
+      const { auth } = await import('@/lib/firebase');
+      const token = await auth.currentUser?.getIdToken();
+
+      if (!token) {
+        toast.error("Session expired. Please log in again.");
+        setProcessingTier(null);
+        return;
       }
-    } catch (error) {
-      toast.error("An error occurred during upgrade.");
+
+      if (transactionId) {
+        // Secure Server-side Payment Verification
+        const res = await fetch('/api/payments/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            transaction_id: transactionId,
+            type: 'subscription',
+            tier
+          })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success) {
+          const expiration = new Date();
+          expiration.setDate(expiration.getDate() + 30);
+
+          setProfile({
+            ...profile,
+            subscriptionTier: tier,
+            subscriptionStatus: 'active',
+            premiumUntil: expiration.toISOString(),
+            subscriptionRemindersSent: []
+          } as any);
+
+          toast.success(`Successfully upgraded to ${tier.toUpperCase()} plan!`);
+        } else {
+          toast.error(data.error || "Payment verification failed. Please contact support.");
+        }
+      } else {
+        toast.error("Missing transaction verification ID.");
+      }
+    } catch (error: any) {
+      toast.error(error?.message || "An error occurred during upgrade verification.");
     }
     setProcessingTier(null);
   };

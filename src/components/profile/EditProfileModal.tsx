@@ -248,7 +248,7 @@ export default function EditProfileModal({ onClose }: EditProfileModalProps) {
 
         <div className="flex flex-col md:flex-row h-full overflow-hidden">
           {/* Tabs Sidebar */}
-          <div className="w-full md:w-48 bg-surface-raised border-r border-border p-4 flex flex-row md:flex-col gap-2 overflow-x-auto">
+          <div className="w-full md:w-48 bg-surface-raised border-r border-border p-4 flex flex-row md:flex-col gap-2 overflow-x-auto scrollbar-none no-scrollbar">
             <button 
               onClick={() => setActiveTab("personal")}
               className={`text-left px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${activeTab === "personal" ? "bg-primary text-white shadow-sm" : "text-secondary hover:bg-surface"}`}

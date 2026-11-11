@@ -27,6 +27,14 @@ const ALLOWED_FOLDERS = new Set([
 
 export async function POST(req: Request) {
   try {
+    // Firebase Admin is required for token verification and chat membership checks.
+    if (!adminAuth || !adminDb) {
+      return NextResponse.json(
+        { error: 'Firebase Admin is not initialized' },
+        { status: 503 }
+      );
+    }
+
     // 1. Require a Firebase ID token.
     const authHeader = req.headers.get('authorization');
 
@@ -65,7 +73,7 @@ export async function POST(req: Request) {
     // 3. Read and validate the request body.
     const body = await req.json().catch(() => null);
 
-    if (!body || typeof body !== 'object') {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json(
         { error: 'Invalid request body' },
         { status: 400 }

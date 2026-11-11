@@ -28,6 +28,7 @@ import {
   Briefcase,
   MessageCircle,
   ExternalLink,
+  Crown,
 } from "lucide-react";
 
 // Subtle non-intrusive sound chime using Web Audio API
@@ -418,10 +419,20 @@ export default function InAppNotificationBanner() {
           );
           break;
 
-        default:
+        case "subscription":
           router.push(
-            "/feed"
+            notif.link || "/premium"
           );
+          break;
+
+        default:
+          if (notif.link) {
+            router.push(notif.link);
+          } else {
+            router.push(
+              "/feed"
+            );
+          }
           break;
       }
     };
@@ -462,6 +473,11 @@ export default function InAppNotificationBanner() {
       case "match":
         return (
           <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+        );
+
+      case "subscription":
+        return (
+          <Crown className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
         );
 
       default:

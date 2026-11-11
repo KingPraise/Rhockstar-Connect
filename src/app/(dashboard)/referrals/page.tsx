@@ -77,7 +77,14 @@ export default function ReferralsPage() {
     if (res.success) {
       // Update local profile store
       const updatedClaimed = [...claimedRewards, tier.id];
-      const updatedProfile = { ...profile, claimedRewards: updatedClaimed };
+      const updatedProfile: any = { ...profile, claimedRewards: updatedClaimed };
+      if (tier.rewardType === 'premium') {
+        updatedProfile.subscriptionTier = 'pro';
+        updatedProfile.subscriptionStatus = 'active';
+      } else if (tier.rewardType === 'vip') {
+        updatedProfile.subscriptionTier = 'elite';
+        updatedProfile.subscriptionStatus = 'active';
+      }
       setProfile(updatedProfile);
 
       setClaimSuccessMsg(`🎉 Success! You unlocked: ${tier.title}`);

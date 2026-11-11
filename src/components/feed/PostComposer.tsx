@@ -198,6 +198,12 @@ export default function PostComposer() {
     setIsPosting(true);
     setErrorMsg(null);
 
+    if (typeof navigator !== "undefined" && !navigator.onLine && mediaFile) {
+      toast.error("Media uploads require an active internet connection. Please reconnect to attach images.");
+      setIsPosting(false);
+      return;
+    }
+
     try {
       // The edited File goes through the existing post upload service.
       const res = await createPost(profile, content, mediaFile, pollData);

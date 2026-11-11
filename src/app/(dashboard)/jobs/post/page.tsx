@@ -7,6 +7,8 @@ import { createJob } from "@/lib/services/jobs";
 import { Loader2, Briefcase, MapPin, ChevronDown, DollarSign, Building2, ChevronLeft, Sparkles, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import JobImportModal from "@/components/jobs/JobImportModal";
+import { ParsedJobData } from "@/lib/utils/jobParser";
 
 export default function PostJobPage() {
   const router = useRouter();
@@ -15,9 +17,11 @@ export default function PostJobPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   
   const [formData, setFormData] = useState({
     title: "",
+    company: "",
     type: "Full-time" as any,
     location: "",
     salary: "",
@@ -33,6 +37,18 @@ export default function PostJobPage() {
     }));
   };
 
+  const handleImportJob = (parsed: ParsedJobData) => {
+    setFormData(prev => ({
+      ...prev,
+      title: parsed.title || prev.title,
+      company: parsed.company || prev.company,
+      location: parsed.location || prev.location,
+      type: (parsed.type as any) || prev.type,
+      salary: parsed.salary || prev.salary,
+      description: parsed.description || prev.description,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.uid) return;
@@ -40,9 +56,11 @@ export default function PostJobPage() {
     setLoading(true);
     setError("");
     
+    const companyName = formData.company || profile.fullName || "Rhockstar Partner Company";
     const res = await createJob({
       ...formData,
-      company: profile.fullName || "Rhockstar Partner Company"
+      company: companyName,
+      customCompany: formData.company || undefined,
     }, profile.uid);
 
     if (res.success) {
@@ -112,14 +130,51 @@ export default function PostJobPage() {
       <div className="neo-card p-6 md:p-10 rounded-3xl bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand via-brand-purple to-emerald-500"></div>
         
-        <div className="flex items-center gap-4 mb-8 border-b border-white/10 pb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand/20 to-brand-purple/20 text-brand border border-brand/30 flex items-center justify-center shadow-lg">
-            <Briefcase className="w-7 h-7" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-white/10 pb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand/20 to-brand-purple/20 text-brand border border-brand/30 flex items-center justify-center shadow-lg shrink-0">
+              <Briefcase className="w-7 h-7" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Post a New Job Opportunity</h1>
+              <p className="text-slate-400 font-medium text-sm mt-0.5">Reach thousands of top talent across Nigeria and global remote networks.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Post a New Job Opportunity</h1>
-            <p className="text-slate-400 font-medium text-sm mt-0.5">Reach thousands of top talent across Nigeria and global remote networks.</p>
+
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="self-start sm:self-auto px-4 py-2.5 bg-gradient-to-r from-brand/20 to-purple-500/20 hover:from-brand/30 hover:to-purple-500/30 text-brand border border-brand/40 rounded-2xl font-extrabold text-xs transition-all flex items-center gap-2 shadow-lg"
+          >
+            <Sparkles className="w-4 h-4 text-brand animate-pulse" />
+            AI Auto-Fill / Paste Job
+          </button>
+        </div>
+
+        {/* AI Quick Import Banner */}
+        <div className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-brand/10 via-purple-500/10 to-transparent border border-brand/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-brand/20 text-brand flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-brand" />
+            </div>
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                Have a raw job listing text or file?
+                <span className="text-[10px] bg-brand text-slate-950 font-black px-2 py-0.5 rounded-full">One-Click</span>
+              </h3>
+              <p className="text-[11px] sm:text-xs text-slate-400">
+                Paste any unstructured job post from WhatsApp, LinkedIn, or doc — our AI parses and fills all inputs automatically.
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="w-full sm:w-auto px-4 py-2 bg-brand text-slate-950 font-extrabold text-xs rounded-xl hover:bg-brand-hover transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-[0_0_15px_rgba(56,189,248,0.3)]"
+          >
+            <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+            Paste / Upload Listing
+          </button>
         </div>
 
         {error && (
@@ -152,23 +207,38 @@ export default function PostJobPage() {
                   className="neo-input text-sm"
                 />
               </div>
+
+              <div className="space-y-2 text-left">
+                <label className="text-sm font-extrabold text-slate-200">Company / Brand Name</label>
+                <div className="relative">
+                  <Building2 className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input 
+                    type="text" 
+                    name="company"
+                    value={formData.company}
+                    onChange={handleChange}
+                    placeholder={profile?.fullName || "e.g. Rainha Hair"} 
+                    className="neo-input pl-12 text-sm"
+                  />
+                </div>
+              </div>
               
               <div className="space-y-2 text-left">
                 <label className="text-sm font-extrabold text-slate-200">Employment Type <span className="text-rose-500">*</span></label>
                 <div className="relative">
                   <Briefcase className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 z-10" />
                   <select 
-                  name="type"
-                  value={formData.type}
-                  onChange={handleChange}
-                  className="neo-input pl-12 pr-10 text-sm cursor-pointer appearance-none"
-                >
-                  <option value="Full-time" className="bg-slate-900 text-white">Full-time</option>
-                  <option value="Part-time" className="bg-slate-900 text-white">Part-time</option>
-                  <option value="Contract" className="bg-slate-900 text-white">Contract</option>
-                  <option value="Remote" className="bg-slate-900 text-white">Remote</option>
-                  <option value="Internship" className="bg-slate-900 text-white">Internship</option>
-                </select>
+                    name="type"
+                    value={formData.type}
+                    onChange={handleChange}
+                    className="neo-input pl-12 pr-10 text-sm cursor-pointer appearance-none"
+                  >
+                    <option value="Full-time" className="bg-slate-900 text-white">Full-time</option>
+                    <option value="Part-time" className="bg-slate-900 text-white">Part-time</option>
+                    <option value="Contract" className="bg-slate-900 text-white">Contract</option>
+                    <option value="Remote" className="bg-slate-900 text-white">Remote</option>
+                    <option value="Internship" className="bg-slate-900 text-white">Internship</option>
+                  </select>
                   <ChevronDown className="w-5 h-5 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
               </div>
@@ -189,8 +259,8 @@ export default function PostJobPage() {
                 </div>
               </div>
 
-              <div className="space-y-2 text-left">
-                <label className="text-sm font-extrabold text-slate-200">Salary Range <span className="text-rose-500">*</span></label>
+              <div className="space-y-2 text-left md:col-span-2">
+                <label className="text-sm font-extrabold text-slate-200">Salary / Compensation <span className="text-rose-500">*</span></label>
                 <div className="relative">
                   <DollarSign className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   <input 
@@ -199,7 +269,7 @@ export default function PostJobPage() {
                     required
                     value={formData.salary}
                     onChange={handleChange}
-                    placeholder="e.g. ₦600k - ₦1.2M / mo or $3,000 / mo" 
+                    placeholder="e.g. ₦150,000–₦200,000 per month" 
                     className="neo-input pl-12 text-sm"
                   />
                 </div>
@@ -214,8 +284,8 @@ export default function PostJobPage() {
                 value={formData.description}
                 onChange={handleChange}
                 placeholder="Detail key responsibilities, qualifications, stack, and application guidelines..." 
-                rows={7}
-                className="neo-input text-sm resize-y"
+                rows={9}
+                className="neo-input text-sm resize-y leading-relaxed font-mono"
               ></textarea>
             </div>
 
@@ -236,6 +306,13 @@ export default function PostJobPage() {
           </form>
         )}
       </div>
+
+      {/* AI Smart Import Modal */}
+      <JobImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportJob}
+      />
     </div>
   );
 }

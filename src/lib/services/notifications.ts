@@ -18,7 +18,7 @@ import { getMessaging, getToken, isSupported } from 'firebase/messaging';
 export interface Notification {
   id: string;
   userId: string;
-  type: "match" | "message" | "connection" | "job" | "like" | "comment" | "follow";
+  type: "match" | "message" | "connection" | "job" | "like" | "comment" | "follow" | "subscription";
   title: string;
   message: string;
   read: boolean;
