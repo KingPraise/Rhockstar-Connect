@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useInView } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useRouter } from "next/navigation";
 
 /* =========================================================
    DATA
@@ -165,8 +166,20 @@ function AnimatedStat({
 ========================================================= */
 
 export default function Home() {
-  const { profile } = useAuthStore();
+  const router = useRouter();
+  const { profile, user, isLoading } = useAuthStore();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isStandalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+
+    if (!isLoading && (profile || user || isStandalone)) {
+      router.replace("/feed");
+    }
+  }, [profile, user, isLoading, router]);
 
   const closeMenu = () => setMenuOpen(false);
 
