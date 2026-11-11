@@ -192,6 +192,53 @@ export const createPost = async (
 
     const docRef = await addDoc(collection(db, 'posts'), postData);
 
+    // Trigger real-time notifications for user mentions in post
+    (async () => {
+      try {
+        const mentionMatches = content.match(/@([a-zA-Z0-9_]+)/g);
+        if (mentionMatches && mentionMatches.length > 0) {
+          const { getAllUsers } = await import('./users');
+          const { createNotification } = await import('./notifications');
+          const usersRes = await getAllUsers();
+          if (usersRes.success && usersRes.users) {
+            const handles = new Set(mentionMatches.map(m => m.substring(1).toLowerCase()));
+            for (const targetUser of usersRes.users) {
+              if (
+                targetUser.uid !== user.uid &&
+                targetUser.username &&
+                handles.has(targetUser.username.toLowerCase())
+              ) {
+                const title = "New Mention";
+                const messageBody = `${user.fullName} mentioned you in a post.`;
+                const mentionUrl = `/feed?postId=${docRef.id}#post-${docRef.id}`;
+
+                await createNotification({
+                  userId: targetUser.uid,
+                  type: "mention" as any,
+                  title,
+                  message: messageBody,
+                  link: mentionUrl,
+                  targetId: docRef.id,
+                  senderId: user.uid,
+                  senderName: user.fullName,
+                  senderAvatar: user.avatar || user.fullName.substring(0, 2).toUpperCase()
+                });
+
+                void sendPushNotification({
+                  userId: targetUser.uid,
+                  title,
+                  body: messageBody,
+                  url: mentionUrl
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Background post mention notification error:", err);
+      }
+    })();
+
     // 2. If ambiguous (e.g. external Telegram/WhatsApp link), publish but queue in SuperAdmin flagged_content
     if (modResult.severity === 'ambiguous') {
       await logFlaggedContent({

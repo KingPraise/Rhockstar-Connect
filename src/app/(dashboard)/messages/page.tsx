@@ -45,6 +45,8 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import UserAvatar from "@/components/ui/UserAvatar";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import PhotoEditor from "@/components/media/PhotoEditor";
+import { useLightboxStore } from "@/store/useLightboxStore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -136,6 +138,18 @@ function MessagesContent() {
   const [isCommunityInfoOpen, setIsCommunityInfoOpen] = useState(false);
   const [sendingCommunityMsg, setSendingCommunityMsg] = useState(false);
   const [communityReplyingTo, setCommunityReplyingTo] = useState<CommunityMessage | null>(null);
+
+  // Community Attachment & Photo Editing State
+  const [communityMediaFile, setCommunityMediaFile] = useState<File | null>(null);
+  const [communityMediaPreview, setCommunityMediaPreview] = useState<string | null>(null);
+  const [communityEditingImage, setCommunityEditingImage] = useState<File | null>(null);
+  const communityFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Community Members List State
+  const [communityMembersList, setCommunityMembersList] = useState<UserBasic[]>([]);
+  const [isLoadingCommunityMembers, setIsLoadingCommunityMembers] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const openLightbox = useLightboxStore((s) => s.openLightbox);
 
   // Media upload & editing state
   const [mediaFile, setMediaFile] = useState<File | null>(null);
@@ -308,6 +322,55 @@ function MessagesContent() {
     };
     fetchUsers();
   }, [profile?.uid]);
+
+  // Load community member profiles when drawer is opened
+  useEffect(() => {
+    if (!activeCommunity || !isCommunityInfoOpen) return;
+    let isCancelled = false;
+    const loadMembers = async () => {
+      setIsLoadingCommunityMembers(true);
+      try {
+        const memberIds = activeCommunity.members || [];
+        const loaded: UserBasic[] = [];
+        const missingIds: string[] = [];
+
+        memberIds.forEach((id) => {
+          if (users[id]) {
+            loaded.push(users[id]);
+          } else {
+            missingIds.push(id);
+          }
+        });
+
+        if (missingIds.length > 0) {
+          const fetchPromises = missingIds.map((id) => getUserById(id));
+          const results = await Promise.all(fetchPromises);
+          results.forEach((res) => {
+            if (res.success && res.user) {
+              loaded.push(res.user);
+            }
+          });
+        }
+
+        if (!isCancelled) {
+          setCommunityMembersList(loaded);
+        }
+      } catch (err) {
+        console.error("Failed to load community members:", err);
+      } finally {
+        if (!isCancelled) setIsLoadingCommunityMembers(false);
+      }
+    };
+    loadMembers();
+    return () => { isCancelled = true; };
+  }, [activeCommunity?.id, isCommunityInfoOpen, activeCommunity?.members, users]);
+
+  const filteredCommunityMembers = memberSearchQuery.trim()
+    ? communityMembersList.filter(m =>
+        m.fullName?.toLowerCase().includes(memberSearchQuery.toLowerCase()) ||
+        m.username?.toLowerCase().includes(memberSearchQuery.toLowerCase())
+      )
+    : communityMembersList;
 
   // Track already initiated target params to prevent duplicate calls / race conditions
   const initiatedTargetParamRef = useRef<string | null>(null);
@@ -566,10 +629,36 @@ function MessagesContent() {
     });
   };
 
+  const handleCommunityFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (file.type.startsWith("image/")) {
+      setCommunityEditingImage(file);
+      return;
+    }
+
+    if (communityMediaPreview) {
+      URL.revokeObjectURL(communityMediaPreview);
+    }
+    setCommunityMediaFile(file);
+    setCommunityMediaPreview(null);
+  };
+
+  const handleCommunityEditorConfirm = (editedFile: File) => {
+    if (communityMediaPreview) {
+      URL.revokeObjectURL(communityMediaPreview);
+    }
+    setCommunityMediaFile(editedFile);
+    setCommunityMediaPreview(URL.createObjectURL(editedFile));
+    setCommunityEditingImage(null);
+  };
+
   // Send Community Message
   const handleSendCommunityMessage = async (e?: React.FormEvent<HTMLFormElement>) => {
     e?.preventDefault();
-    if (!newCommunityMessageText.trim() || !activeCommunity || !profile) return;
+    if ((!newCommunityMessageText.trim() && !communityMediaFile) || !activeCommunity || !profile) return;
 
     try {
       setSendingCommunityMsg(true);
@@ -577,17 +666,42 @@ function MessagesContent() {
       const replyId = communityReplyingTo?.id;
       const replyText = communityReplyingTo?.text;
       const replySenderName = communityReplyingTo?.senderName;
+
+      let uploadedMediaUrl: string | undefined = undefined;
+      let msgType: 'text' | 'image' | 'audio' | 'document' = 'text';
+
+      if (communityMediaFile) {
+        const isImg = communityMediaFile.type.startsWith('image/');
+        msgType = isImg ? 'image' : 'document';
+        try {
+          uploadedMediaUrl = await uploadMediaToCloudinary(
+            communityMediaFile,
+            'messages',
+            isImg ? 'image' : 'auto'
+          );
+        } catch (uploadErr: any) {
+          toast.error(`Media upload failed: ${uploadErr.message}`);
+          setSendingCommunityMsg(false);
+          return;
+        }
+      }
+
       setNewCommunityMessageText("");
       setCommunityReplyingTo(null);
+      if (communityMediaPreview) {
+        URL.revokeObjectURL(communityMediaPreview);
+        setCommunityMediaPreview(null);
+      }
+      setCommunityMediaFile(null);
 
       await sendCommunityMessage(
         activeCommunity.id,
         profile.uid,
-        text,
+        text || (msgType === 'image' ? 'Sent an image' : 'Attachment'),
         profile.fullName,
         profile.avatar || "",
-        'text',
-        undefined,
+        msgType,
+        uploadedMediaUrl,
         replyId,
         replyText,
         replySenderName
@@ -1868,7 +1982,38 @@ function MessagesContent() {
                                     <span className="line-clamp-2 text-[11px] whitespace-normal break-words">{msg.replyToText}</span>
                                   </div>
                                 )}
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                {msg.mediaUrl && (
+                                  <div className="mb-2">
+                                    {(msg.type === "image" || (!msg.type && (msg.mediaUrl.includes('/image/') || msg.mediaUrl.match(/\.(jpeg|jpg|gif|png|webp)/i)))) ? (
+                                      <img
+                                        src={msg.mediaUrl}
+                                        alt="Community media"
+                                        className="rounded-xl max-h-60 w-full object-cover cursor-pointer hover:opacity-95 transition-opacity shadow-sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openLightbox([msg.mediaUrl!]);
+                                        }}
+                                      />
+                                    ) : msg.type === "document" ? (
+                                      <a
+                                        href={msg.mediaUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className={`flex items-center gap-2 p-2.5 rounded-xl ${isMe ? 'bg-black/20 text-slate-950' : 'bg-slate-700/60 text-white'} hover:opacity-90 transition-opacity`}
+                                      >
+                                        <FileText className="w-5 h-5 text-brand shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-xs font-bold truncate">Attachment</p>
+                                          <p className="text-[10px] opacity-75">Click to view/download</p>
+                                        </div>
+                                      </a>
+                                    ) : null}
+                                  </div>
+                                )}
+                                {(!msg.mediaUrl || (msg.text && msg.text !== "Sent an image" && msg.text !== "Attachment")) && (
+                                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                )}
                                 <div className={`flex items-center justify-end gap-2 text-[10px] ${isMe ? "text-slate-950/70 font-semibold" : "text-slate-400 font-medium"}`}>
                                   <span>{formatMessageTime(msg.createdAt)}</span>
                                 </div>
@@ -1941,6 +2086,48 @@ function MessagesContent() {
                   <div ref={communityMessagesEndRef} />
                 </div>
 
+                {/* Community Attachment Preview Chip */}
+                {communityMediaFile && (
+                  <div className="px-4 pt-3 pb-1 bg-slate-900/95 border-t border-white/5 flex items-center gap-3 animate-in slide-in-from-bottom duration-150">
+                    {communityMediaPreview ? (
+                      <img
+                        src={communityMediaPreview}
+                        alt="Attachment preview"
+                        className="w-12 h-12 object-cover rounded-xl border border-brand/40 shadow-md shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-brand shrink-0">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-white truncate">{communityMediaFile.name}</p>
+                      <p className="text-[10px] text-slate-400">{(communityMediaFile.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (communityMediaPreview) URL.revokeObjectURL(communityMediaPreview);
+                        setCommunityMediaFile(null);
+                        setCommunityMediaPreview(null);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors"
+                      title="Remove attachment"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Community Photo Editor */}
+                {communityEditingImage && (
+                  <PhotoEditor
+                    image={communityEditingImage}
+                    onConfirm={handleCommunityEditorConfirm}
+                    onClose={() => setCommunityEditingImage(null)}
+                  />
+                )}
+
                 {/* Community Reply Banner */}
                 {communityReplyingTo && (
                   <div className="px-4 pt-3 pb-1 bg-slate-900/95 border-t border-white/5 animate-in slide-in-from-bottom duration-150">
@@ -1959,7 +2146,23 @@ function MessagesContent() {
                 )}
 
                 {/* Group Message Input */}
-                <form onSubmit={handleSendCommunityMessage} className="p-3.5 sm:p-4 border-t border-white/5 bg-slate-900/95 backdrop-blur-md flex items-center gap-3">
+                <form onSubmit={handleSendCommunityMessage} className="p-3.5 sm:p-4 border-t border-white/5 bg-slate-900/95 backdrop-blur-md flex items-center gap-2 sm:gap-3">
+                  <input
+                    type="file"
+                    ref={communityFileInputRef}
+                    onChange={handleCommunityFileSelect}
+                    accept="image/*,.pdf,.doc,.docx"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => communityFileInputRef.current?.click()}
+                    disabled={sendingCommunityMsg}
+                    className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
+                    title="Attach image or file"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
                   <textarea
                     rows={1}
                     placeholder={`Message ${activeCommunity.name}...`}
@@ -1982,7 +2185,7 @@ function MessagesContent() {
                   />
                   <button
                     type="submit"
-                    disabled={!newCommunityMessageText.trim() || sendingCommunityMsg}
+                    disabled={(!newCommunityMessageText.trim() && !communityMediaFile) || sendingCommunityMsg}
                     className="p-3 bg-gradient-to-r from-brand to-brand-purple text-slate-950 font-bold rounded-2xl hover:opacity-90 disabled:opacity-50 transition-opacity shadow-md shrink-0"
                   >
                     {sendingCommunityMsg ? (
@@ -2252,6 +2455,114 @@ function MessagesContent() {
                       <p className="text-[10px] text-amber-400 font-semibold">Community Admin</p>
                     </div>
                   </div>
+                </div>
+
+                {/* Community Members Directory */}
+                <div className="space-y-2.5 pt-2 border-t border-white/5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-brand" />
+                      Members ({(activeCommunity.members || []).length})
+                    </h4>
+                  </div>
+
+                  {/* Instant Search Bar */}
+                  {(activeCommunity.members || []).length > 3 && (
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Search members..."
+                        value={memberSearchQuery}
+                        onChange={(e) => setMemberSearchQuery(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 bg-slate-800/80 border border-white/5 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand/40"
+                      />
+                    </div>
+                  )}
+
+                  {isLoadingCommunityMembers ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-brand" />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                      {filteredCommunityMembers.map((member) => {
+                        const isCreator = member.uid === activeCommunity.creatorId;
+                        const isAdmin = isCreator || activeCommunity.admins?.includes(member.uid);
+                        const canRemove = (profile.uid === activeCommunity.creatorId || activeCommunity.admins?.includes(profile.uid)) && member.uid !== profile.uid && member.uid !== activeCommunity.creatorId;
+
+                        return (
+                          <div
+                            key={member.uid}
+                            className="flex items-center justify-between gap-2 p-2 bg-slate-800/40 hover:bg-slate-800/70 rounded-xl border border-white/5 transition-colors group"
+                          >
+                            <Link
+                              href={`/profile?uid=${member.uid}`}
+                              className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-90"
+                              title="View Profile"
+                            >
+                              <UserAvatar
+                                src={member.avatar}
+                                name={member.fullName || member.username}
+                                className="w-7 h-7 rounded-full shrink-0"
+                                textClassName="text-[10px] font-bold"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-white truncate flex items-center gap-1">
+                                  <span>{member.fullName || member.username}</span>
+                                  {member.subscriptionTier && <VerifiedBadge tier={member.subscriptionTier as any} size="xs" />}
+                                </p>
+                                <p className="text-[10px] text-slate-400 truncate">@{member.username}</p>
+                              </div>
+                            </Link>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {isCreator ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-0.5">
+                                  <Crown className="w-2.5 h-2.5" /> Admin
+                                </span>
+                              ) : isAdmin ? (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-300 border border-purple-500/20 flex items-center gap-0.5">
+                                  <Shield className="w-2.5 h-2.5" /> Mod
+                                </span>
+                              ) : null}
+
+                              {canRemove && (
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    if (window.confirm(`Remove ${member.fullName || member.username} from this community?`)) {
+                                      const res = await removeMemberFromCommunity(activeCommunity.id, member.uid);
+                                      if (res.success) {
+                                        toast.success("Member removed");
+                                        setCommunityMembersList((prev) => prev.filter((m) => m.uid !== member.uid));
+                                        setActiveCommunity((prev) => prev ? {
+                                          ...prev,
+                                          members: (prev.members || []).filter((id) => id !== member.uid),
+                                          memberCount: Math.max(0, prev.memberCount - 1),
+                                        } : null);
+                                      } else {
+                                        toast.error(res.error || "Failed to remove member");
+                                      }
+                                    }
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 rounded transition-all"
+                                  title="Remove member"
+                                >
+                                  <UserX className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {filteredCommunityMembers.length === 0 && (
+                        <p className="text-xs text-slate-500 text-center py-2">No members found</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

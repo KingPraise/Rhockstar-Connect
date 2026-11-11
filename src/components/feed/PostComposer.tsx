@@ -16,9 +16,11 @@ import {
   BarChart2,
   Plus,
   Video,
+  AtSign,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { createPost, PollData } from "@/lib/services/posts";
+import { getAllUsers, type UserBasic } from "@/lib/services/users";
 import toast from "react-hot-toast";
 
 export default function PostComposer() {
@@ -26,6 +28,15 @@ export default function PostComposer() {
 
   const [content, setContent] = useState("");
   const [mediaFile, setMediaFile] = useState<File | null>(null);
+
+  // Mention State
+  const [mentionUsers, setMentionUsers] = useState<UserBasic[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState<number | null>(null);
+  const [mentionEnd, setMentionEnd] = useState<number | null>(null);
+  const [isLoadingMentionUsers, setIsLoadingMentionUsers] = useState(false);
+  const mentionUsersRequestedRef = useRef(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [mediaPreview, setMediaPreview] = useState<{
     url: string;
@@ -162,6 +173,69 @@ export default function PostComposer() {
     }
   };
 
+  const handleContentChange = (value: string) => {
+    setContent(value);
+    const cursor = textareaRef.current?.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursor);
+    const match = textBeforeCursor.match(/(^|[\s(])@([a-zA-Z0-9_]*)$/);
+
+    if (!match) {
+      setMentionQuery(null);
+      setMentionStart(null);
+      setMentionEnd(null);
+      return;
+    }
+
+    const start = cursor - match[2].length - 1;
+    setMentionQuery(match[2]);
+    setMentionStart(start);
+    setMentionEnd(cursor);
+
+    if (!mentionUsersRequestedRef.current) {
+      mentionUsersRequestedRef.current = true;
+      setIsLoadingMentionUsers(true);
+      getAllUsers()
+        .then((result) => {
+          if (result.success && result.users) {
+            setMentionUsers(result.users);
+          }
+        })
+        .catch((error) => console.error("Failed to load mention users:", error))
+        .finally(() => setIsLoadingMentionUsers(false));
+    }
+  };
+
+  const handleSelectMention = (selectedUser: UserBasic) => {
+    if (mentionStart === null || mentionEnd === null) return;
+    const mention = `@${selectedUser.username} `;
+    const updatedText =
+      content.slice(0, mentionStart) +
+      mention +
+      content.slice(mentionEnd);
+    const cursorPosition = mentionStart + mention.length;
+
+    setContent(updatedText);
+    setMentionQuery(null);
+    setMentionStart(null);
+    setMentionEnd(null);
+
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(cursorPosition, cursorPosition);
+    });
+  };
+
+  const filteredMentionUsers = mentionQuery === null
+    ? []
+    : mentionUsers
+        .filter((u) =>
+          u.uid !== profile?.uid &&
+          u.username &&
+          (u.username.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+           u.fullName?.toLowerCase().includes(mentionQuery.toLowerCase()))
+        )
+        .slice(0, 6);
+
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -212,6 +286,9 @@ export default function PostComposer() {
 
       if (res.success) {
         setContent("");
+        setMentionQuery(null);
+        setMentionStart(null);
+        setMentionEnd(null);
         removeMedia();
 
         setShowPollBuilder(false);
@@ -301,14 +378,43 @@ export default function PostComposer() {
               textClassName="text-xs font-bold"
             />
 
-            <div className="flex-1 flex flex-col gap-2">
+            <div className="flex-1 flex flex-col gap-2 relative">
               <textarea
+                ref={textareaRef}
                 className="w-full min-h-[75px] resize-none bg-slate-800/40 text-sm text-slate-200 placeholder:text-slate-500 p-3 rounded-xl border border-white/5 focus:outline-none focus:border-purple-500/50"
-                placeholder={`Share an update, video, or opportunity, ${profile.fullName.split(" ")[0]}...`}
+                placeholder={`Share an update, video, or opportunity, ${profile.fullName.split(" ")[0]}... (type @ to mention)`}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e) => handleContentChange(e.target.value)}
                 disabled={isPosting}
               />
+
+              {/* Mention Suggestions Popover */}
+              {filteredMentionUsers.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-30 max-h-48 overflow-y-auto divide-y divide-white/5 custom-scrollbar">
+                  <div className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 bg-slate-950/60">
+                    <AtSign className="w-3 h-3 text-brand" /> Mention Member
+                  </div>
+                  {filteredMentionUsers.map((user) => (
+                    <button
+                      key={user.uid}
+                      type="button"
+                      onClick={() => handleSelectMention(user)}
+                      className="w-full p-2.5 flex items-center gap-2.5 hover:bg-slate-800 transition-colors text-left"
+                    >
+                      <UserAvatar
+                        src={user.avatar}
+                        name={user.fullName || user.username}
+                        className="w-7 h-7"
+                        textClassName="text-[10px] font-bold"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-white truncate">{user.fullName}</p>
+                        <p className="text-[11px] text-brand truncate">@{user.username}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Poll Builder */}
               {showPollBuilder && (

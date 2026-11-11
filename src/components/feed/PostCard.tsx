@@ -619,7 +619,23 @@ export default function PostCard({ post }: PostCardProps) {
         <div className="mb-3 text-sm text-slate-200 leading-snug whitespace-pre-wrap">
           {post.content.length > 220 && !isExpanded ? (
             <>
-              <span>{post.content.slice(0, 220)}... </span>
+              <span>
+                {post.content.slice(0, 220).split(/(@[a-zA-Z0-9_]+)/g).map((part, index) =>
+                  part.startsWith("@") ? (
+                    <Link
+                      key={`mention-short-${index}`}
+                      href={`/profile?username=${part.slice(1)}`}
+                      className="text-brand font-semibold hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {part}
+                    </Link>
+                  ) : (
+                    <span key={`text-short-${index}`}>{part}</span>
+                  )
+                )}
+                ...{" "}
+              </span>
               <button
                 type="button"
                 onClick={() => setIsExpanded(true)}
@@ -630,7 +646,22 @@ export default function PostCard({ post }: PostCardProps) {
             </>
           ) : (
             <>
-              <span>{post.content} </span>
+              <span>
+                {post.content.split(/(@[a-zA-Z0-9_]+)/g).map((part, index) =>
+                  part.startsWith("@") ? (
+                    <Link
+                      key={`mention-full-${index}`}
+                      href={`/profile?username=${part.slice(1)}`}
+                      className="text-brand font-semibold hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {part}
+                    </Link>
+                  ) : (
+                    <span key={`text-full-${index}`}>{part}</span>
+                  )
+                )}{" "}
+              </span>
               {post.content.length > 220 && (
                 <button
                   type="button"
