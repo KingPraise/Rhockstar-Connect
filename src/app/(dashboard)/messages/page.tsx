@@ -454,7 +454,12 @@ const toTimestampDate = (value: unknown): Date | null => {
     if (file) {
       try {
         setIsUploadingImage(true);
-        uploadedMediaUrl = await uploadMediaToCloudinary(file, `chats_${activeChat.id}`, file.type.startsWith('image/') ? 'image' : 'auto');
+       uploadedMediaUrl = await uploadMediaToCloudinary(
+  file,
+  'messages',
+  file.type.startsWith('image/') ? 'image' : 'auto',
+  activeChat.id
+);
 
         if (file.type.startsWith('image/')) type = 'image';
         else if (file.type.startsWith('audio/') || file.type.includes('mp4') || file.type.includes('webm') || file.name.endsWith('.webm') || file.name.endsWith('.mp3') || file.name.endsWith('.ogg') || file.name.endsWith('.m4a') || file.name.endsWith('.wav')) type = 'audio';
