@@ -67,8 +67,8 @@ export const createAdvertisement = async (adData: {
   mediaType?: 'image' | 'video';
   ctaText: string;
   targetUrl: string;
-  durationDays?: number;
   price?: number;
+  durationDays?: number;
 }) => {
   try {
     const adsRef = collection(db, 'advertisements');

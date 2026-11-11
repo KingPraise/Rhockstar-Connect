@@ -220,30 +220,6 @@ export default function PresenceHeartbeat() {
     };
   }, [profile?.uid]);
 
-  // 4. Push Notification & Service Worker Registration
-  useEffect(() => {
-    if (!profile?.uid) return;
-
-    const setupPushNotifications = async () => {
-      try {
-        if ('Notification' in window && Notification.permission === 'denied') return;
-
-        if ('serviceWorker' in navigator) {
-          await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-            scope: '/firebase-cloud-messaging-push-scope'
-          });
-        }
-
-        const { requestNotificationPermission } = await import('@/lib/services/notifications');
-        await requestNotificationPermission(profile.uid);
-      } catch (err) {
-        console.warn('Push notification setup:', err);
-      }
-    };
-
-    const timer = setTimeout(setupPushNotifications, 3000);
-    return () => clearTimeout(timer);
-  }, [profile?.uid]);
 
   return null;
 }

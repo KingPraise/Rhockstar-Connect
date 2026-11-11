@@ -1,149 +1,179 @@
-import { NextResponse } from 'next/server';
-import crypto from 'crypto';
 
+import { v2 as cloudinary } from 'cloudinary';
+import { NextResponse } from 'next/server';
+import { adminAuth, adminDb } from '@/lib/firebase-admin';
+
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Exact folder names used by existing non-chat upload features.
+// Do not add broad prefixes or wildcards here.
 const ALLOWED_FOLDERS = new Set([
   'avatars',
   'covers',
   'posts',
   'resumes',
   'ads',
-  'ads_logos',
-  'ads_media',
   'dating',
+  'messages',
   'dating_photos',
   'dating_voice',
-  'messages',
+  'ads_logos',
+  'ads_media',
 ]);
-
-function isFolderAllowed(folder: string): boolean {
-  if (ALLOWED_FOLDERS.has(folder)) return true;
-  if (folder.startsWith('chats_')) return true;
-  return false;
-}
-
-/**
- * Lightweight, zero-dependency token validation that guarantees 100% serverless uptime.
- * Never imports heavy or runtime-sensitive server SDKs during signature verification.
- */
-function verifyFirebaseToken(
-  token: string,
-  expectedProjectId?: string
-): { valid: boolean; uid?: string; error?: string } {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return { valid: false, error: 'Invalid token structure' };
-    }
-
-    const payload = JSON.parse(
-      Buffer.from(parts[1], 'base64').toString('utf-8')
-    );
-    const now = Math.floor(Date.now() / 1000);
-
-    if (payload.exp && payload.exp < now) {
-      return { valid: false, error: 'Authentication token has expired' };
-    }
-
-    if (expectedProjectId) {
-      if (
-        payload.aud !== expectedProjectId ||
-        payload.iss !== `https://securetoken.google.com/${expectedProjectId}`
-      ) {
-        return { valid: false, error: 'Token was not issued for this project' };
-      }
-    }
-
-    const uid = payload.user_id || payload.sub;
-    if (!uid) {
-      return { valid: false, error: 'Missing user identifier in token' };
-    }
-
-    return { valid: true, uid };
-  } catch (err: any) {
-    return { valid: false, error: err?.message || 'Token verification failed' };
-  }
-}
 
 export async function POST(req: Request) {
   try {
+    // Firebase Admin is required for token verification and chat membership checks.
+    if (!adminAuth || !adminDb) {
+      return NextResponse.json(
+        { error: 'Firebase Admin is not initialized' },
+        { status: 503 }
+      );
+    }
+
+    // 1. Require a Firebase ID token.
     const authHeader = req.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json(
         { error: 'Unauthorized: Missing or malformed authorization header' },
         { status: 401 }
       );
     }
 
-    const token = authHeader.split('Bearer ')[1]?.trim();
-    if (!token) {
+    const token = authHeader.slice(7).trim();
+
+    if (!token || token.split('.').length !== 3) {
       return NextResponse.json(
-        { error: 'Unauthorized: Empty authorization token' },
+        { error: 'Unauthorized: Invalid token format' },
         { status: 401 }
       );
     }
 
-    const projectId =
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
-      process.env.FIREBASE_PROJECT_ID;
-    const tokenCheck = verifyFirebaseToken(token, projectId);
-    if (!tokenCheck.valid) {
+    // 2. Always verify the token. Never silently skip verification.
+    let decodedToken;
+
+    try {
+      decodedToken = await adminAuth.verifyIdToken(token);
+    } catch (authError) {
+      console.warn('Firebase token verification failed:', authError);
+
       return NextResponse.json(
-        { error: `Unauthorized: ${tokenCheck.error}` },
+        { error: 'Unauthorized: Authentication token is invalid or expired' },
         { status: 401 }
       );
     }
 
-    const body = await req.json().catch(() => ({}));
-    const requestedFolder = String(body.folder || 'posts').toLowerCase().trim();
+    const uid = decodedToken.uid;
 
-    // Security check: Whitelist folder names and disallow path traversal
-    if (
-      !isFolderAllowed(requestedFolder) ||
-      requestedFolder.includes('..') ||
-      requestedFolder.includes('/') ||
-      requestedFolder.includes('\\')
-    ) {
+    // 3. Read and validate the request body.
+    const body = await req.json().catch(() => null);
+
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return NextResponse.json(
-        {
-          error: `Security Policy Violation: Upload folder '${requestedFolder}' is not permitted.`,
-        },
-        { status: 403 }
+        { error: 'Invalid request body' },
+        { status: 400 }
       );
     }
 
-    const timestamp = Math.round(new Date().getTime() / 1000);
+    let approvedFolder: string;
 
-    // Resilient fallback secret to guarantee signatures can always be generated on hosting
-    const apiSecret =
-      process.env.CLOUDINARY_API_SECRET ||
-      process.env.CLOUDINARY_SECRET ||
-      'zQxqGiiySH64rd8ZHfAFLs75rV8';
+    // 4. Chat uploads require server-side membership verification.
+    if (body.chatId !== undefined) {
+      const chatId = body.chatId;
 
-    // Cloudinary signature formula: SHA-1 hash of alphabetized parameters followed directly by api_secret
-    const paramsToSign: Record<string, string | number> = {
-      folder: requestedFolder,
-      timestamp,
-    };
+      if (
+        typeof chatId !== 'string' ||
+        !chatId.trim() ||
+        chatId !== chatId.trim() ||
+        chatId.length > 256 ||
+        chatId.includes('/')
+      ) {
+        return NextResponse.json(
+          { error: 'Invalid chat ID' },
+          { status: 400 }
+        );
+      }
 
-    const sortedKeys = Object.keys(paramsToSign).sort();
-    const serialized = sortedKeys
-      .map((key) => `${key}=${paramsToSign[key]}`)
-      .join('&');
+      const chatSnapshot = await adminDb
+        .collection('chats')
+        .doc(chatId)
+        .get();
 
-    const signature = crypto
-      .createHash('sha1')
-      .update(serialized + apiSecret)
-      .digest('hex');
+      if (!chatSnapshot.exists) {
+        return NextResponse.json(
+          { error: 'You are not authorized to upload to this chat' },
+          { status: 403 }
+        );
+      }
+
+      const chatData = chatSnapshot.data();
+      const participants = chatData?.participants;
+
+      if (
+        !Array.isArray(participants) ||
+        !participants.includes(uid)
+      ) {
+        return NextResponse.json(
+          { error: 'You are not authorized to upload to this chat' },
+          { status: 403 }
+        );
+      }
+
+      // The folder is derived from the verified Firestore document ID.
+      approvedFolder = `chats_${chatId}`;
+    } else {
+      // 5. Non-chat uploads must use an exact permitted folder name.
+      const requestedFolder =
+        typeof body.folder === 'string' ? body.folder.trim() : '';
+
+      if (!ALLOWED_FOLDERS.has(requestedFolder)) {
+        return NextResponse.json(
+          { error: 'Security Policy Violation: Upload folder is not permitted.' },
+          { status: 403 }
+        );
+      }
+
+      approvedFolder = requestedFolder;
+    }
+
+    // 6. Ensure the Cloudinary signing secret exists.
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!apiSecret) {
+      console.error('Cloudinary API secret is not configured.');
+
+      return NextResponse.json(
+        { error: 'Cloudinary signing is not configured' },
+        { status: 500 }
+      );
+    }
+
+    // 7. Sign the exact folder approved by the server.
+    const timestamp = Math.round(Date.now() / 1000);
+
+    const signature = cloudinary.utils.api_sign_request(
+      {
+        timestamp,
+        folder: approvedFolder,
+      },
+      apiSecret
+    );
 
     return NextResponse.json({
       timestamp,
       signature,
-      folder: requestedFolder,
+      folder: approvedFolder,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Cloudinary signature error:', error);
+
     return NextResponse.json(
-      { error: error?.message || 'Failed to sign request' },
+      { error: 'Failed to generate Cloudinary upload signature' },
       { status: 500 }
     );
   }
