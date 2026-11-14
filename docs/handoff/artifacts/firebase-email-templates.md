@@ -4,7 +4,7 @@ Follow these steps to make your emails look professional and branded instead of 
 
 ### Where to go
 1. Go to your **Firebase Console** (console.firebase.google.com)
-2. Open your project (`rhockstar-connect-v2`)
+2. Open your project (`your-project-id`)
 3. Click on **Authentication** in the left sidebar
 4. Go to the **Templates** tab at the top.
 

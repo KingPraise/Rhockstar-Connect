@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb, adminMessaging, adminAuth } from '@/lib/firebase-admin';
+import { adminDb, adminMessaging, adminAuth, getAdminDb, getAdminMessaging, getAdminAuth } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 // In-memory sliding rate-limiter for push notifications (15 requests/min per user)
@@ -24,7 +24,10 @@ function checkRateLimit(senderUid: string): boolean {
 
 export async function POST(req: Request) {
   try {
-    if (!adminAuth || !adminDb || !adminMessaging) {
+    const auth = getAdminAuth() || adminAuth;
+    const db = getAdminDb() || adminDb;
+    const messaging = getAdminMessaging() || adminMessaging;
+    if (!auth || !db || !messaging) {
       return NextResponse.json({ error: 'Server initialization error: Push notifications unavailable.' }, { status: 503 });
     }
 
@@ -36,7 +39,7 @@ export async function POST(req: Request) {
     const token = authHeader.split('Bearer ')[1];
     let decodedToken;
     try {
-      decodedToken = await adminAuth.verifyIdToken(token);
+      decodedToken = await auth.verifyIdToken(token);
     } catch {
       return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
     }
@@ -70,7 +73,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const userDoc = await adminDb.collection('users').doc(userId).get();
+    const userDoc = await db.collection('users').doc(userId).get();
     
     if (!userDoc.exists) {
       return NextResponse.json({ error: 'Recipient user not found' }, { status: 404 });
@@ -83,9 +86,9 @@ export async function POST(req: Request) {
     if (!isSelf && !isAdmin) {
       const chatId = [decodedToken.uid, userId].sort().join('_');
       const [chatDoc, connDocA, connDocB] = await Promise.all([
-        adminDb.collection('chats').doc(chatId).get(),
-        adminDb.collection('connections').where('fromUserId', '==', decodedToken.uid).where('toUserId', '==', userId).limit(1).get(),
-        adminDb.collection('connections').where('fromUserId', '==', userId).where('toUserId', '==', decodedToken.uid).limit(1).get()
+        db.collection('chats').doc(chatId).get(),
+        db.collection('connections').where('fromUserId', '==', decodedToken.uid).where('toUserId', '==', userId).limit(1).get(),
+        db.collection('connections').where('fromUserId', '==', userId).where('toUserId', '==', decodedToken.uid).limit(1).get()
       ]);
 
       let isAuthorized = chatDoc.exists || !connDocA.empty || !connDocB.empty;
@@ -93,8 +96,8 @@ export async function POST(req: Request) {
       if (!isAuthorized) {
         // Check if mutual dating match exists
         const [matchDocA, matchDocB] = await Promise.all([
-          adminDb.collection('matches').doc(`${decodedToken.uid}_${userId}`).get(),
-          adminDb.collection('matches').doc(`${userId}_${decodedToken.uid}`).get()
+          db.collection('matches').doc(`${decodedToken.uid}_${userId}`).get(),
+          db.collection('matches').doc(`${userId}_${decodedToken.uid}`).get()
         ]);
         isAuthorized = matchDocA.exists || matchDocB.exists;
       }
@@ -105,7 +108,7 @@ export async function POST(req: Request) {
           const parsedUrl = new URL(safeUrl, 'https://rhockstarconnect.com');
           const postId = parsedUrl.searchParams.get('postId');
           if (postId) {
-            const postDoc = await adminDb.collection('posts').doc(postId).get();
+            const postDoc = await db.collection('posts').doc(postId).get();
             if (postDoc.exists && postDoc.data()?.userId === userId) {
               isAuthorized = true;
             }
@@ -143,7 +146,7 @@ export async function POST(req: Request) {
       tokens: fcmTokens
     };
 
-    const response = await adminMessaging.sendEachForMulticast(message);
+    const response = await messaging.sendEachForMulticast(message);
     
     // Cleanup invalid or expired tokens
     if (response.failureCount > 0) {
@@ -155,7 +158,7 @@ export async function POST(req: Request) {
       });
       
       if (failedTokens.length > 0) {
-        await adminDb.collection('users').doc(userId).update({
+        await db.collection('users').doc(userId).update({
           fcmTokens: FieldValue.arrayRemove(...failedTokens)
         });
       }

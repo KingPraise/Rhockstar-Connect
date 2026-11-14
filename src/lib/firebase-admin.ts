@@ -10,15 +10,16 @@ import type { Messaging } from 'firebase-admin/messaging';
 function cleanPrivateKey(key: string | undefined): string | undefined {
   if (!key) return undefined;
   let cleaned = key.trim();
-  // Strip enclosing single or double quotes
-  if (
+  // Strip enclosing single or double quotes repeatedly
+  while (
     (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
     (cleaned.startsWith("'") && cleaned.endsWith("'"))
   ) {
-    cleaned = cleaned.slice(1, -1);
+    cleaned = cleaned.slice(1, -1).trim();
   }
-  // Replace escaped \n with actual newlines
-  return cleaned.replace(/\\n/g, '\n');
+  // Replace escaped \n sequences with actual newlines
+  cleaned = cleaned.replace(/\\n/g, '\n');
+  return cleaned;
 }
 
 let adminApp: App | null = null;
@@ -26,43 +27,84 @@ let adminAuth: Auth | null = null;
 let adminDb: Firestore | null = null;
 let adminMessaging: Messaging | null = null;
 
+function initializeAdmin() {
+  if (adminApp && adminAuth && adminDb) {
+    return;
+  }
+
+  const projectId =
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = cleanPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
+
+  const isConfigured = Boolean(projectId && clientEmail && privateKey);
+
+  try {
+    if (!getApps().length) {
+      if (isConfigured) {
+        try {
+          adminApp = initializeApp({
+            credential: cert({
+              projectId: projectId!,
+              clientEmail: clientEmail!,
+              privateKey: privateKey!,
+            }),
+          });
+        } catch (certErr) {
+          console.error('Firebase Admin cert initialization error:', certErr);
+        }
+      }
+    } else {
+      adminApp = getApp();
+    }
+
+    const activeApp = adminApp || (getApps().length > 0 ? getApp() : null);
+
+    if (activeApp) {
+      if (!adminAuth) {
+        try { adminAuth = getAuth(activeApp); } catch (e) { console.warn('adminAuth init warning:', e); }
+      }
+      if (!adminDb) {
+        try { adminDb = getFirestore(activeApp); } catch (e) { console.warn('adminDb init warning:', e); }
+      }
+      if (!adminMessaging) {
+        try { adminMessaging = getMessaging(activeApp); } catch (e) { console.warn('adminMessaging init warning:', e); }
+      }
+    }
+  } catch (globalErr) {
+    console.error('Firebase admin initialization error:', globalErr);
+  }
+}
+
+// Initial attempt (safe, will not throw)
+initializeAdmin();
+
+export function getAdminApp(): App | null {
+  if (!adminApp) initializeAdmin();
+  return adminApp;
+}
+
+export function getAdminAuth(): Auth | null {
+  if (!adminAuth) initializeAdmin();
+  return adminAuth;
+}
+
+export function getAdminDb(): Firestore | null {
+  if (!adminDb) initializeAdmin();
+  return adminDb;
+}
+
+export function getAdminMessaging(): Messaging | null {
+  if (!adminMessaging) initializeAdmin();
+  return adminMessaging;
+}
+
 const projectId =
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
   process.env.FIREBASE_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 const privateKey = cleanPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
-
 const isAdminConfigured = Boolean(projectId && clientEmail && privateKey);
 
-try {
-  if (!getApps().length) {
-    if (isAdminConfigured) {
-      try {
-        adminApp = initializeApp({
-          credential: cert({
-            projectId: projectId!,
-            clientEmail: clientEmail!,
-            privateKey: privateKey!,
-          }),
-        });
-      } catch (certErr) {
-        console.error('Firebase Admin cert initialization error:', certErr);
-      }
-    }
-  } else {
-    adminApp = getApp();
-  }
-
-  const activeApp = adminApp || (getApps().length > 0 ? getApp() : null);
-
-  if (activeApp && isAdminConfigured) {
-    try { adminAuth = getAuth(activeApp); } catch (e) { console.warn('adminAuth init warning:', e); }
-    try { adminDb = getFirestore(activeApp); } catch (e) { console.warn('adminDb init warning:', e); }
-    try { adminMessaging = getMessaging(activeApp); } catch (e) { console.warn('adminMessaging init warning:', e); }
-  }
-} catch (globalErr) {
-  console.error('Firebase admin top-level initialization error:', globalErr);
-}
-
-// Proxies or direct exports so existing callers expecting non-null get meaningful errors on invocation rather than crash on import
 export { adminApp, adminAuth, adminDb, adminMessaging, isAdminConfigured };

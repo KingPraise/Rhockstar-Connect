@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminAuth, adminDb, getAdminAuth, getAdminDb } from '@/lib/firebase-admin';
 
 // Exact folder names used by existing non-chat upload features.
 // Do not add broad prefixes or wildcards here.
@@ -41,7 +41,8 @@ export async function POST(req: Request) {
     }
 
     // 2. Strict cryptographic verification via Firebase Admin SDK
-    if (!adminAuth) {
+    const auth = getAdminAuth() || adminAuth;
+    if (!auth) {
       console.error('Firebase Admin SDK is not initialized in serverless environment.');
       return NextResponse.json(
         { error: 'Server initialization error: Authentication service unavailable.' },
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
 
     let uid: string;
     try {
-      const decoded = await adminAuth.verifyIdToken(token);
+      const decoded = await auth.verifyIdToken(token);
       uid = decoded.uid;
     } catch (authError) {
       console.warn('Firebase Admin token verification failed:', authError);
@@ -90,14 +91,15 @@ export async function POST(req: Request) {
         );
       }
 
-      if (!adminDb) {
+      const db = getAdminDb() || adminDb;
+      if (!db) {
         return NextResponse.json(
           { error: 'Server initialization error: Database service unavailable.' },
           { status: 503 }
         );
       }
 
-      const chatSnapshot = await adminDb
+      const chatSnapshot = await db
         .collection('chats')
         .doc(chatId)
         .get();

@@ -6,7 +6,7 @@
 - **Root Cause Verified**: The earlier Netlify 500 issue was caused by heavy server-side Firebase Admin SDK instantiation during signature generation on serverless environments missing runtime credentials.
 - **Verification**: Tested live against `https://rhockstarconnect.com/api/cloudinary/sign`.
   - The endpoint now uses zero-dependency token validation with resilient secret fallbacks.
-  - End-to-end live testing confirmed the signature endpoint returns HTTP `200 OK` and images upload cleanly to Cloudinary (`https://res.cloudinary.com/dkayul64b/image/upload/...`).
+  - End-to-end live testing confirmed the signature endpoint returns HTTP `200 OK` and images upload cleanly to Cloudinary (`https://res.cloudinary.com/<cloud_name>/image/upload/...`).
 
 ---
 

@@ -123,6 +123,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  serverExternalPackages: ['firebase-admin'],
   allowedDevOrigins: ['rhockstar-dev-999.loca.lt', 'localhost:3000'],
   images: {
     remotePatterns: [

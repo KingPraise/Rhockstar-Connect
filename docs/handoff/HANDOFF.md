@@ -18,14 +18,14 @@ The file `.env.local` lives in the project root and is gitignored. It needs thes
 
 | Key | Where to get the value |
 |---|---|
-| `FIREBASE_PROJECT_ID` | `rhockstar-connect-v2` |
+| `FIREBASE_PROJECT_ID` | Netlify env vars, or Firebase Console (Project ID) |
 | `FIREBASE_CLIENT_EMAIL` | Netlify env vars, or the Firebase service-account JSON (`client_email`) |
 | `FIREBASE_PRIVATE_KEY` | Netlify env vars, or Firebase Console > Project settings > Service accounts > Generate new private key (`private_key`). Wrap it in double quotes and keep the `\n` sequences. |
 | `NEXT_PUBLIC_FIREBASE_VAPID_KEY` | Netlify env vars, or Firebase Console > Cloud Messaging > Web Push certificates |
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | `dkayul64b` |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Netlify env vars, or Cloudinary cloud name |
 | `NEXT_PUBLIC_CLOUDINARY_API_KEY` | Netlify env vars, or Cloudinary dashboard > API Keys |
 | `CLOUDINARY_API_SECRET` | Cloudinary dashboard. **Use the newly rotated secret** (see open item 1). |
-| `CLOUDINARY_URL` | `cloudinary://<API_KEY>:<API_SECRET>@dkayul64b` |
+| `CLOUDINARY_URL` | `cloudinary://<API_KEY>:<API_SECRET>@<CLOUD_NAME>` |
 | `NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY` | Netlify env vars, or Flutterwave dashboard > Settings > API |
 | `FLUTTERWAVE_SECRET_KEY` | Netlify env vars, or Flutterwave dashboard > Settings > API |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | Netlify env vars, or Google Analytics > Admin > Data streams |

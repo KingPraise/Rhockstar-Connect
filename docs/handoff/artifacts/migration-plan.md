@@ -34,6 +34,6 @@ Migrate the project away from Firebase Storage to Cloudinary for all media uploa
 
 ## Verification Plan
 ### Manual Verification
-1. **Cloudinary**: User updates their profile picture or posts an image. Verification passes if the image successfully loads and its URL points to `res.cloudinary.com/dkayul64b/`.
+1. **Cloudinary**: User updates their profile picture or posts an image. Verification passes if the image successfully loads and its URL points to `res.cloudinary.com/<cloud_name>/`.
 2. **Push Notifications**: User sends a direct message to a test account. Verification passes if a push notification is delivered and no `Firebase Admin missing credentials` errors appear in the server logs.
 3. **Payments**: User attempts to purchase a subscription using a Flutterwave test card. Verification passes if the transaction succeeds and the user's tier is upgraded in Firestore.

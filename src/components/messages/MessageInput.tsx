@@ -11,6 +11,7 @@ import type {
 import {
   FileText,
   Mic,
+  Sparkles,
   Paperclip,
   Send,
   Square,
@@ -131,11 +132,22 @@ export default function MessageInput({
         {mediaFile && !isRecording && (
           <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-xl relative self-start">
             {mediaFile.type.startsWith("image/") ? (
-              <img
-                src={mediaPreviewUrl || ""}
-                alt="Edited attachment preview"
-                className="h-16 rounded-md object-cover"
-              />
+              <div className="relative group">
+                <img
+                  src={mediaPreviewUrl || ""}
+                  alt="Edited attachment preview"
+                  className="h-16 rounded-md object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() => setEditingImage(mediaFile)}
+                  className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/75 hover:bg-black/90 text-white rounded text-[10px] font-semibold flex items-center gap-1 border border-white/20 shadow"
+                  title="Edit photo"
+                >
+                  <Sparkles className="w-2.5 h-2.5 text-purple-400" />
+                  <span>Edit</span>
+                </button>
+              </div>
             ) : mediaFile.type.startsWith("audio/") ? (
               mediaPreviewUrl ? (
                 <audio

@@ -446,12 +446,14 @@ export default function PostCard({ post }: PostCardProps) {
                   ? "This comment has been hidden."
                   : comment.content.split(/(@[a-zA-Z0-9_]+)/g).map((part, index) =>
                       part.startsWith("@") ? (
-                        <span
+                        <Link
                           key={`${comment.id}-mention-${index}`}
-                          className="text-brand font-semibold"
+                          href={`/profile?username=${part.slice(1)}`}
+                          className="text-brand font-semibold hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {part}
-                        </span>
+                        </Link>
                       ) : (
                         <span key={`${comment.id}-text-${index}`}>{part}</span>
                       )
@@ -517,7 +519,7 @@ export default function PostCard({ post }: PostCardProps) {
         </div>
 
         {replies.length > 0 && (
-          <div className="ml-3 pl-3 border-l border-white/10 space-y-3">
+          <div className="ml-3 pl-3 border-l-2 border-brand/25 space-y-3 mt-2">
             {replies.map(reply => renderComment(reply, depth + 1))}
           </div>
         )}
@@ -983,7 +985,6 @@ export default function PostCard({ post }: PostCardProps) {
     </div>
   );
 }
-
 
 
 

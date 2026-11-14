@@ -508,6 +508,17 @@ export default function PostComposer() {
                     </div>
                   )}
 
+                  {mediaPreview.type === "image" && mediaFile && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingImage(mediaFile)}
+                      className="absolute top-2 right-10 px-2.5 py-1 bg-black/70 hover:bg-black/90 text-white rounded-full text-xs font-semibold flex items-center gap-1 backdrop-blur-sm shadow-md border border-white/15 transition-all"
+                      title="Edit photo with filters, crop, and draw"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Edit</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={removeMedia}

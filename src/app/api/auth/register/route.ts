@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb, adminAuth, isAdminConfigured } from '@/lib/firebase-admin';
+import { adminDb, adminAuth, isAdminConfigured, getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const RESERVED_USERNAMES = [
@@ -14,7 +14,9 @@ const RESERVED_USERNAMES = [
 
 export async function POST(req: Request) {
   try {
-    if (!isAdminConfigured || !adminAuth || !adminDb) {
+    const auth = getAdminAuth() || adminAuth;
+    const db = getAdminDb() || adminDb;
+    if (!auth || !db) {
       console.warn('Firebase Admin not configured on server, activating seamless client fallback');
       return NextResponse.json({ success: false, fallback: true, message: 'Server fallback active' }, { status: 200 });
     }
@@ -51,7 +53,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Check if username is taken in Firestore
-    const usernameSnap = await adminDb.collection('users')
+    const usernameSnap = await db.collection('users')
       .where('username', '==', cleanUsername)
       .limit(1)
       .get();
@@ -63,7 +65,7 @@ export async function POST(req: Request) {
     // 3. Check if email already exists in Auth or Firestore
     let existingAuthUser: any = null;
     try {
-      existingAuthUser = await adminAuth.getUserByEmail(cleanEmail);
+      existingAuthUser = await auth.getUserByEmail(cleanEmail);
     } catch (e: any) {
       if (e?.code !== 'auth/user-not-found') {
         // Ignored, user doesn't exist
@@ -72,7 +74,7 @@ export async function POST(req: Request) {
 
     if (existingAuthUser) {
       // Check if Firestore document exists
-      const existingDoc = await adminDb.collection('users').doc(existingAuthUser.uid).get();
+      const existingDoc = await db.collection('users').doc(existingAuthUser.uid).get();
       if (existingDoc.exists) {
         return NextResponse.json({
           error: 'This email address is already registered. If you already have an account, please log in or reset your password.'
@@ -80,7 +82,7 @@ export async function POST(req: Request) {
       } else {
         // Orphaned Auth user without a Firestore doc: purge the broken Auth user so registration can proceed cleanly
         try {
-          await adminAuth.deleteUser(existingAuthUser.uid);
+          await auth.deleteUser(existingAuthUser.uid);
         } catch (delErr) {
           console.warn('Could not purge orphaned user before recreate:', delErr);
         }
@@ -90,7 +92,7 @@ export async function POST(req: Request) {
     // 4. Create user in Firebase Auth
     let newAuthUser;
     try {
-      newAuthUser = await adminAuth.createUser({
+      newAuthUser = await auth.createUser({
         email: cleanEmail,
         password: password,
         displayName: fullName.trim(),
@@ -107,7 +109,7 @@ export async function POST(req: Request) {
 
     // 5. Create user document in Firestore with Admin privileges
     try {
-      await adminDb.collection('users').doc(newAuthUser.uid).set({
+      await db.collection('users').doc(newAuthUser.uid).set({
         uid: newAuthUser.uid,
         fullName: fullName.trim(),
         username: cleanUsername,
@@ -128,7 +130,7 @@ export async function POST(req: Request) {
       console.error('Error creating user Firestore doc, rolling back Auth:', dbErr);
       // Rollback Auth user if database creation failed
       try {
-        await adminAuth.deleteUser(newAuthUser.uid);
+        await auth.deleteUser(newAuthUser.uid);
       } catch (rollbackErr) {
         console.warn('Rollback failed:', rollbackErr);
       }
@@ -141,12 +143,12 @@ export async function POST(req: Request) {
         const cleanRefCode = referralCode.trim().replace('@', '').toLowerCase();
         let referrerDoc: any = null;
 
-        const refSnap = await adminDb.collection('users').where('username', '==', cleanRefCode).limit(1).get();
+        const refSnap = await db.collection('users').where('username', '==', cleanRefCode).limit(1).get();
         if (!refSnap.empty) {
           referrerDoc = refSnap.docs[0];
         } else {
           // Fallback by doc id
-          const idDoc = await adminDb.collection('users').doc(cleanRefCode).get();
+          const idDoc = await db.collection('users').doc(cleanRefCode).get();
           if (idDoc.exists) {
             referrerDoc = idDoc;
           }
@@ -163,7 +165,7 @@ export async function POST(req: Request) {
           });
 
           // Create notification for referrer
-          await adminDb.collection('notifications').add({
+          await db.collection('notifications').add({
             userId: referrerDoc.id,
             type: 'connection',
             title: '🎉 Referral Joined!',
