@@ -48,6 +48,7 @@ import {
   Check,
   WifiOff,
   ArrowUp,
+  X,
 } from "lucide-react";
 
 import PullToRefresh from "@/components/ui/PullToRefresh";
@@ -437,16 +438,19 @@ function FeedContent() {
 
         setNetworkSlow(false);
 
+        // Only trigger if no live server snapshot has arrived after 60 seconds (1 minute)
         syncTimerRef.current =
           setTimeout(() => {
             if (
-              !hasServerSnapshotRef.current
+              !hasServerSnapshotRef.current &&
+              typeof navigator !== "undefined" &&
+              navigator.onLine
             ) {
               setNetworkSlow(
                 true
               );
             }
-          }, 4000);
+          }, 60000);
       };
 
     const handleOnline = () => {
@@ -1247,15 +1251,21 @@ function FeedContent() {
             {networkSlow &&
               posts.length >
                 0 && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-                  <WifiOff className="w-3.5 h-3.5 shrink-0" />
-
-                  <span>
-                    Connection is
-                    slow. Showing
-                    your latest
-                    saved content.
-                  </span>
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <WifiOff className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      Connection is slow. Showing your latest saved content.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNetworkSlow(false)}
+                    className="p-1 text-amber-400/80 hover:text-white hover:bg-amber-500/20 rounded-md transition-colors shrink-0"
+                    aria-label="Dismiss notice"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )}
 
