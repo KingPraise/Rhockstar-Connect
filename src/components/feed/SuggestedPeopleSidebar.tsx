@@ -46,7 +46,7 @@ export default function SuggestedPeopleSidebar({
               key={i}
               className="flex items-center gap-2.5 p-2 rounded-xl animate-pulse"
             >
-              <div className="w-8 h-8 rounded-full bg-slate-700 shrink-0" />
+              <div className="w-10 h-10 rounded-full bg-slate-700 shrink-0" />
               <div className="min-w-0 flex-1 space-y-1.5">
                 <div className="h-3 bg-slate-700 rounded w-28" />
                 <div className="h-2 bg-slate-700/60 rounded w-16" />
@@ -63,21 +63,21 @@ export default function SuggestedPeopleSidebar({
                 <UserAvatar
                   name={user.fullName}
                   src={user.avatar}
-                  className="w-8 h-8 text-xs font-bold shrink-0"
+                  className="w-10 h-10 text-xs font-bold shrink-0 shadow-sm"
                 />
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-1">
                     <Link
                       href={`/profile?uid=${user.uid}`}
-                      className="font-bold text-white text-xs truncate block hover:underline"
+                      className="font-bold text-white text-sm truncate block hover:underline"
                     >
                       {user.fullName}
                     </Link>
                     <VerifiedBadge tier={user.subscriptionTier} />
                   </div>
 
-                  <p className="text-[11px] text-purple-300/80 truncate">
+                  <p className="text-xs text-purple-300/80 truncate">
                     {user.headline ||
                       user.industry ||
                       user.accountType ||

@@ -1115,132 +1115,98 @@ function FeedContent() {
         {/* Mobile Suggestions */}
         {suggestedLoading ? (
           <div className="block lg:hidden mb-4 space-y-3">
-            <div className="p-3 bg-slate-900/80 border border-white/5 rounded-2xl space-y-2">
+            <div className="p-3.5 bg-slate-900/80 border border-white/5 rounded-2xl space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-sm font-bold text-white flex items-center gap-2">
+                  <Users className="w-4 h-4 text-purple-400" />
                   Suggested Connections
                 </span>
               </div>
 
-              <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
-                {[1, 2].map(
-                  (i) => (
-                    <div
-                      key={
-                        i
-                      }
-                      className="p-2.5 bg-slate-800/40 border border-white/5 rounded-xl flex items-center gap-2 shrink-0 min-w-[210px] animate-pulse"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-slate-700 shrink-0" />
-
-                      <div className="min-w-0 flex-1 space-y-1.5">
-                        <div className="h-3 bg-slate-700 rounded w-24" />
-                        <div className="h-2 bg-slate-700/60 rounded w-16" />
-                      </div>
+              <div className="flex gap-3 overflow-x-auto pb-1.5 scrollbar-none">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="p-3 bg-slate-800/40 border border-white/5 rounded-2xl flex items-center gap-3 shrink-0 min-w-[270px] animate-pulse"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-slate-700 shrink-0" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-3.5 bg-slate-700 rounded w-28" />
+                      <div className="h-2.5 bg-slate-700/60 rounded w-20" />
                     </div>
-                  )
-                )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        ) : suggestedPeople.length >
-          0 ? (
+        ) : suggestedPeople.length > 0 ? (
           <div className="block lg:hidden mb-4 space-y-3">
-            <div className="p-3 bg-slate-900/80 border border-white/5 rounded-2xl space-y-2">
+            <div className="p-3.5 bg-slate-900/80 border border-white/5 rounded-2xl space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-sm font-bold text-white flex items-center gap-2">
+                  <Users className="w-4 h-4 text-purple-400" />
                   Suggested Connections
                 </span>
 
                 <Link
                   href="/network"
-                  className="text-[11px] font-medium text-purple-400 hover:underline"
+                  className="text-xs font-semibold text-purple-400 hover:underline"
                 >
                   View All
                 </Link>
               </div>
 
-              <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none">
-                {suggestedPeople.map(
-                  (user) => (
-                    <div
-                      key={
-                        user.uid
-                      }
-                      className="p-2.5 bg-slate-800/40 border border-white/5 rounded-xl flex items-center gap-2 shrink-0 min-w-[210px]"
-                    >
-                      <UserAvatar
-                        name={
-                          user.fullName
-                        }
-                        src={
-                          user.avatar
-                        }
-                        className="w-8 h-8 text-xs font-bold shrink-0"
-                      />
+              <div className="flex gap-3 overflow-x-auto pb-1.5 scrollbar-none">
+                {suggestedPeople.map((user) => (
+                  <div
+                    key={user.uid}
+                    className="p-3 bg-slate-800/60 border border-white/10 rounded-2xl flex items-center gap-3 shrink-0 min-w-[270px] shadow-sm hover:border-purple-500/30 transition-all"
+                  >
+                    <UserAvatar
+                      name={user.fullName}
+                      src={user.avatar}
+                      className="w-12 h-12 text-sm font-bold shrink-0 shadow-inner"
+                    />
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1">
-                          <Link
-                            href={`/profile?uid=${user.uid}`}
-                            className="font-bold text-white text-xs truncate block hover:underline"
-                          >
-                            {
-                              user.fullName
-                            }
-                          </Link>
-
-                          <VerifiedBadge
-                            tier={
-                              user.subscriptionTier
-                            }
-                          />
-                        </div>
-
-                        <p className="text-[10px] text-purple-300/80 truncate">
-                          {user.headline ||
-                            user.industry ||
-                            user.accountType ||
-                            "Member"}
-                        </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/profile?uid=${user.uid}`}
+                          className="font-bold text-white text-sm truncate block hover:underline"
+                        >
+                          {user.fullName}
+                        </Link>
+                        <VerifiedBadge tier={user.subscriptionTier} />
                       </div>
 
-                      {sentRequestIds.has(
-                        user.uid
-                      ) ? (
-                        <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs shrink-0 flex items-center gap-1 font-semibold">
-                          <Check className="w-3.5 h-3.5" />
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() =>
-                            handleConnect(
-                              user.uid,
-                              user.fullName
-                            )
-                          }
-                          disabled={
-                            connectingUserIds.has(
-                              user.uid
-                            ) ||
-                            !isOnline
-                          }
-                          className="p-1.5 bg-purple-600/20 text-purple-300 hover:bg-purple-600 hover:text-white rounded-lg text-xs shrink-0 disabled:opacity-50"
-                        >
-                          {connectingUserIds.has(
-                            user.uid
-                          ) ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <UserPlus className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      )}
+                      <p className="text-xs text-purple-300/80 truncate mt-0.5">
+                        {user.headline || user.industry || user.accountType || "Member"}
+                      </p>
                     </div>
-                  )
-                )}
+
+                    {sentRequestIds.has(user.uid) ? (
+                      <span className="p-2 px-3 bg-emerald-500/20 text-emerald-400 rounded-xl text-xs shrink-0 flex items-center gap-1.5 font-semibold border border-emerald-500/30">
+                        <Check className="w-4 h-4" />
+                        <span>Sent</span>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleConnect(user.uid, user.fullName)}
+                        disabled={connectingUserIds.has(user.uid) || !isOnline}
+                        className="p-2 px-3 bg-purple-600/20 text-purple-300 hover:bg-purple-600 hover:text-white rounded-xl text-xs font-semibold shrink-0 disabled:opacity-50 flex items-center gap-1.5 transition-all border border-purple-500/30"
+                      >
+                        {connectingUserIds.has(user.uid) ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <>
+                            <UserPlus className="w-4 h-4" />
+                            <span>Connect</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           </div>

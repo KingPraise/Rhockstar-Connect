@@ -207,7 +207,8 @@ export default function PostComposer() {
 
   const handleSelectMention = (selectedUser: UserBasic) => {
     if (mentionStart === null || mentionEnd === null) return;
-    const mention = `@${selectedUser.username} `;
+    const cleanUsername = (selectedUser.username || "").trim();
+    const mention = `@${cleanUsername} `;
     const updatedText =
       content.slice(0, mentionStart) +
       mention +
@@ -351,7 +352,7 @@ export default function PostComposer() {
 
   return (
     <>
-      <div className="neo-card p-3.5 sm:p-4 mb-4 border border-white/5 bg-slate-900/80 rounded-2xl relative overflow-hidden">
+      <div className="neo-card p-3.5 sm:p-4 mb-4 border border-white/5 bg-slate-900/80 rounded-2xl relative overflow-visible z-20">
         <form onSubmit={handlePost}>
           {errorMsg && (
             <div className="mb-3 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between text-rose-400 text-xs">
@@ -390,26 +391,32 @@ export default function PostComposer() {
 
               {/* Mention Suggestions Popover */}
               {filteredMentionUsers.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-30 max-h-48 overflow-y-auto divide-y divide-white/5 custom-scrollbar">
-                  <div className="p-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 bg-slate-950/60">
-                    <AtSign className="w-3 h-3 text-brand" /> Mention Member
+                <div className="absolute left-0 right-0 top-full mt-2 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.8)] z-50 max-h-64 sm:max-h-80 overflow-y-auto divide-y divide-white/5 custom-scrollbar">
+                  <div className="p-2.5 px-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between bg-slate-950/80 sticky top-0 z-10 border-b border-white/5">
+                    <span className="flex items-center gap-1.5 text-purple-300">
+                      <AtSign className="w-3.5 h-3.5 text-brand" /> Mention Member
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-normal">
+                      {filteredMentionUsers.length} available
+                    </span>
                   </div>
                   {filteredMentionUsers.map((user) => (
                     <button
                       key={user.uid}
                       type="button"
+                      onMouseDown={(e) => e.preventDefault()}
                       onClick={() => handleSelectMention(user)}
-                      className="w-full p-2.5 flex items-center gap-2.5 hover:bg-slate-800 transition-colors text-left"
+                      className="w-full p-3 px-3.5 flex items-center gap-3 hover:bg-white/5 active:bg-white/10 transition-colors text-left"
                     >
                       <UserAvatar
                         src={user.avatar}
                         name={user.fullName || user.username}
-                        className="w-7 h-7"
-                        textClassName="text-[10px] font-bold"
+                        className="w-9 h-9 shrink-0 shadow-sm"
+                        textClassName="text-xs font-bold"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-white truncate">{user.fullName}</p>
-                        <p className="text-[11px] text-brand truncate">@{user.username}</p>
+                        <p className="text-sm font-bold text-white truncate">{user.fullName}</p>
+                        <p className="text-xs text-brand truncate font-medium">@{user.username}</p>
                       </div>
                     </button>
                   ))}

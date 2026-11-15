@@ -177,7 +177,8 @@ export default function PostCard({ post }: PostCardProps) {
   const handleSelectMention = (selectedUser: UserBasic) => {
     if (mentionStart === null || mentionEnd === null) return;
 
-    const mention = `@${selectedUser.username}`;
+    const cleanUsername = (selectedUser.username || "").trim();
+    const mention = `@${cleanUsername}`;
     const updatedText =
       commentText.slice(0, mentionStart) +
       mention +
@@ -448,7 +449,7 @@ export default function PostCard({ post }: PostCardProps) {
                       part.startsWith("@") ? (
                         <Link
                           key={`${comment.id}-mention-${index}`}
-                          href={`/profile?username=${part.slice(1)}`}
+                          href={`/profile?username=${encodeURIComponent(part.slice(1).trim())}`}
                           className="text-brand font-semibold hover:underline"
                           onClick={(e) => e.stopPropagation()}
                         >
@@ -626,7 +627,7 @@ export default function PostCard({ post }: PostCardProps) {
                   part.startsWith("@") ? (
                     <Link
                       key={`mention-short-${index}`}
-                      href={`/profile?username=${part.slice(1)}`}
+                      href={`/profile?username=${encodeURIComponent(part.slice(1).trim())}`}
                       className="text-brand font-semibold hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -653,7 +654,7 @@ export default function PostCard({ post }: PostCardProps) {
                   part.startsWith("@") ? (
                     <Link
                       key={`mention-full-${index}`}
-                      href={`/profile?username=${part.slice(1)}`}
+                      href={`/profile?username=${encodeURIComponent(part.slice(1).trim())}`}
                       className="text-brand font-semibold hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >

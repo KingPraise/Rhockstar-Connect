@@ -127,10 +127,60 @@ export const getUserById = async (userId: string): Promise<{ success: boolean; u
 
 export const getUserByUsername = async (username: string): Promise<{ success: boolean; user?: any; error?: string }> => {
   try {
+    const clean = username.replace('@', '').trim();
+    if (!clean) return { success: false, error: "Username is required" };
+
     const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('username', '==', username.replace('@', '')));
-    const snapshot = await getDocs(q);
-    
+
+    // 1. Try exact match
+    let q = query(usersRef, where('username', '==', clean));
+    let snapshot = await getDocs(q);
+
+    // 2. Try lowercased match if different
+    if (snapshot.empty && clean.toLowerCase() !== clean) {
+      q = query(usersRef, where('username', '==', clean.toLowerCase()));
+      snapshot = await getDocs(q);
+    }
+
+    // 3. Try matching 'handle' field if username was stored as handle
+    if (snapshot.empty) {
+      q = query(usersRef, where('handle', '==', clean));
+      snapshot = await getDocs(q);
+    }
+    if (snapshot.empty && clean.toLowerCase() !== clean) {
+      q = query(usersRef, where('handle', '==', clean.toLowerCase()));
+      snapshot = await getDocs(q);
+    }
+
+    // 4. Try legacy whitespace variants (single or double space)
+    if (snapshot.empty) {
+      q = query(usersRef, where('username', '==', clean + ' '));
+      snapshot = await getDocs(q);
+    }
+    if (snapshot.empty) {
+      q = query(usersRef, where('username', '==', clean + '  '));
+      snapshot = await getDocs(q);
+    }
+
+    // 5. Fallback: query all users and match case-insensitively
+    if (snapshot.empty) {
+      const allSnapshot = await getDocs(usersRef);
+      const matchedDoc = allSnapshot.docs.find(d => {
+        const u = d.data();
+        return (u.username && u.username.trim().toLowerCase() === clean.toLowerCase()) ||
+               (u.handle && u.handle.trim().toLowerCase() === clean.toLowerCase());
+      });
+      if (matchedDoc) {
+        return {
+          success: true,
+          user: {
+            uid: matchedDoc.id,
+            ...matchedDoc.data()
+          }
+        };
+      }
+    }
+
     if (!snapshot.empty) {
       const docSnap = snapshot.docs[0];
       return { 

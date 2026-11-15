@@ -5,12 +5,10 @@ import { useSearchParams } from "next/navigation";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import AuthRequiredModal from "@/components/auth/AuthRequiredModal";
-import { 
-  Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap, 
+import { Plus, Building2, GraduationCap, Code2, Globe, Heart, ChevronRight, Zap, 
   UserPlus, Target, CheckCircle2, MessageSquare, User, MoreHorizontal, 
   FileText, Briefcase, MapPin, Calendar, ExternalLink, Sparkles, ChevronDown, 
-  ChevronUp, ShieldCheck, Volume2, Flame, Loader2 
-} from "lucide-react";
+  ChevronUp, ShieldCheck, Volume2, Flame, Loader2, UserX } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { getUserById, getUserByUsername, trackProfileView, listenToUserProfile } from "@/lib/services/users";
 import { sendConnectionRequest } from "@/lib/services/connections";
@@ -41,6 +39,7 @@ function ProfileContent() {
   const queryEdit = searchParams.get("edit");
 
   const [targetUser, setTargetUser] = useState<any>(null);
+  const [userNotFound, setUserNotFound] = useState(false);
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'none' | 'pending' | 'accepted' | 'rejected'>('none');
   const [actionLoading, setActionLoading] = useState(false);
@@ -77,22 +76,31 @@ function ProfileContent() {
       let fetchedUser = null;
       if (queryUser) {
         setLoading(true);
+        setUserNotFound(false);
         const res = await getUserByUsername(queryUser);
         if (res.success && res.user) {
           fetchedUser = res.user;
           setTargetUser(fetchedUser);
+        } else {
+          setTargetUser(null);
+          setUserNotFound(true);
         }
         setLoading(false);
       } else if (queryUid) {
         setLoading(true);
+        setUserNotFound(false);
         const res = await getUserById(queryUid);
         if (res.success && res.user) {
           fetchedUser = res.user;
           setTargetUser(fetchedUser);
+        } else {
+          setTargetUser(null);
+          setUserNotFound(true);
         }
         setLoading(false);
       } else {
         setTargetUser(null);
+        setUserNotFound(false);
       }
 
       // Only listen to target user document when viewing another person's profile
@@ -231,6 +239,32 @@ function ProfileContent() {
           <div className="flex flex-col gap-8">
             <div className="h-80 bg-slate-800 rounded-3xl"></div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (userNotFound) {
+    return (
+      <div className="w-full max-w-xl mx-auto neo-card p-10 text-center flex flex-col items-center gap-6 my-12 bg-slate-900/80 rounded-3xl border border-white/10 shadow-2xl">
+        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center">
+          <UserX className="w-8 h-8" />
+        </div>
+        <h2 className="text-2xl font-extrabold text-white">Member Not Found</h2>
+        <p className="text-slate-400 text-sm max-w-sm">
+          We couldn&apos;t find a profile for{" "}
+          <span className="text-brand font-bold">
+            {queryUser ? `@${queryUser.replace('@', '')}` : `ID: ${queryUid}`}
+          </span>
+          . The account may have been renamed or removed.
+        </p>
+        <div className="flex gap-4">
+          <Link
+            href="/feed"
+            className="py-2.5 px-6 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition-all shadow-lg"
+          >
+            Back to Feed
+          </Link>
         </div>
       </div>
     );
