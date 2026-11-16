@@ -42,6 +42,9 @@
     "tailwindcss": "^4.3.2",
     "typescript": "^5"
   },
+  "overrides": {
+    "jose": "^4.15.9"
+  },
   "allowScripts": {
     "@firebase/util@1.15.3": true,
     "protobufjs@7.6.6": true,
