@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2, FileText, Check, Eye, EyeOff, BarChart2, CheckCircle2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Bookmark, Send, Reply, Edit2, Trash2, Flag, X, Loader2, FileText, Check, Eye, EyeOff, BarChart2, CheckCircle2, AtSign, ChevronDown, ChevronUp, CornerDownRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { toggleLike, toggleSavePost, addComment, deleteComment, deletePost, updatePost, updateComment, toggleCommentVisibility, votePoll, Post } from "@/lib/services/posts";
@@ -75,7 +75,8 @@ export default function PostCard({ post }: PostCardProps) {
   const [isLoadingLikes, setIsLoadingLikes] = useState(false);
   
   const { openLightbox } = useLightboxStore();
-  const [replyingTo, setReplyingTo] = useState<{ id: string; name: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; name: string; handle?: string } | null>(null);
+  const [collapsedThreads, setCollapsedThreads] = useState<Set<string>>(new Set());
   
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editPostText, setEditPostText] = useState(post.content);
@@ -114,16 +115,41 @@ export default function PostCard({ post }: PostCardProps) {
     setAuthModalOpen(true);
   };
 
-  const handleReplyComment = (commentId: string, userName: string) => {
+  const toggleThreadCollapse = (commentId: string) => {
+    setCollapsedThreads((prev) => {
+      const next = new Set(prev);
+      if (next.has(commentId)) {
+        next.delete(commentId);
+      } else {
+        next.add(commentId);
+      }
+      return next;
+    });
+  };
+
+  const handleReplyComment = (commentId: string, displayName: string, handle?: string) => {
     if (!profile) {
       promptGuestAuth("reply to comments");
       return;
     }
-    setReplyingTo({ id: commentId, name: userName });
+    const cleanHandle = (handle || "").trim();
+    setReplyingTo({ id: commentId, name: displayName, handle: cleanHandle || undefined });
     setMentionQuery(null);
     setMentionStart(null);
     setMentionEnd(null);
-    setCommentText(`@${userName} `);
+    if (cleanHandle && !cleanHandle.includes(" ")) {
+      setCommentText((prev) => {
+        const prefix = `@${cleanHandle} `;
+        return prev.startsWith(prefix) ? prev : prefix;
+      });
+    }
+    // Expand parent thread if it was collapsed
+    setCollapsedThreads((prev) => {
+      if (!prev.has(commentId)) return prev;
+      const next = new Set(prev);
+      next.delete(commentId);
+      return next;
+    });
     if (!showComments) setShowComments(true);
     setTimeout(() => {
       commentInputRef.current?.focus();
@@ -133,13 +159,9 @@ export default function PostCard({ post }: PostCardProps) {
   const handleCommentInputChange = (value: string) => {
     setCommentText(value);
 
-    if (value === "") {
-      setReplyingTo(null);
-    }
-
     const cursor = commentInputRef.current?.selectionStart ?? value.length;
     const textBeforeCursor = value.slice(0, cursor);
-    const match = textBeforeCursor.match(/(^|[\\s(])@([a-zA-Z0-9_]*)$/);
+    const match = textBeforeCursor.match(/(^|[\s(])@([a-zA-Z0-9_]*)$/);
 
     if (!match) {
       setMentionQuery(null);
@@ -148,8 +170,7 @@ export default function PostCard({ post }: PostCardProps) {
       return;
     }
 
-    const token = match[0];
-    const start = cursor - token.length + match[1].length;
+    const start = cursor - match[2].length - 1;
 
     setMentionQuery(match[2]);
     setMentionStart(start);
@@ -204,7 +225,8 @@ export default function PostCard({ post }: PostCardProps) {
         .filter((mentionUser) =>
           mentionUser.uid !== profile?.uid &&
           mentionUser.username &&
-          mentionUser.username.toLowerCase().includes(mentionQuery.toLowerCase())
+          (mentionUser.username.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+           mentionUser.fullName?.toLowerCase().includes(mentionQuery.toLowerCase()))
         )
         .slice(0, 6);
 
@@ -366,10 +388,21 @@ export default function PostCard({ post }: PostCardProps) {
   }, [post.id, searchParams]);
 
 
-  // Render comments recursively so replies can have their own replies.
+  // Render comments recursively so replies can have unlimited nested replies without mobile overflow.
   const comments = post.comments ?? [];
+  const commentById = new Map(comments.map((c) => [c.id, c]));
+
+  const countDescendants = (parentId: string): number => {
+    const direct = comments.filter((c) => c.replyToId === parentId);
+    return direct.reduce((sum, child) => sum + 1 + countDescendants(child.id), 0);
+  };
+
   const renderComment = (comment: (typeof comments)[number], depth = 0): React.ReactNode => {
     const replies = comments.filter(item => item.replyToId === comment.id);
+    const parentComment = comment.replyToId ? commentById.get(comment.replyToId) : undefined;
+    const isThreadCollapsed = collapsedThreads.has(comment.id);
+    const totalRepliesCount = replies.length > 0 ? countDescendants(comment.id) : 0;
+
     const created = new Date(comment.createdAt);
     const commentTime = !isNaN(created.getTime())
       ? formatDistanceToNow(created, { addSuffix: true })
@@ -380,38 +413,64 @@ export default function PostCard({ post }: PostCardProps) {
     const displayName = comment.userId === profile?.uid
       ? profile?.fullName
       : comment.user.name;
+    const cleanCommentHandle = (comment.userId === profile?.uid ? profile?.username : comment.user.handle)?.trim();
+    const isActiveReplyTarget = replyingTo?.id === comment.id;
 
     return (
       <div
         key={comment.id}
         id={`comment-${comment.id}`}
         className="flex flex-col gap-2 transition-all duration-300"
-        style={{ marginLeft: `${Math.min(depth, 5) * 16}px` }}
       >
-        <div className="flex gap-3">
+        <div className="flex gap-2.5 sm:gap-3">
           <Link href={`/profile?uid=${comment.userId}`} className="shrink-0">
             <UserAvatar
               src={comment.userId === profile?.uid ? profile?.avatar : comment.user.avatar}
               name={displayName}
-              className="w-9 h-9 shadow-inner"
+              className={`${depth > 0 ? "w-7 h-7 sm:w-8 sm:h-8" : "w-8 h-8 sm:w-9 sm:h-9"} shadow-inner`}
               textClassName="text-xs font-bold"
             />
           </Link>
 
-          <div className="flex-1 min-w-0 bg-slate-800/50 rounded-2xl rounded-tl-sm p-3">
+          <div className={`flex-1 min-w-0 rounded-2xl rounded-tl-sm p-2.5 sm:p-3 border transition-colors ${
+            isActiveReplyTarget
+              ? "bg-purple-950/35 border-brand/50"
+              : "bg-slate-800/50 border-white/5"
+          }`}>
             <div className="flex items-center justify-between gap-2 mb-1">
-              <Link
-                href={`/profile?uid=${comment.userId}`}
-                className="font-bold text-white text-sm hover:text-brand transition-colors flex items-center gap-1 min-w-0"
-              >
-                <span className="truncate">{displayName}</span>
-                <VerifiedBadge
-                  tier={comment.userId === profile?.uid
-                    ? (profile as any)?.subscriptionTier
-                    : ((comment.user as any)?.subscriptionTier ||
-                      (comment.user?.name?.includes("Elijah") ? "elite" : undefined))}
-                />
-              </Link>
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                <Link
+                  href={`/profile?uid=${comment.userId}`}
+                  className="font-bold text-white text-xs sm:text-sm hover:text-brand transition-colors flex items-center gap-1 min-w-0"
+                >
+                  <span className="truncate">{displayName}</span>
+                  <VerifiedBadge
+                    tier={comment.userId === profile?.uid
+                      ? (profile as any)?.subscriptionTier
+                      : ((comment.user as any)?.subscriptionTier ||
+                        (comment.user?.name?.includes("Elijah") ? "elite" : undefined))}
+                  />
+                </Link>
+                {cleanCommentHandle && (
+                  <span className="text-[11px] text-slate-400 truncate hidden sm:inline">
+                    @{cleanCommentHandle}
+                  </span>
+                )}
+                {parentComment && depth >= 3 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const el = document.getElementById(`comment-${parentComment.id}`);
+                      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                    className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-purple-300 bg-purple-500/15 px-1.5 py-0.5 rounded-md hover:bg-purple-500/25 transition-colors"
+                    title={`Replying to ${parentComment.user.name}`}
+                  >
+                    <CornerDownRight className="w-2.5 h-2.5" />
+                    <span>@{parentComment.user.handle?.trim() || parentComment.user.name}</span>
+                  </button>
+                )}
+              </div>
               <span className="text-[10px] text-slate-500 shrink-0">{commentTime}</span>
             </div>
 
@@ -420,28 +479,29 @@ export default function PostCard({ post }: PostCardProps) {
                 <textarea
                   value={editCommentText}
                   onChange={(e) => setEditCommentText(e.target.value)}
-                  className="w-full bg-slate-900 text-sm text-white p-2 rounded-lg border border-brand/50 focus:outline-none resize-none"
+                  rows={2}
+                  className="w-full bg-slate-900 text-sm text-white p-2.5 rounded-xl border border-brand/50 focus:outline-none resize-none"
                 />
                 <div className="flex justify-end gap-2 mt-2">
                   <button
                     type="button"
                     onClick={() => setEditingCommentId(null)}
-                    className="text-xs text-slate-400 hover:text-white"
+                    className="text-xs text-slate-400 hover:text-white px-2 py-1"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={() => handleSaveCommentEdit(comment.id, comment.content)}
-                    className="text-xs bg-brand text-white px-3 py-1 rounded"
+                    className="text-xs bg-brand text-slate-950 font-bold px-3 py-1 rounded-lg hover:opacity-90"
                   >
                     Save
                   </button>
                 </div>
               </div>
             ) : (
-              <p className={`text-sm whitespace-pre-wrap break-words ${
-                comment.isHidden ? "text-slate-500 italic" : "text-slate-300"
+              <p className={`text-sm whitespace-pre-wrap break-words leading-relaxed ${
+                comment.isHidden ? "text-slate-500 italic" : "text-slate-200"
               }`}>
                 {comment.isHidden && !canModerate
                   ? "This comment has been hidden."
@@ -463,14 +523,40 @@ export default function PostCard({ post }: PostCardProps) {
             )}
 
             <div className="mt-2 pt-2 border-t border-white/5 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => handleReplyComment(comment.id, comment.user.handle || comment.user.name)}
-                className="text-xs font-semibold text-slate-400 hover:text-brand flex items-center gap-1 transition-colors"
-              >
-                <Reply className="w-3.5 h-3.5" />
-                Reply
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleReplyComment(comment.id, displayName || "Member", cleanCommentHandle)}
+                  className={`text-xs font-semibold flex items-center gap-1 transition-colors ${
+                    isActiveReplyTarget ? "text-brand" : "text-slate-400 hover:text-brand"
+                  }`}
+                >
+                  <Reply className="w-3.5 h-3.5" />
+                  <span>Reply</span>
+                </button>
+
+                {replies.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => toggleThreadCollapse(comment.id)}
+                    className="text-xs font-medium text-purple-300/90 hover:text-purple-200 flex items-center gap-1 transition-colors"
+                  >
+                    {isThreadCollapsed ? (
+                      <>
+                        <ChevronDown className="w-3.5 h-3.5" />
+                        <span>
+                          View {totalRepliesCount} {totalRepliesCount === 1 ? "reply" : "replies"}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronUp className="w-3.5 h-3.5" />
+                        <span>Hide {replies.length === 1 ? "reply" : "replies"}</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
 
               <div className="flex items-center gap-3">
                 {canManage && (
@@ -519,8 +605,14 @@ export default function PostCard({ post }: PostCardProps) {
           </div>
         </div>
 
-        {replies.length > 0 && (
-          <div className="ml-3 pl-3 border-l-2 border-brand/25 space-y-3 mt-2">
+        {replies.length > 0 && !isThreadCollapsed && (
+          <div
+            className={
+              depth < 3
+                ? "ml-3 sm:ml-5 pl-2.5 sm:pl-3.5 border-l-2 border-purple-500/25 space-y-2.5 mt-1"
+                : "space-y-2.5 mt-1"
+            }
+          >
             {replies.map(reply => renderComment(reply, depth + 1))}
           </div>
         )}
@@ -859,16 +951,50 @@ export default function PostCard({ post }: PostCardProps) {
             </div>
           )}
 
+          {/* Replying To Banner */}
+          {replyingTo && (
+            <div className="mt-3 mb-2 flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl bg-purple-950/40 border border-purple-500/30 text-xs animate-in fade-in slide-in-from-bottom-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <Reply className="w-3.5 h-3.5 text-brand shrink-0" />
+                <span className="text-slate-300 truncate">
+                  Replying to{" "}
+                  <strong className="text-white">
+                    {replyingTo.handle ? `@${replyingTo.handle}` : replyingTo.name}
+                  </strong>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplyingTo(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                aria-label="Cancel reply"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Add Comment Input */}
-          <form onSubmit={handleAddComment} className="flex gap-2 items-center mt-4">
-            <UserAvatar src={profile?.avatar} name={profile?.fullName} className="w-10 h-10 shadow-md shrink-0" textClassName="text-sm font-bold" />
+          <form onSubmit={handleAddComment} className="flex gap-2 items-center mt-3">
+            <UserAvatar src={profile?.avatar} name={profile?.fullName} className="w-9 h-9 sm:w-10 sm:h-10 shadow-md shrink-0" textClassName="text-sm font-bold" />
 
             <div className="relative flex-1 min-w-0">
               {mentionQuery !== null && (
-                <div className="absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto rounded-xl border border-white/10 bg-slate-900 shadow-2xl z-30">
+                <div className="absolute bottom-full left-0 right-0 mb-2 max-h-64 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/95 backdrop-blur-xl shadow-[0_16px_40px_rgba(0,0,0,0.8)] z-50 divide-y divide-white/5 custom-scrollbar">
+                  <div className="p-2 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between bg-slate-950/80 sticky top-0 z-10 border-b border-white/5">
+                    <span className="flex items-center gap-1.5 text-purple-300">
+                      <AtSign className="w-3.5 h-3.5 text-brand" /> Mention Member
+                    </span>
+                    {!isLoadingMentionUsers && (
+                      <span className="text-[10px] text-slate-500 font-normal">
+                        {filteredMentionUsers.length} match{filteredMentionUsers.length === 1 ? "" : "es"}
+                      </span>
+                    )}
+                  </div>
                   {isLoadingMentionUsers ? (
-                    <div className="px-4 py-3 text-xs text-slate-400">
-                      Finding people...
+                    <div className="px-4 py-3 text-xs text-slate-400 flex items-center gap-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-brand" />
+                      <span>Finding members...</span>
                     </div>
                   ) : filteredMentionUsers.length > 0 ? (
                     filteredMentionUsers.map((mentionUser) => (
@@ -877,27 +1003,27 @@ export default function PostCard({ post }: PostCardProps) {
                         type="button"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => handleSelectMention(mentionUser)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/5 transition-colors"
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-white/5 active:bg-white/10 transition-colors"
                       >
                         <UserAvatar
                           src={mentionUser.avatar}
-                          name={mentionUser.fullName}
+                          name={mentionUser.fullName || mentionUser.username}
                           className="w-8 h-8 shrink-0"
-                          textClassName="text-xs"
+                          textClassName="text-xs font-bold"
                         />
                         <span className="flex-1 min-w-0">
-                          <span className="block text-sm font-semibold text-white truncate">
+                          <span className="block text-sm font-bold text-white truncate">
                             {mentionUser.fullName}
                           </span>
-                          <span className="block text-xs text-slate-400 truncate">
-                            @{mentionUser.username}
+                          <span className="block text-xs text-brand font-medium truncate">
+                            @{mentionUser.username?.trim()}
                           </span>
                         </span>
                       </button>
                     ))
                   ) : (
                     <div className="px-4 py-3 text-xs text-slate-400">
-                      No users found.
+                      No matching members found.
                     </div>
                   )}
                 </div>
@@ -916,8 +1042,8 @@ export default function PostCard({ post }: PostCardProps) {
                     setMentionEnd(null);
                   }, 150);
                 }}
-                placeholder={replyingTo ? `Replying to ${replyingTo.name}...` : "Write a comment..."}
-                className="w-full bg-slate-900/50 border border-white/10 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:border-brand/50"
+                placeholder={replyingTo ? `Write a reply to ${replyingTo.name}... (type @ to mention)` : "Write a comment... (type @ to mention)"}
+                className="w-full bg-slate-900/50 border border-white/10 rounded-full px-4 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-brand/50"
                 disabled={isCommenting}
               />
             </div>

@@ -1,8 +1,10 @@
 "use client";
 
 import type { RefObject } from "react";
+import Link from "next/link";
 import type { Message } from "@/lib/services/messages";
 import type { UserBasic } from "@/lib/services/users";
+import { useLightboxStore } from "@/store/useLightboxStore";
 import UserAvatar from "@/components/ui/UserAvatar";
 import {
   Check,
@@ -59,6 +61,7 @@ export default function DMMessageFeed({
   formatMessageTime,
   messagesEndRef,
 }: DMMessageFeedProps) {
+  const openLightbox = useLightboxStore((s) => s.openLightbox);
   let lastMessageDate: Date | null = null;
 
   const isSameDay = (first: Date, second: Date) =>
@@ -241,19 +244,19 @@ export default function DMMessageFeed({
                   ) : (
                     <>
                       {msg.type === "image" && msg.mediaUrl && (
-                        <a
-                          href={msg.mediaUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block w-full"
-                        >
+                        <div className="block w-full mb-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={msg.mediaUrl}
                             alt="Shared"
-                            className="rounded-xl max-h-60 w-full object-cover mb-2 cursor-pointer hover:opacity-95 transition-opacity shadow-sm"
-                            title="Click to view full image"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openLightbox([msg.mediaUrl!]);
+                            }}
+                            className="rounded-xl max-h-60 w-full object-cover cursor-pointer hover:opacity-95 transition-opacity shadow-sm"
+                            title="Tap to view & zoom"
                           />
-                        </a>
+                        </div>
                       )}
 
                       {msg.type === "audio" && msg.mediaUrl && (
@@ -271,10 +274,11 @@ export default function DMMessageFeed({
                           href={msg.mediaUrl}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           className="flex items-center gap-2 p-2.5 mb-2 rounded-xl bg-black/20 hover:bg-black/30 transition-colors border border-white/10 w-full"
                         >
                           <span className="text-sm font-medium truncate flex-1">
-                            {msg.text || "ViewDocument"}
+                            {msg.text || "View Document"}
                           </span>
                         </a>
                       )}
@@ -284,8 +288,25 @@ export default function DMMessageFeed({
                           msg.text !== "Sent an image") ||
                         (msg.type === "document" && !msg.mediaUrl)) &&
                         msg.text && (
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {msg.text}
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                            {msg.text.split(/(@[a-zA-Z0-9_]+)/g).map((part, idx) =>
+                              part.startsWith("@") ? (
+                                <Link
+                                  key={`${msg.id}-mention-${idx}`}
+                                  href={`/profile?username=${encodeURIComponent(part.slice(1).trim())}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className={
+                                    isMe
+                                      ? "font-extrabold underline decoration-slate-950/60 hover:opacity-80"
+                                      : "text-brand font-semibold hover:underline"
+                                  }
+                                >
+                                  {part}
+                                </Link>
+                              ) : (
+                                <span key={`${msg.id}-text-${idx}`}>{part}</span>
+                              )
+                            )}
                           </p>
                         )}
                     </>

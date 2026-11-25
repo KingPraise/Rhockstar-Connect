@@ -6,10 +6,12 @@ import type {
   ChangeEvent,
   FormEvent,
   RefObject,
-} from "react";import { db } from "@/lib/firebase";
+} from "react";
 
 import {
+  AtSign,
   FileText,
+  Loader2,
   Mic,
   Sparkles,
   Paperclip,
@@ -20,6 +22,9 @@ import {
 } from "lucide-react";
 
 import PhotoEditor from "@/components/media/PhotoEditor";
+import UserAvatar from "@/components/ui/UserAvatar";
+import { getAllUsers, type UserBasic } from "@/lib/services/users";
+import { useAuthStore } from "@/store/useAuthStore";
 
 interface MessageInputProps {
   newMessage: string;
@@ -54,8 +59,83 @@ export default function MessageInput({
   onSendMessage,
   textareaRef,
 }: MessageInputProps) {
+  const { profile } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingImage, setEditingImage] = useState<File | null>(null);
+
+  // Mention autocomplete state
+  const [mentionUsers, setMentionUsers] = useState<UserBasic[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState<number | null>(null);
+  const [mentionEnd, setMentionEnd] = useState<number | null>(null);
+  const [isLoadingMentions, setIsLoadingMentions] = useState(false);
+  const mentionLoadedRef = useRef(false);
+
+  const handleTextChange = (value: string) => {
+    setNewMessage(value);
+
+    const cursor = textareaRef.current?.selectionStart ?? value.length;
+    const textBeforeCursor = value.slice(0, cursor);
+    const match = textBeforeCursor.match(/(^|[\s(])@([a-zA-Z0-9_]*)$/);
+
+    if (!match) {
+      setMentionQuery(null);
+      setMentionStart(null);
+      setMentionEnd(null);
+      return;
+    }
+
+    setMentionQuery(match[2]);
+    setMentionStart(cursor - match[2].length - 1);
+    setMentionEnd(cursor);
+
+    if (!mentionLoadedRef.current) {
+      mentionLoadedRef.current = true;
+      setIsLoadingMentions(true);
+      getAllUsers()
+        .then((res) => {
+          if (res.success && res.users) {
+            setMentionUsers(res.users);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setIsLoadingMentions(false));
+    }
+  };
+
+  const handleSelectMention = (user: UserBasic) => {
+    if (mentionStart === null || mentionEnd === null) return;
+    const cleanHandle = (user.username || "").trim();
+    const inserted = `@${cleanHandle} `;
+    const updated =
+      newMessage.slice(0, mentionStart) +
+      inserted +
+      newMessage.slice(mentionEnd);
+    const nextCursor = mentionStart + inserted.length;
+
+    setNewMessage(updated);
+    setMentionQuery(null);
+    setMentionStart(null);
+    setMentionEnd(null);
+
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      textareaRef.current?.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
+  const filteredMentions =
+    mentionQuery === null
+      ? []
+      : mentionUsers
+          .filter(
+            (u) =>
+              u.uid !== profile?.uid &&
+              u.username &&
+              (u.username.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+                u.fullName?.toLowerCase().includes(mentionQuery.toLowerCase()))
+          )
+          .slice(0, 6);
 
   const handleFileSelect = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -250,43 +330,90 @@ export default function MessageInput({
               </button>
             </div>
           ) : (
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              placeholder="Write a message..."
-              value={newMessage}
-              onChange={(event) => {
-                setNewMessage(event.target.value);
+            <div className="relative flex-1 min-w-0 flex">
+              {mentionQuery !== null && (isLoadingMentions || filteredMentions.length > 0) && (
+                <div className="absolute bottom-full left-0 right-0 mb-2 max-h-60 overflow-y-auto rounded-2xl border border-white/10 bg-slate-900/95 backdrop-blur-xl shadow-2xl z-50 divide-y divide-white/5 custom-scrollbar">
+                  <div className="p-2 px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between bg-slate-950/80 sticky top-0 z-10 border-b border-white/5">
+                    <span className="flex items-center gap-1.5 text-purple-300">
+                      <AtSign className="w-3.5 h-3.5 text-brand" /> Mention Member
+                    </span>
+                  </div>
+                  {isLoadingMentions ? (
+                    <div className="px-4 py-3 text-xs text-slate-400 flex items-center gap-2">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-brand" />
+                      <span>Loading members...</span>
+                    </div>
+                  ) : (
+                    filteredMentions.map((u) => (
+                      <button
+                        key={u.uid}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSelectMention(u)}
+                        className="w-full p-2.5 px-3.5 flex items-center gap-3 hover:bg-white/5 active:bg-white/10 transition-colors text-left"
+                      >
+                        <UserAvatar
+                          src={u.avatar}
+                          name={u.fullName || u.username}
+                          className="w-8 h-8 shrink-0"
+                          textClassName="text-xs font-bold"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-white truncate">{u.fullName}</p>
+                          <p className="text-xs text-brand font-medium truncate">@{u.username?.trim()}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
 
-                event.target.style.height = "auto";
-                event.target.style.height =
-                  Math.min(event.target.scrollHeight, 150) + "px";
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                placeholder="Write a message... (type @ to mention)"
+                value={newMessage}
+                onChange={(event) => {
+                  handleTextChange(event.target.value);
 
-                if (!event.target.value) {
                   event.target.style.height = "auto";
-                }
-              }}
-              onKeyDown={(event) => {
-                const isTouchDevice =
-                  typeof window !== "undefined" &&
-                  ("ontouchstart" in window ||
-                    navigator.maxTouchPoints > 0);
+                  event.target.style.height =
+                    Math.min(event.target.scrollHeight, 150) + "px";
 
-                if (
-                  event.key === "Enter" &&
-                  !event.shiftKey &&
-                  !event.ctrlKey &&
-                  !isTouchDevice
-                ) {
-                  event.preventDefault();
-                  onSendMessage(
-                    event as unknown as FormEvent<HTMLFormElement>
-                  );
-                  event.currentTarget.style.height = "auto";
-                }
-              }}
-              className="flex-1 bg-slate-800 border border-white/10 rounded-2xl px-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand resize-none min-h-[44px] max-h-[140px] overflow-y-auto"
-            />
+                  if (!event.target.value) {
+                    event.target.style.height = "auto";
+                  }
+                }}
+                onBlur={() => {
+                  window.setTimeout(() => {
+                    setMentionQuery(null);
+                    setMentionStart(null);
+                    setMentionEnd(null);
+                  }, 150);
+                }}
+                onKeyDown={(event) => {
+                  const isTouchDevice =
+                    typeof window !== "undefined" &&
+                    ("ontouchstart" in window ||
+                      navigator.maxTouchPoints > 0);
+
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey &&
+                    !event.ctrlKey &&
+                    !isTouchDevice
+                  ) {
+                    event.preventDefault();
+                    setMentionQuery(null);
+                    onSendMessage(
+                      event as unknown as FormEvent<HTMLFormElement>
+                    );
+                    event.currentTarget.style.height = "auto";
+                  }
+                }}
+                className="flex-1 w-full bg-slate-800 border border-white/10 rounded-2xl px-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand resize-none min-h-[44px] max-h-[140px] overflow-y-auto"
+              />
+            </div>
           )}
 
           <button

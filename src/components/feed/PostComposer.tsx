@@ -3,7 +3,7 @@
 
 import UserAvatar from "@/components/ui/UserAvatar";
 import PhotoEditor from "@/components/media/PhotoEditor";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import {
   Image as ImageIcon,
@@ -56,6 +56,28 @@ export default function PostComposer() {
   const [showPollBuilder, setShowPollBuilder] = useState(false);
   const [pollQuestion, setPollQuestion] = useState("");
   const [pollOptions, setPollOptions] = useState<string[]>(["", ""]);
+
+  // Support QuickCreate deep-links (?action=photo | ?action=poll | ?action=post)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get("action");
+    if (!action) return;
+
+    if (action === "poll") {
+      setShowPollBuilder(true);
+    } else if (action === "photo") {
+      setTimeout(() => fileInputRef.current?.click(), 150);
+    } else if (action === "post") {
+      setTimeout(() => textareaRef.current?.focus(), 150);
+    }
+
+    // Clean URL query parameter without reloading
+    params.delete("action");
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`;
+    window.history.replaceState({}, "", nextUrl);
+  }, []);
 
   // Releases the previous local preview URL when replacing media.
   const releaseCurrentPreview = () => {

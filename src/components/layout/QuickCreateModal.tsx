@@ -34,17 +34,16 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
     switch (action) {
       case "post":
         onClose();
-        router.push("/feed");
+        router.push("/feed?action=post");
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: "smooth" });
         }, 100);
         break;
       case "photo":
         onClose();
-        router.push("/feed");
+        router.push("/feed?action=photo");
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: "smooth" });
-          toast.success("Attach your photo in the composer!");
         }, 100);
         break;
       case "job":
@@ -65,10 +64,9 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
         break;
       case "poll":
         onClose();
-        router.push("/feed");
+        router.push("/feed?action=poll");
         setTimeout(() => {
           window.scrollTo({ top: 0, behavior: "smooth" });
-          toast("Click the Poll icon (📊) in the composer to launch a poll!", { icon: "📊" });
         }, 100);
         break;
     }
@@ -204,7 +202,7 @@ export default function QuickCreateModal({ isOpen, onClose }: QuickCreateModalPr
         onClose={() => setIsCommunityModalOpen(false)}
         onCreated={(id) => {
           setIsCommunityModalOpen(false);
-          router.push("/messages");
+          router.push(`/messages?communityId=${encodeURIComponent(id)}`);
           toast.success("Public community created! Opening Chat...");
         }}
       />

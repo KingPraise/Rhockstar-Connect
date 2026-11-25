@@ -273,19 +273,21 @@ export const sendCommunityMessage = async (
           }
         }
 
-        // 2. Mention alerts (@username)
+        // 2. Mention alerts (@username) - case-insensitive resolution
         const mentionMatches = text.match(/@([a-zA-Z0-9_]+)/g);
         if (mentionMatches && mentionMatches.length > 0) {
-          const rawUsernames = [...new Set(mentionMatches.map((m) => m.slice(1).toLowerCase()))];
-          for (const handle of rawUsernames.slice(0, 5)) {
+          const { getUserByUsername } = await import('./users');
+          const rawUsernames = [...new Set(mentionMatches.map((m) => m.slice(1).trim()))];
+          const seenLower = new Set<string>();
+          for (const handle of rawUsernames) {
+            const lower = handle.toLowerCase();
+            if (!lower || seenLower.has(lower)) continue;
+            seenLower.add(lower);
+            if (seenLower.size > 6) break;
             try {
-              const userQuery = query(collection(db, 'users'), where('username', '==', handle));
-              const snap = await getDocs(userQuery);
-              if (!snap.empty) {
-                const targetUid = snap.docs[0].id;
-                if (targetUid !== senderId) {
-                  recipientsToNotify.add(targetUid);
-                }
+              const userRes = await getUserByUsername(handle);
+              if (userRes.success && userRes.user && userRes.user.uid !== senderId) {
+                recipientsToNotify.add(userRes.user.uid);
               }
             } catch (mentionErr) {
               console.warn('Mention target lookup notice:', mentionErr);

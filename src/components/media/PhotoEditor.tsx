@@ -89,6 +89,7 @@ export default function PhotoEditor({
     const [blurSize, setBlurSize] = useState(36);
 
     const [textValue, setTextValue] = useState("");
+    const [textColor, setTextColor] = useState("#ffffff");
 
     const [adjustments, setAdjustments] =
         useState<ImageAdjustments>(DEFAULT_ADJUSTMENTS);
@@ -645,23 +646,29 @@ export default function PhotoEditor({
 
             if (!canvas) return;
 
+            const isLightText =
+                textColor.toLowerCase() === "#ffffff" ||
+                textColor.toLowerCase() === "#facc15" ||
+                textColor.toLowerCase() === "#38bdf8";
+
             const text = new IText(textValue.trim(), {
                 left: dimensionsRef.current.width / 2,
                 top: dimensionsRef.current.height / 2,
                 originX: "center",
                 originY: "center",
                 fontFamily: "Arial",
+                fontWeight: "bold",
                 fontSize: Math.max(
                     24,
                     dimensionsRef.current.width * 0.045
                 ),
-                fill: "#ffffff",
+                fill: textColor,
                 textAlign: "center",
                 editable: true,
                 selectable: true,
                 shadow: new Shadow({
-                    color: "rgba(0, 0, 0, 0.5)",
-                    blur: 4,
+                    color: isLightText ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.5)",
+                    blur: 6,
                     offsetX: 1,
                     offsetY: 2,
                 }),
@@ -680,7 +687,14 @@ export default function PhotoEditor({
 
             setError("We couldn't add text to this image.");
         }
-    }, [textValue, saveHistory]);
+    }, [textValue, textColor, saveHistory]);
+
+    const handleApplyPreset = useCallback(
+        (preset: ImageAdjustments) => {
+            setAdjustments(preset);
+        },
+        []
+    );
 
     const handleAdjustmentChange = useCallback(
         (key: keyof ImageAdjustments, value: number) => {
@@ -817,6 +831,12 @@ export default function PhotoEditor({
 
                 event.currentTarget.setPointerCapture(event.pointerId);
 
+                const radius = (blurSize * scaleX) / 2;
+                context.fillStyle = "#a855f7";
+                context.beginPath();
+                context.arc(x, y, Math.max(2, radius), 0, Math.PI * 2);
+                context.fill();
+
                 context.beginPath();
                 context.moveTo(x, y);
             } else if (
@@ -824,7 +844,7 @@ export default function PhotoEditor({
                 blurDrawingRef.current
             ) {
                 context.lineTo(x, y);
-                context.strokeStyle = "#ffffff";
+                context.strokeStyle = "#a855f7";
                 context.lineWidth = blurSize * scaleX;
                 context.lineCap = "round";
                 context.lineJoin = "round";
@@ -1144,7 +1164,7 @@ export default function PhotoEditor({
                                         onPointerMove={handleBlurPointer}
                                         onPointerUp={handleBlurPointer}
                                         onPointerCancel={handleBlurPointer}
-                                        className="absolute inset-0 h-full w-full touch-none cursor-crosshair"
+                                        className="absolute inset-0 h-full w-full touch-none cursor-crosshair opacity-45"
                                     />
                                 )}
                         </div>
@@ -1212,9 +1232,12 @@ export default function PhotoEditor({
                     onApplyBlur={handleApplyBlur}
                     textValue={textValue}
                     onTextValueChange={setTextValue}
+                    textColor={textColor}
+                    onTextColorChange={setTextColor}
                     onAddText={handleAddText}
                     adjustments={adjustments}
                     onAdjustmentChange={handleAdjustmentChange}
+                    onApplyPreset={handleApplyPreset}
                     onResetAdjustments={handleResetAdjustments}
                     outputWidth={outputWidth}
                     outputHeight={outputHeight}

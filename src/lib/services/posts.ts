@@ -596,21 +596,22 @@ export const addComment = async (postId: string, user: UserProfile, content: str
             const { getAllUsers } = await import('./users');
             const usersRes = await getAllUsers();
             if (usersRes.success && usersRes.users) {
-              const handles = new Set(mentionMatches.map(m => m.substring(1).toLowerCase()));
+              const handles = new Set(mentionMatches.map(m => m.substring(1).trim().toLowerCase()));
               for (const targetUser of usersRes.users) {
                 if (
-                  handles.has(targetUser.username.toLowerCase()) && 
+                  targetUser.username &&
+                  handles.has(targetUser.username.trim().toLowerCase()) && 
                   targetUser.uid !== user.uid && 
                   !notifiedUserIds.has(targetUser.uid)
                 ) {
                   notifiedUserIds.add(targetUser.uid);
                   const title = "New Mention";
-                  const messageBody = `${user.fullName} mentioned you in a comment.`;
+                  const messageBody = `${user.fullName} mentioned you in a ${replyToId ? 'reply' : 'comment'}.`;
 
                   const mentionUrl = `/feed?postId=${postData.id}&commentId=${newComment.id}&openComments=true#comment-${newComment.id}`;
                   await createNotification({
                     userId: targetUser.uid,
-                    type: "comment",
+                    type: "mention" as any,
                     title,
                     message: messageBody,
                     link: mentionUrl,
@@ -635,7 +636,7 @@ export const addComment = async (postId: string, user: UserProfile, content: str
         }
       })();
 
-      return { success: true };
+      return { success: true, commentId: newComment.id };
     }
     return { success: false, error: "Post not found" };
   } catch (error: unknown) {
@@ -651,10 +652,11 @@ export const updateComment = async (postId: string, commentId: string, newConten
     const postSnap = await getDoc(postRef);
 
     if (postSnap.exists()) {
+      const sanitized = sanitizeText(newContent, 1000);
       const currentComments = postSnap.data().comments || [];
       const updatedComments = currentComments.map((c: Comment) => {
         if (c.id === commentId) {
-          return { ...c, content: newContent };
+          return { ...c, content: sanitized };
         }
         return c;
       });

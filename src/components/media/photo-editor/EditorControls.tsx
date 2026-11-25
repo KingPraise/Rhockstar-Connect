@@ -27,6 +27,8 @@ interface EditorControlsProps {
 
   textValue: string;
   onTextValueChange: (value: string) => void;
+  textColor: string;
+  onTextColorChange: (color: string) => void;
   onAddText: () => void;
 
   adjustments: ImageAdjustments;
@@ -34,6 +36,7 @@ interface EditorControlsProps {
     key: keyof ImageAdjustments,
     value: number
   ) => void;
+  onApplyPreset: (preset: ImageAdjustments) => void;
   onResetAdjustments: () => void;
 
   outputWidth: number;
@@ -83,6 +86,28 @@ const cropOptions: {
   { value: "9:16", label: "9:16" },
 ];
 
+const COLOR_SWATCHES = [
+  "#ffffff",
+  "#0f172a",
+  "#ef4444",
+  "#facc15",
+  "#22c55e",
+  "#38bdf8",
+  "#a855f7",
+];
+
+const FILTER_PRESETS: {
+  label: string;
+  values: ImageAdjustments;
+}[] = [
+  { label: "Original", values: { brightness: 0, contrast: 0, saturation: 0 } },
+  { label: "Vivid", values: { brightness: 5, contrast: 18, saturation: 35 } },
+  { label: "Warm", values: { brightness: 8, contrast: 8, saturation: 22 } },
+  { label: "Cool", values: { brightness: 2, contrast: 12, saturation: -12 } },
+  { label: "B&W", values: { brightness: 4, contrast: 22, saturation: -100 } },
+  { label: "Dramatic", values: { brightness: -8, contrast: 36, saturation: 14 } },
+];
+
 export default function EditorControls({
   activeTool,
   onToolChange,
@@ -102,10 +127,13 @@ export default function EditorControls({
 
   textValue,
   onTextValueChange,
+  textColor,
+  onTextColorChange,
   onAddText,
 
   adjustments,
   onAdjustmentChange,
+  onApplyPreset,
   onResetAdjustments,
 
   outputWidth,
@@ -267,10 +295,25 @@ export default function EditorControls({
           <section className="space-y-4">
             <PanelHeading>Drawing brush</PanelHeading>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <FieldLabel>Brush colour</FieldLabel>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                {COLOR_SWATCHES.map((swatch) => (
+                  <button
+                    key={swatch}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onBrushColorChange(swatch)}
+                    style={{ backgroundColor: swatch }}
+                    className={`h-7 w-7 rounded-full border transition ${
+                      brushColor.toLowerCase() === swatch
+                        ? "scale-110 border-violet-400 ring-2 ring-violet-500/50"
+                        : "border-white/25 opacity-80 hover:opacity-100"
+                    }`}
+                    aria-label={`Select brush color ${swatch}`}
+                  />
+                ))}
                 <input
                   type="color"
                   value={brushColor}
@@ -278,12 +321,8 @@ export default function EditorControls({
                     onBrushColorChange(event.target.value)
                   }
                   disabled={disabled}
-                  className="h-10 w-12 cursor-pointer rounded-lg border border-white/10 bg-transparent"
+                  className="h-8 w-10 cursor-pointer rounded-lg border border-white/10 bg-transparent"
                 />
-
-                <span className="text-xs text-white/50">
-                  {brushColor.toUpperCase()}
-                </span>
               </div>
             </div>
 
@@ -303,8 +342,7 @@ export default function EditorControls({
             <PanelHeading>Local blur brush</PanelHeading>
 
             <p className="text-xs leading-5 text-white/40">
-              Paint over the areas you want to blur. Only the
-              painted areas will receive the effect.
+              Tap or paint over areas you want to blur (highlighted in purple), then tap Apply.
             </p>
 
             <RangeField
@@ -342,6 +380,34 @@ export default function EditorControls({
               className="w-full resize-none rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-violet-500"
             />
 
+            <div className="space-y-2">
+              <FieldLabel>Text colour</FieldLabel>
+              <div className="flex flex-wrap items-center gap-2">
+                {COLOR_SWATCHES.map((swatch) => (
+                  <button
+                    key={swatch}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onTextColorChange(swatch)}
+                    style={{ backgroundColor: swatch }}
+                    className={`h-7 w-7 rounded-full border transition ${
+                      textColor.toLowerCase() === swatch
+                        ? "scale-110 border-violet-400 ring-2 ring-violet-500/50"
+                        : "border-white/25 opacity-80 hover:opacity-100"
+                    }`}
+                    aria-label={`Select text color ${swatch}`}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={textColor}
+                  onChange={(event) => onTextColorChange(event.target.value)}
+                  disabled={disabled}
+                  className="h-8 w-10 cursor-pointer rounded-lg border border-white/10 bg-transparent"
+                />
+              </div>
+            </div>
+
             <ActionButton
               onClick={onAddText}
               disabled={disabled || !textValue.trim()}
@@ -352,16 +418,42 @@ export default function EditorControls({
             </ActionButton>
 
             <p className="text-xs text-white/40">
-              Once added, select the text on the image to move or
-              resize it.
+              Once added, select the text on the image to move, rotate, or resize it.
             </p>
           </section>
         )}
 
         {activeTool === "adjust" && (
           <section className="space-y-5">
-            <div className="flex items-center justify-between">
-              <PanelHeading>Image adjustments</PanelHeading>
+            <div className="space-y-2.5">
+              <PanelHeading>Filter presets</PanelHeading>
+              <div className="grid grid-cols-3 gap-1.5">
+                {FILTER_PRESETS.map((preset) => {
+                  const isSelected =
+                    adjustments.brightness === preset.values.brightness &&
+                    adjustments.contrast === preset.values.contrast &&
+                    adjustments.saturation === preset.values.saturation;
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => onApplyPreset(preset.values)}
+                      className={`rounded-lg border px-2 py-2 text-xs font-medium transition ${
+                        isSelected
+                          ? "border-violet-500 bg-violet-500/20 text-violet-200"
+                          : "border-white/10 text-white/65 hover:bg-white/5 hover:text-white"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1 border-t border-white/10">
+              <PanelHeading>Fine adjustments</PanelHeading>
 
               <button
                 type="button"
