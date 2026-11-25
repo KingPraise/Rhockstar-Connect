@@ -29,6 +29,7 @@ import {
   MessageCircle,
   ExternalLink,
   Crown,
+  AtSign,
 } from "lucide-react";
 
 // Subtle non-intrusive sound chime using Web Audio API
@@ -332,16 +333,13 @@ export default function InAppNotificationBanner() {
       } catch {}
 
       if (notif.link) {
-        if (
-          notif.link === "/"
-        ) {
-          router.push(
-            "/feed"
-          );
+        const normalized = notif.link
+          .replace(/^https?:\/\/(www\.)?rhockstarconnect\.com/i, "")
+          .trim();
+        if (!normalized || normalized === "/") {
+          router.push("/feed");
         } else {
-          router.push(
-            notif.link
-          );
+          router.push(normalized);
         }
 
         return;
@@ -350,6 +348,7 @@ export default function InAppNotificationBanner() {
       switch (notif.type) {
         case "like":
         case "comment":
+        case "mention":
           if (
             notif.targetId
           ) {
@@ -388,12 +387,21 @@ export default function InAppNotificationBanner() {
             notif.senderId
           ) {
             router.push(
-              `/profile?uid=${notif.senderId}`
+              `/network?tab=invitations&highlight=${encodeURIComponent(notif.senderId)}`
             );
           } else {
             router.push(
-              "/network"
+              "/network?tab=invitations"
             );
+          }
+
+          break;
+
+        case "follow":
+          if (notif.senderId) {
+            router.push(`/profile?uid=${encodeURIComponent(notif.senderId)}`);
+          } else {
+            router.push("/network");
           }
 
           break;
@@ -415,24 +423,20 @@ export default function InAppNotificationBanner() {
 
         case "match":
           router.push(
-            "/dating"
+            "/dating?tab=matches"
           );
           break;
 
         case "subscription":
           router.push(
-            notif.link || "/premium"
+            "/premium"
           );
           break;
 
         default:
-          if (notif.link) {
-            router.push(notif.link);
-          } else {
-            router.push(
-              "/feed"
-            );
-          }
+          router.push(
+            "/feed"
+          );
           break;
       }
     };
@@ -455,12 +459,18 @@ export default function InAppNotificationBanner() {
           <MessageCircle className="w-3.5 h-3.5 text-amber-400" />
         );
 
+      case "mention":
+        return (
+          <AtSign className="w-3.5 h-3.5 text-purple-400" />
+        );
+
       case "message":
         return (
           <MessageSquare className="w-3.5 h-3.5 text-brand" />
         );
 
       case "connection":
+      case "follow":
         return (
           <UserPlus className="w-3.5 h-3.5 text-purple-400" />
         );

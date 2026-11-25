@@ -70,7 +70,7 @@ export default function DMMessageFeed({
     first.getDate() === second.getDate();
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-3 custom-scrollbar">
       {messages.map((msg) => {
         const isMe = msg.senderId === currentUserId;
         const isEditingThis = editingMessageId === msg.id;
@@ -362,8 +362,8 @@ export default function DMMessageFeed({
 
                     {isMenuOpen && (
                       <div
-                        className={`absolute top-full ${
-                          isMe ? "right-0" : "left-0"
+                        className={`absolute top-full right-0 ${
+                          isMe ? "sm:right-0" : "sm:left-0 sm:right-auto"
                         } mt-1 w-32 bg-slate-900 border border-white/10 rounded-xl shadow-2xl z-50 py-1 flex flex-col`}
                       >
                         <button

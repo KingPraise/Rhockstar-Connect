@@ -57,17 +57,31 @@ export const sendConnectionRequest = async (fromUserId: string, toUserId: string
     const senderName = senderProfile?.fullName || 'Someone';
     const senderAvatar = senderProfile?.avatar || '';
 
+    const invitationLink = `/network?tab=invitations&highlight=${encodeURIComponent(fromUserId)}`;
+
     // Trigger notification to recipient
     await createNotification({
       userId: toUserId,
       type: "connection",
       title: "New Connection Request",
       message: `${senderName} sent you a connection request.`,
-      link: "/network?tab=invitations",
+      link: invitationLink,
+      targetId: fromUserId,
       senderId: fromUserId,
       senderName,
       senderAvatar
     });
+
+    import('./pushNotifications')
+      .then(({ sendPushNotification }) =>
+        sendPushNotification({
+          userId: toUserId,
+          title: "New Connection Request",
+          body: `${senderName} sent you a connection request.`,
+          url: invitationLink,
+        })
+      )
+      .catch(() => {});
 
     return { success: true };
   } catch (error: unknown) {
@@ -99,16 +113,30 @@ export const updateConnectionStatus = async (connectionId: string, status: 'acce
         const acceptorName = acceptorProfile?.fullName || 'Someone';
         const acceptorAvatar = acceptorProfile?.avatar || '';
 
+        const acceptedLink = `/network?tab=my-connections&highlight=${encodeURIComponent(connData.toUserId)}`;
+
         await createNotification({
           userId: connData.fromUserId,
           type: "connection",
           title: "Connection Accepted",
           message: `${acceptorName} accepted your connection request!`,
-          link: "/network?tab=my-connections",
+          link: acceptedLink,
+          targetId: connData.toUserId,
           senderId: connData.toUserId,
           senderName: acceptorName,
           senderAvatar: acceptorAvatar
         });
+
+        import('./pushNotifications')
+          .then(({ sendPushNotification }) =>
+            sendPushNotification({
+              userId: connData.fromUserId,
+              title: "Connection Accepted",
+              body: `${acceptorName} accepted your connection request!`,
+              url: acceptedLink,
+            })
+          )
+          .catch(() => {});
       }
     }
     return { success: true };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Heart, MessageSquare, Briefcase, UserPlus, Check, ThumbsUp, MessageCircle, Crown } from "lucide-react";
+import { Bell, Heart, MessageSquare, Briefcase, UserPlus, Check, ThumbsUp, MessageCircle, Crown, AtSign } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { 
   Notification, 
@@ -36,10 +36,13 @@ export default function NotificationsPage() {
     }
 
     if (notification.link) {
-      if (notification.link === "/") {
+      const normalized = notification.link
+        .replace(/^https?:\/\/(www\.)?rhockstarconnect\.com/i, "")
+        .trim();
+      if (!normalized || normalized === "/") {
         router.push("/feed");
       } else {
-        router.push(notification.link);
+        router.push(normalized);
       }
       return;
     }
@@ -47,6 +50,7 @@ export default function NotificationsPage() {
     switch (notification.type) {
       case "like":
       case "comment":
+      case "mention":
         if (notification.targetId) {
           router.push(`/feed?postId=${notification.targetId}#post-${notification.targetId}`);
         } else {
@@ -62,7 +66,14 @@ export default function NotificationsPage() {
         break;
       case "connection":
         if (notification.senderId) {
-          router.push(`/profile?uid=${notification.senderId}`);
+          router.push(`/network?tab=invitations&highlight=${encodeURIComponent(notification.senderId)}`);
+        } else {
+          router.push("/network?tab=invitations");
+        }
+        break;
+      case "follow":
+        if (notification.senderId) {
+          router.push(`/profile?uid=${encodeURIComponent(notification.senderId)}`);
         } else {
           router.push("/network");
         }
@@ -75,13 +86,13 @@ export default function NotificationsPage() {
         }
         break;
       case "match":
-        router.push("/dating");
+        router.push("/dating?tab=matches");
         break;
       case "subscription":
-        router.push(notification.link || "/premium");
+        router.push("/premium");
         break;
       default:
-        router.push(notification.link || "/feed");
+        router.push("/feed");
         break;
     }
   };
@@ -90,10 +101,12 @@ export default function NotificationsPage() {
     switch (type) {
       case "match": return { icon: Heart, color: "text-rose-500", bg: "bg-rose-500/10" };
       case "message": return { icon: MessageSquare, color: "text-brand", bg: "bg-brand/10" };
-      case "connection": return { icon: UserPlus, color: "text-brand-purple", bg: "bg-brand-purple/10" };
+      case "connection":
+      case "follow": return { icon: UserPlus, color: "text-brand-purple", bg: "bg-brand-purple/10" };
       case "job": return { icon: Briefcase, color: "text-emerald-500", bg: "bg-emerald-500/10" };
       case "like": return { icon: ThumbsUp, color: "text-blue-500", bg: "bg-blue-500/10" };
       case "comment": return { icon: MessageCircle, color: "text-amber-500", bg: "bg-amber-500/10" };
+      case "mention": return { icon: AtSign, color: "text-purple-400", bg: "bg-purple-500/10" };
       case "subscription": return { icon: Crown, color: "text-amber-400", bg: "bg-amber-400/10" };
       default: return { icon: Bell, color: "text-slate-400", bg: "bg-slate-800" };
     }

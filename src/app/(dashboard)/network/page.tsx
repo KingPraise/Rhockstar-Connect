@@ -36,12 +36,41 @@ function NetworkContent() {
   const [activeTab, setActiveTab] = useState<TabId>('discover');
   const [activePremiumFilter, setActivePremiumFilter] = useState<PremiumFilter>('all');
 
+  const highlightUid = searchParams?.get("highlight");
+
   useEffect(() => {
     const tab = searchParams?.get("tab") as TabId;
     if (tab && ['discover', 'my-connections', 'invitations', 'sent-requests'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!highlightUid || loading) return;
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const tryHighlight = () => {
+      attempts += 1;
+      const el = document.getElementById(`network-user-${highlightUid}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-brand", "shadow-[0_0_30px_rgba(56,189,248,0.45)]");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-brand", "shadow-[0_0_30px_rgba(56,189,248,0.45)]");
+        }, 4000);
+        return;
+      }
+      if (attempts < 10) {
+        timer = setTimeout(tryHighlight, 150);
+      }
+    };
+
+    timer = setTimeout(tryHighlight, 150);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [highlightUid, loading, activeTab]);
 
   const isPremium = profile?.subscriptionTier === 'pro' || profile?.subscriptionTier === 'elite' || profile?.role === 'admin';
 
@@ -366,7 +395,11 @@ function NetworkContent() {
             const receivedConn = connections.find(c => c.fromUserId === user.uid && c.toUserId === profile.uid && c.status === 'pending');
             
             return (
-              <div key={user.uid} className="neo-card p-5 rounded-none sm:rounded-2xl bg-slate-900/60 border-y sm:border border-white/5 flex flex-col group hover:-translate-y-1 transition-all duration-300">
+              <div
+                key={user.uid}
+                id={`network-user-${user.uid}`}
+                className="neo-card p-5 rounded-none sm:rounded-2xl bg-slate-900/60 border-y sm:border border-white/5 flex flex-col group hover:-translate-y-1 transition-all duration-300"
+              >
                 <Link href={`/profile?uid=${user.uid}`} className="flex items-start gap-4 w-full group/profile mb-4">
                   <UserAvatar 
                     src={user.avatar} 

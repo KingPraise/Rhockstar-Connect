@@ -360,7 +360,12 @@ export default function PostCard({ post }: PostCardProps) {
           setShowComments(true);
         }
 
-        const timer = setTimeout(() => {
+        let attempts = 0;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+
+        const tryScrollToTarget = () => {
+          attempts += 1;
+
           if (targetCommentId) {
             const commentEl = document.getElementById(`comment-${targetCommentId}`);
             if (commentEl) {
@@ -371,18 +376,32 @@ export default function PostCard({ post }: PostCardProps) {
               }, 4000);
               return;
             }
+          } else {
+            const el = document.getElementById(`post-${post.id}`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.classList.add('ring-2', 'ring-brand', 'shadow-[0_0_35px_rgba(56,189,248,0.6)]', 'scale-[1.01]');
+              setTimeout(() => {
+                el.classList.remove('ring-2', 'ring-brand', 'shadow-[0_0_35px_rgba(56,189,248,0.6)]', 'scale-[1.01]');
+              }, 4000);
+              return;
+            }
           }
 
-          const el = document.getElementById(`post-${post.id}`);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.classList.add('ring-2', 'ring-brand', 'shadow-[0_0_35px_rgba(56,189,248,0.6)]', 'scale-[1.01]');
-            setTimeout(() => {
-              el.classList.remove('ring-2', 'ring-brand', 'shadow-[0_0_35px_rgba(56,189,248,0.6)]', 'scale-[1.01]');
-            }, 4000);
+          if (attempts < 12) {
+            timer = setTimeout(tryScrollToTarget, 150);
+          } else if (targetCommentId) {
+            const el = document.getElementById(`post-${post.id}`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
           }
-        }, 400);
-        return () => clearTimeout(timer);
+        };
+
+        timer = setTimeout(tryScrollToTarget, 200);
+        return () => {
+          if (timer) clearTimeout(timer);
+        };
       }
     }
   }, [post.id, searchParams]);
